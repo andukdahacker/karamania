@@ -1,0 +1,10 @@
+installation:
+  version: 6.0.0-alpha.23
+  installDate: 2026-03-03T09:56:00.481Z
+  lastUpdated: 2026-03-03T09:56:00.481Z
+modules:
+  - core
+  - bmm
+ides:
+  - claude-code
+  - opencode
