@@ -559,44 +559,42 @@ The `delay` parameter in Svelte's transition directive is the key insight: serve
 
 Every real-time list (participants, reactions, vote results) MUST use keyed `{#each}` blocks. Without keys, Svelte reuses DOM nodes by index — causing flickering, wrong animations, and ghost elements when the WebSocket pushes reordered data.
 
-**Single Reactive Store File**
+**Single Reactive Store File (Svelte 5 Runes)**
 
-```javascript
-// src/lib/stores/party.js — owns WebSocket + ALL reactive state
-import { writable, derived } from 'svelte/store';
+```typescript
+// stores/djStore.svelte.ts — Svelte 5 runes pattern (per Architecture decision)
 
-export const djState = writable('lobby');
-export const participants = writable([]);
-export const ceremonyData = writable(null);
-export const currentSong = writable(null);
-export const partyCard = writable(null);        // Current party card deal {card, singer, status}
-export const songMode = writable('leanin');     // 'leanin' | 'lightstick'
-export const interludeData = writable(null);    // Current interlude game data
-export const captureBubble = writable(null);    // {trigger, timestamp} or null
-export const songSelection = writable(null);    // {mode, songs, votes, timer} for Quick Pick / Spin
-export const tvPairing = writable({status: 'unpaired'}); // 'unpaired' | 'pairing' | 'paired' | 'failed'
-export const nowPlaying = writable(null);       // {song, artist, genre, videoId} from Lounge API
-export const suggestions = writable([]);        // Current suggestion pool from engine
-export const playlists = writable([]);          // Imported playlists per participant [{userId, songCount, status}]
+import type { DJState } from '@karamania/shared';
 
-// Single WebSocket connection
+// Module-scoped $state — NOT exported directly
+let currentState = $state<DJState>(initialState);
+let currentPhase = $state<string | null>(null);
+
+// Exported: read-only derived getters ONLY
+export const djStore = {
+  get current() { return currentState; },
+  get phase() { return currentPhase; },
+  get isCeremony() { return currentState.type.startsWith('CEREMONY'); },
+};
+
+// Mutations: named functions, called ONLY from Socket.io handler
+export function _onStateChanged(state: DJState) { currentState = state; }
+export function _onPhaseChanged(phase: string) { currentPhase = phase; }
+```
+
+```typescript
+// socket/client.ts — Single WebSocket connection, dispatches to stores
+import { io } from 'socket.io-client';
+import { _onStateChanged } from '../stores/djStore.svelte';
+
 const socket = io(SERVER_URL);
-socket.on('state', (s) => djState.set(s.state));
-socket.on('participants', (p) => participants.set(p));
-socket.on('ceremony_silence', (d) => ceremonyData.set(d));
-socket.on('party_card_deal', (c) => partyCard.set(c));
-socket.on('capture_bubble', (b) => captureBubble.set(b));
-socket.on('interlude', (i) => interludeData.set(i));
-socket.on('song_selection', (s) => songSelection.set(s));
-socket.on('tv_pairing', (t) => tvPairing.set(t));
-socket.on('now_playing', (n) => nowPlaying.set(n));
-socket.on('suggestions_update', (s) => suggestions.set(s));
-socket.on('playlist_imported', (p) => playlists.update(list => [...list, p]));
-
+socket.on('dj:stateChanged', (s) => _onStateChanged(s));
+socket.on('ceremony:phase', (p) => _onPhaseChanged(p));
+// ... all other event handlers dispatch to store mutation functions
 export { socket };
 ```
 
-One file owns the WebSocket connection and all reactive stores. Components subscribe. No component ever creates its own socket listener.
+One file owns the WebSocket connection. Store files own reactive state via Svelte 5 `$state` runes. Components read stores via exported getters. No component ever creates its own socket listener or mutates store state directly.
 
 ### Testing Strategy
 

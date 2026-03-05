@@ -24,7 +24,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 ### Requirements Overview
 
-**Functional Requirements (95 FRs across 12 categories):**
+**Functional Requirements (112 FRs across 12 categories):**
 
 **Tier 0 — Architectural Foundation (drive the hardest decisions):**
 
@@ -53,7 +53,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 | Audience Modes | FR63-FR66 | Lightstick rendering (GPU animation), hype signal (torch API) — client-side only, no server architecture impact |
 | Song Integration | FR74-FR95 | Lounge API, YouTube Data API, Spotify API, catalog index, suggestion algorithm — architecturally significant but Sprint 3 additive. Does NOT change foundation |
 
-**Non-Functional Requirements (33 NFRs across 5 categories):**
+**Non-Functional Requirements (38 NFRs across 6 categories):**
 
 | Category | Key Constraints |
 |----------|----------------|
