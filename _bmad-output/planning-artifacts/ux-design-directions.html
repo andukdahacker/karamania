@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karamania — Design Direction: Full DJ State Walkthrough</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --dj-bg: #0a0a0f;
+    --dj-surface: #1a1a2e;
+    --dj-surface-elevated: #252542;
+    --dj-text-primary: #f0f0f0;
+    --dj-text-secondary: #8888aa;
+    --dj-action-confirm: #4ade80;
+    --dj-action-danger: #ef4444;
+    --dj-transition-fast: 150ms;
+    --dj-accent: #ffd700;
+    --dj-ceremony-glow: #ffd700;
+    --dj-ceremony-bg: #1a0a2e;
+    --dj-action-primary: #6c63ff;
+  }
+  [data-vibe="kpop"] {
+    --dj-accent: #ff0080; --dj-ceremony-glow: #ff69b4;
+    --dj-ceremony-bg: #1a0a20; --dj-action-primary: #cc00ff;
+  }
+  [data-vibe="rock"] {
+    --dj-accent: #ff4444; --dj-ceremony-glow: #ff6600;
+    --dj-ceremony-bg: #1a0a0a; --dj-action-primary: #cc4422;
+  }
+  [data-vibe="ballad"] {
+    --dj-accent: #ff9966; --dj-ceremony-glow: #ffcc88;
+    --dj-ceremony-bg: #1a1210; --dj-action-primary: #cc8866;
+  }
+  [data-vibe="edm"] {
+    --dj-accent: #00ffc8; --dj-ceremony-glow: #00c8ff;
+    --dj-ceremony-bg: #0a1a1a; --dj-action-primary: #00c8ff;
+  }
+
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: #050508;
+    color: var(--dj-text-primary);
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  h1 {
+    text-align: center; font-size: 1.6rem; margin-bottom: 0.3rem;
+    color: var(--dj-accent);
+  }
+  .subtitle { text-align: center; color: var(--dj-text-secondary); margin-bottom: 1.5rem; font-size: 0.85rem; }
+
+  /* Vibe switcher */
+  .vibe-switcher {
+    display: flex; justify-content: center; gap: 8px; margin-bottom: 2.5rem;
+    position: sticky; top: 0; z-index: 100;
+    background: #050508; padding: 12px 0; border-bottom: 1px solid #1a1a2e;
+  }
+  .vibe-btn {
+    padding: 8px 16px; border-radius: 20px; border: 2px solid #333;
+    background: var(--dj-surface); color: var(--dj-text-primary);
+    font-family: 'Space Grotesk', sans-serif; font-size: 0.85rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .vibe-btn:hover { border-color: #666; }
+  .vibe-btn.active { border-color: var(--dj-accent); background: var(--dj-surface-elevated); }
+
+  /* Screen section */
+  .screen-section {
+    max-width: 900px; margin: 0 auto 3rem;
+    display: flex; gap: 2rem; align-items: flex-start;
+  }
+  .screen-info {
+    flex: 1; min-width: 280px; padding-top: 20px;
+  }
+  .screen-info .state-badge {
+    display: inline-block; padding: 3px 12px; border-radius: 12px;
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .screen-info h2 { font-size: 1.2rem; margin-bottom: 8px; color: var(--dj-text-primary); }
+  .screen-info p { font-size: 0.8rem; color: var(--dj-text-secondary); line-height: 1.6; margin-bottom: 12px; }
+  .screen-info .detail-list { list-style: none; }
+  .screen-info .detail-list li {
+    font-size: 0.75rem; color: var(--dj-text-secondary); padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .screen-info .detail-list li strong { color: var(--dj-text-primary); }
+  .screen-info .timing {
+    margin-top: 12px; padding: 8px 12px;
+    background: var(--dj-surface); border-radius: 8px;
+    font-size: 0.7rem; color: var(--dj-text-secondary);
+  }
+  .screen-info .timing strong { color: var(--dj-accent); }
+
+  /* Phone */
+  .phone-col { flex-shrink: 0; }
+  .phone {
+    width: 280px; height: 560px; border-radius: 28px;
+    overflow: hidden; position: relative;
+    border: 3px solid #333; box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  }
+  .ps { /* phone screen */
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    position: relative; overflow: hidden;
+    background: var(--dj-bg);
+  }
+
+  /* Shared phone elements */
+  .ps .top-bar {
+    padding: 10px 16px 6px; display: flex;
+    justify-content: space-between; align-items: center;
+  }
+  .ps .top-bar .state-tag {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--dj-text-secondary);
+  }
+  .ps .top-bar .party-name {
+    font-size: 0.6rem; color: var(--dj-text-secondary);
+  }
+  .ps .top-bar .people-count {
+    font-size: 0.6rem; color: var(--dj-action-confirm);
+  }
+  .divider { height: 1px; background: rgba(255,255,255,0.06); }
+
+  /* ============ SCREEN 1: LOBBY ============ */
+  .lobby-screen .lobby-hero {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .lobby-screen .app-logo {
+    font-size: 2rem; font-weight: 700; color: var(--dj-accent);
+    margin-bottom: 4px; letter-spacing: -1px;
+  }
+  .lobby-screen .app-tagline {
+    font-size: 0.7rem; color: var(--dj-text-secondary);
+    margin-bottom: 24px;
+  }
+  .lobby-screen .name-input {
+    width: 80%; padding: 12px 16px; border-radius: 12px;
+    background: var(--dj-surface); border: 2px solid #333;
+    color: var(--dj-text-primary); font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem; text-align: center; margin-bottom: 12px;
+    outline: none;
+  }
+  .lobby-screen .name-input::placeholder { color: var(--dj-text-secondary); }
+  .lobby-screen .join-btn {
+    width: 80%; padding: 14px; border-radius: 12px; border: none;
+    background: var(--dj-action-primary); color: #fff;
+    font-family: 'Space Grotesk', sans-serif; font-size: 0.9rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+    cursor: pointer;
+  }
+  .lobby-screen .lobby-footer {
+    padding: 16px; text-align: center;
+  }
+  .lobby-screen .participant-dots {
+    display: flex; justify-content: center; gap: 6px; margin-bottom: 8px;
+  }
+  .lobby-screen .p-dot {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--dj-surface-elevated);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; color: var(--dj-text-secondary);
+  }
+  .lobby-screen .p-dot.filled { background: var(--dj-action-primary); color: #fff; }
+  .lobby-screen .waiting-text {
+    font-size: 0.7rem; color: var(--dj-text-secondary);
+  }
+
+  /* ============ SCREEN 2: ICEBREAKER ============ */
+  .icebreaker-screen .ice-hero {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .icebreaker-screen .ice-prompt {
+    font-size: 0.75rem; color: var(--dj-text-secondary);
+    text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px;
+  }
+  .icebreaker-screen .ice-question {
+    font-size: 1.2rem; font-weight: 700; color: var(--dj-text-primary);
+    text-align: center; margin-bottom: 24px; line-height: 1.4;
+  }
+  .icebreaker-screen .ice-options {
+    width: 100%; display: flex; flex-direction: column; gap: 10px;
+  }
+  .icebreaker-screen .ice-option {
+    padding: 14px 20px; border-radius: 12px;
+    background: var(--dj-surface); border: 2px solid #333;
+    color: var(--dj-text-primary); font-size: 0.85rem;
+    text-align: center; cursor: pointer; transition: all 0.15s;
+  }
+  .icebreaker-screen .ice-option:hover { border-color: var(--dj-action-primary); }
+  .icebreaker-screen .ice-option.selected {
+    border-color: var(--dj-action-primary);
+    background: rgba(108,99,255,0.15);
+  }
+  .icebreaker-screen .ice-note {
+    margin-top: 20px; font-size: 0.65rem; color: var(--dj-text-secondary);
+    text-align: center;
+  }
+
+  /* ============ SCREEN 3: SONG STATE ============ */
+  .song-screen .song-header {
+    padding: 12px 16px; text-align: center;
+  }
+  .song-screen .song-title { font-size: 0.85rem; font-weight: 700; }
+  .song-screen .song-artist { font-size: 0.7rem; color: var(--dj-text-secondary); margin-top: 2px; }
+  .song-screen .singer-chip {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    background: rgba(108,99,255,0.15); border: 1px solid rgba(108,99,255,0.3);
+    font-size: 0.65rem; color: var(--dj-action-primary); margin-top: 6px;
+  }
+  .song-screen .soundboard {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px; padding: 12px 16px;
+  }
+  .song-screen .sb-btn {
+    padding: 12px 8px; border-radius: 10px;
+    background: var(--dj-surface); border: 1px solid #333;
+    display: flex; align-items: center; justify-content: center;
+    gap: 4px; font-size: 0.7rem; color: var(--dj-text-primary);
+  }
+  .song-screen .reactions-row {
+    padding: 10px 16px; display: flex; gap: 8px;
+  }
+  .song-screen .react-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(108,99,255,0.1); border: 1px solid rgba(108,99,255,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+  }
+  .song-screen .participants-mini {
+    padding: 6px 16px;
+  }
+  .song-screen .p-row {
+    display: flex; align-items: center; gap: 8px; padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .song-screen .p-av {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--dj-surface-elevated);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem; color: var(--dj-text-secondary);
+  }
+  .song-screen .p-nm { font-size: 0.75rem; flex: 1; }
+  .song-screen .p-st { font-size: 0.6rem; color: var(--dj-action-confirm); }
+  .song-screen .p-st.idle { color: var(--dj-text-secondary); }
+  .song-screen .song-over-area {
+    margin-top: auto; padding: 12px 16px 16px;
+  }
+  .song-screen .song-over-btn {
+    width: 100%; padding: 14px; border-radius: 12px;
+    background: rgba(239,68,68,0.1); border: 2px solid rgba(239,68,68,0.35);
+    color: var(--dj-action-danger); font-weight: 700;
+    font-size: 0.85rem; text-align: center;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .song-screen .song-over-hint {
+    text-align: center; font-size: 0.6rem;
+    color: var(--dj-text-secondary); margin-top: 4px;
+  }
+
+  /* ============ SCREEN 4: VOTING ============ */
+  .voting-screen .ps { background: var(--dj-ceremony-bg); }
+  .voting-screen .vote-header {
+    padding: 16px; text-align: center;
+  }
+  .voting-screen .vote-category {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--dj-accent); margin-bottom: 4px;
+  }
+  .voting-screen .vote-title {
+    font-size: 1.3rem; font-weight: 700;
+  }
+  .voting-screen .vote-timer {
+    width: 80px; height: 80px; margin: 12px auto;
+    border-radius: 50%; border: 4px solid #333;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem; font-weight: 700; color: var(--dj-accent);
+    position: relative;
+    background: conic-gradient(var(--dj-accent) 65%, #333 65%);
+  }
+  .voting-screen .vote-timer .timer-inner {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--dj-ceremony-bg);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .voting-screen .nominee-list {
+    padding: 0 16px; flex: 1;
+  }
+  .voting-screen .nominee {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; margin-bottom: 8px;
+    border-radius: 12px; background: var(--dj-surface);
+    border: 2px solid transparent; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .voting-screen .nominee:hover { border-color: var(--dj-action-primary); }
+  .voting-screen .nominee.voted {
+    border-color: var(--dj-accent);
+    background: rgba(255,215,0,0.08);
+  }
+  .voting-screen .nom-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--dj-surface-elevated);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; color: var(--dj-text-secondary);
+  }
+  .voting-screen .nom-name { font-size: 0.9rem; font-weight: 600; flex: 1; }
+  .voting-screen .nom-check {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid #444; display: flex;
+    align-items: center; justify-content: center;
+  }
+  .voting-screen .nominee.voted .nom-check {
+    background: var(--dj-accent); border-color: var(--dj-accent);
+    color: #000; font-size: 0.7rem;
+  }
+  .voting-screen .vote-footer {
+    padding: 12px 16px; text-align: center;
+    font-size: 0.65rem; color: var(--dj-text-secondary);
+  }
+
+  /* ============ SCREEN 5: SILENCE ============ */
+  .silence-screen .ps {
+    background: #050508; display: flex;
+    align-items: center; justify-content: center;
+  }
+  .silence-screen .silence-content {
+    text-align: center;
+  }
+  .silence-screen .silence-category {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 3px;
+    color: var(--dj-text-secondary); animation: silencePulse 1.5s ease-in-out infinite;
+  }
+  @keyframes silencePulse {
+    0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; }
+  }
+
+  /* ============ SCREEN 6: REVEAL ============ */
+  .reveal-screen .ps { background: var(--dj-ceremony-bg); }
+  .reveal-screen .reveal-glow {
+    position: absolute; top: 35%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 250px; height: 250px; border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--dj-ceremony-glow) 15%, transparent) 0%, transparent 70%);
+    animation: revealGlow 2s ease-in-out infinite;
+  }
+  @keyframes revealGlow {
+    0%, 100% { opacity: 0.5; transform: translate(-50%,-50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%,-50%) scale(1.1); }
+  }
+  .reveal-screen .confetti-layer {
+    position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  }
+  .reveal-screen .confetti-layer span {
+    position: absolute; font-size: 1rem;
+    animation: cFall 3s linear infinite; opacity: 0.7;
+  }
+  @keyframes cFall {
+    0% { transform: translateY(-20px) rotate(0); opacity: 0.8; }
+    100% { transform: translateY(580px) rotate(720deg); opacity: 0; }
+  }
+  .reveal-screen .reveal-content {
+    position: relative; z-index: 2;
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .reveal-screen .reveal-category {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--dj-text-secondary); margin-bottom: 16px;
+  }
+  .reveal-screen .reveal-emoji { font-size: 3rem; margin-bottom: 8px; }
+  .reveal-screen .reveal-name {
+    font-size: 2rem; font-weight: 700; color: var(--dj-accent);
+    text-shadow: 0 0 30px color-mix(in srgb, var(--dj-accent) 40%, transparent);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .reveal-screen .reveal-subtitle {
+    font-size: 0.85rem; color: var(--dj-ceremony-glow); margin-top: 4px;
+  }
+  .reveal-screen .vote-results {
+    width: 100%; margin-top: 24px;
+  }
+  .reveal-screen .vr-bar {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 8px; font-size: 0.75rem;
+  }
+  .reveal-screen .vr-name { width: 44px; text-align: right; color: var(--dj-text-secondary); }
+  .reveal-screen .vr-track {
+    flex: 1; height: 16px; background: rgba(255,255,255,0.06);
+    border-radius: 4px; overflow: hidden;
+  }
+  .reveal-screen .vr-fill { height: 100%; border-radius: 4px; }
+  .reveal-screen .vr-fill.win {
+    background: linear-gradient(90deg, var(--dj-accent), var(--dj-ceremony-glow));
+  }
+  .reveal-screen .vr-fill.lose { background: var(--dj-action-primary); opacity: 0.5; }
+  .reveal-screen .vr-pct { width: 28px; font-size: 0.7rem; color: var(--dj-text-secondary); }
+  .reveal-screen .reveal-reactions {
+    position: relative; z-index: 2;
+    padding: 12px 16px; display: flex; gap: 10px; justify-content: center;
+  }
+  .reveal-screen .rr-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+  }
+
+  /* ============ SCREEN 7: QUICK CEREMONY ============ */
+  .quick-screen .ps { background: var(--dj-ceremony-bg); }
+  .quick-screen .quick-content {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .quick-screen .quick-label {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--dj-text-secondary); margin-bottom: 8px;
+    padding: 3px 12px; border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+  }
+  .quick-screen .quick-category {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--dj-accent); margin-bottom: 16px;
+  }
+  .quick-screen .quick-emoji { font-size: 2.5rem; margin-bottom: 8px; }
+  .quick-screen .quick-name {
+    font-size: 1.6rem; font-weight: 700; color: var(--dj-accent);
+  }
+  .quick-screen .quick-reason {
+    font-size: 0.75rem; color: var(--dj-text-secondary); margin-top: 6px;
+    text-align: center;
+  }
+  .quick-screen .quick-footer {
+    padding: 16px; text-align: center;
+    font-size: 0.65rem; color: var(--dj-text-secondary);
+  }
+
+  /* ============ SCREEN 8: INTERLUDE ============ */
+  .interlude-screen .inter-header {
+    padding: 16px; text-align: center;
+  }
+  .interlude-screen .inter-label {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--dj-text-secondary); margin-bottom: 4px;
+  }
+  .interlude-screen .inter-title {
+    font-size: 1.1rem; font-weight: 700;
+  }
+  .interlude-screen .inter-subtitle {
+    font-size: 0.75rem; color: var(--dj-text-secondary); margin-top: 4px;
+  }
+  .interlude-screen .singer-options {
+    padding: 0 16px; flex: 1;
+  }
+  .interlude-screen .singer-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px; margin-bottom: 8px; border-radius: 12px;
+    background: var(--dj-surface); border: 2px solid transparent;
+    cursor: pointer;
+  }
+  .interlude-screen .singer-card:hover { border-color: var(--dj-action-primary); }
+  .interlude-screen .singer-card.leading { border-color: var(--dj-accent); }
+  .interlude-screen .singer-av {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--dj-surface-elevated);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; color: var(--dj-text-secondary); flex-shrink: 0;
+  }
+  .interlude-screen .singer-card.leading .singer-av {
+    background: rgba(255,215,0,0.15); color: var(--dj-accent);
+  }
+  .interlude-screen .singer-info { flex: 1; min-width: 0; }
+  .interlude-screen .singer-name { font-size: 0.85rem; font-weight: 600; }
+  .interlude-screen .singer-votes {
+    font-size: 0.7rem; color: var(--dj-accent); font-weight: 600;
+  }
+  .interlude-screen .inter-timer {
+    padding: 12px 16px; text-align: center;
+    font-size: 0.7rem; color: var(--dj-text-secondary);
+  }
+  .interlude-screen .inter-timer strong { color: var(--dj-accent); }
+
+  /* ============ SCREEN 9: FINALE ============ */
+  .finale-screen .ps {
+    background: linear-gradient(180deg, var(--dj-ceremony-bg) 0%, #050508 100%);
+  }
+  .finale-screen .finale-confetti {
+    position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  }
+  .finale-screen .finale-confetti span {
+    position: absolute; font-size: 1.1rem;
+    animation: cFall 4s linear infinite; opacity: 0.5;
+  }
+  .finale-screen .finale-content {
+    position: relative; z-index: 2;
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .finale-screen .finale-label {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 3px;
+    color: var(--dj-accent); margin-bottom: 16px;
+  }
+  .finale-screen .finale-title {
+    font-size: 1.4rem; font-weight: 700; text-align: center;
+    margin-bottom: 16px;
+  }
+  .finale-screen .setlist-card {
+    width: 100%; background: rgba(255,255,255,0.04);
+    border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.08);
+  }
+  .finale-screen .setlist-header {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--dj-accent); margin-bottom: 10px;
+  }
+  .finale-screen .setlist-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.75rem;
+  }
+  .finale-screen .sl-song { color: var(--dj-text-primary); }
+  .finale-screen .sl-singer { color: var(--dj-text-secondary); font-size: 0.65rem; }
+  .finale-screen .finale-stats {
+    margin-top: 16px; display: flex; gap: 16px; justify-content: center;
+  }
+  .finale-screen .f-stat {
+    text-align: center;
+  }
+  .finale-screen .f-stat-num {
+    font-size: 1.5rem; font-weight: 700; color: var(--dj-accent);
+  }
+  .finale-screen .f-stat-label {
+    font-size: 0.6rem; color: var(--dj-text-secondary);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .finale-screen .share-btn-area {
+    position: relative; z-index: 2;
+    padding: 16px;
+  }
+  .finale-screen .share-btn {
+    width: 100%; padding: 14px; border-radius: 12px; border: none;
+    background: var(--dj-accent); color: #000;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem; font-weight: 700;
+    text-transform: uppercase; cursor: pointer;
+  }
+
+  /* ============ SCREEN: PARTY CARD DEAL ============ */
+  .card-deal-screen .ps { background: #1a0a1a; }
+  .card-deal-screen .card-hero {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .card-deal-screen .card-incoming {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--dj-text-secondary); margin-bottom: 16px;
+  }
+  .card-deal-screen .party-card {
+    width: 85%; border-radius: 16px; padding: 24px 20px;
+    text-align: center; position: relative; overflow: hidden;
+    background: var(--dj-surface); border: 2px solid;
+  }
+  .card-deal-screen .party-card.vocal { border-color: #4488ff; }
+  .card-deal-screen .party-card.performance { border-color: #aa66ff; }
+  .card-deal-screen .party-card.group { border-color: var(--dj-accent); }
+  .card-deal-screen .card-type-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 8px;
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .card-deal-screen .card-type-badge.vocal { background: rgba(68,136,255,0.15); color: #4488ff; }
+  .card-deal-screen .card-type-badge.performance { background: rgba(170,102,255,0.15); color: #aa66ff; }
+  .card-deal-screen .card-type-badge.group { background: rgba(255,215,0,0.15); color: var(--dj-accent); }
+  .card-deal-screen .card-emoji { font-size: 2.5rem; margin-bottom: 8px; }
+  .card-deal-screen .card-title {
+    font-size: 1.3rem; font-weight: 700; color: var(--dj-text-primary);
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .card-deal-screen .card-desc {
+    font-size: 0.8rem; color: var(--dj-text-secondary); line-height: 1.5;
+  }
+  .card-deal-screen .card-actions {
+    display: flex; gap: 10px; justify-content: center;
+    padding: 16px 20px; margin-top: 8px;
+  }
+  .card-deal-screen .card-btn {
+    padding: 12px 20px; border-radius: 12px; border: none;
+    font-family: 'Space Grotesk', sans-serif; font-size: 0.8rem;
+    font-weight: 700; text-transform: uppercase; cursor: pointer;
+    flex: 1; max-width: 120px;
+  }
+  .card-deal-screen .card-btn.accept { background: var(--dj-action-confirm); color: #000; }
+  .card-deal-screen .card-btn.dismiss { background: var(--dj-surface-elevated); color: var(--dj-text-secondary); }
+  .card-deal-screen .card-btn.redraw {
+    background: rgba(108,99,255,0.15); color: var(--dj-action-primary);
+    border: 1px solid rgba(108,99,255,0.3); position: relative;
+  }
+  .card-deal-screen .free-badge {
+    position: absolute; top: -6px; right: -6px;
+    background: var(--dj-accent); color: #000; font-size: 0.5rem;
+    padding: 2px 5px; border-radius: 6px;
+  }
+  .card-deal-screen .card-timer {
+    font-size: 0.65rem; color: var(--dj-text-secondary);
+    text-align: center; margin-top: 8px;
+  }
+
+  /* ============ SCREEN: LIGHTSTICK MODE ============ */
+  .lightstick-screen .ps { background: #0a0a0f; }
+  .lightstick-screen .lightstick-glow {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, color-mix(in srgb, var(--dj-action-primary) 25%, transparent) 0%, transparent 70%);
+    animation: lightstickPulse 2s ease-in-out infinite;
+  }
+  @keyframes lightstickPulse {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+  }
+  .lightstick-screen .lightstick-content {
+    position: relative; z-index: 2;
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-end;
+    padding: 20px 20px 24px;
+  }
+  .lightstick-screen .lightstick-label {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 3px;
+    color: var(--dj-text-secondary); margin-bottom: 20px; opacity: 0.6;
+  }
+  .lightstick-screen .color-picker {
+    display: flex; gap: 14px; margin-bottom: 16px;
+  }
+  .lightstick-screen .color-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid transparent; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .lightstick-screen .color-dot.active { border-color: #fff; transform: scale(1.2); }
+  .lightstick-screen .lightstick-bottom {
+    display: flex; gap: 12px; width: 100%; justify-content: center;
+  }
+  .lightstick-screen .ls-btn {
+    padding: 10px 20px; border-radius: 10px; border: none;
+    font-family: 'Space Grotesk', sans-serif; font-size: 0.75rem;
+    font-weight: 600; cursor: pointer;
+  }
+  .lightstick-screen .ls-btn.hype {
+    background: rgba(255,255,255,0.12); color: var(--dj-text-primary);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .lightstick-screen .ls-btn.exit {
+    background: rgba(255,255,255,0.06); color: var(--dj-text-secondary);
+  }
+
+  /* ============ SCREEN: CAPTURE BUBBLE ============ */
+  .capture-bubble-overlay {
+    position: absolute; bottom: 100px; left: 16px; z-index: 10;
+  }
+  .capture-bubble {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: rgba(108,99,255,0.2); border: 2px solid rgba(108,99,255,0.5);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; cursor: pointer;
+    animation: bubblePulse 2s ease-in-out infinite;
+  }
+  @keyframes bubblePulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(108,99,255,0.3); }
+    50% { transform: scale(1.08); box-shadow: 0 0 12px 4px rgba(108,99,255,0.2); }
+  }
+  .capture-expanded {
+    position: absolute; bottom: 56px; left: 0;
+    display: flex; gap: 8px; padding: 8px 12px;
+    background: var(--dj-surface-elevated); border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  .capture-expanded .cap-btn {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--dj-surface); border: 1px solid #333;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; cursor: pointer;
+  }
+
+  /* ============ SCREEN: INTERLUDE GAMES ============ */
+  .game-screen .game-hero {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .game-screen .game-icon { font-size: 3rem; margin-bottom: 12px; }
+  .game-screen .game-label {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--dj-text-secondary); margin-bottom: 4px;
+    padding: 3px 12px; border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+  }
+  .game-screen .game-title {
+    font-size: 1.1rem; font-weight: 700; color: var(--dj-accent);
+    margin-bottom: 20px;
+  }
+  /* Kings Cup */
+  .game-screen .kings-card {
+    width: 85%; border-radius: 16px; padding: 24px;
+    background: var(--dj-surface); border: 2px solid rgba(255,215,0,0.2);
+    text-align: center;
+  }
+  .game-screen .kings-rule {
+    font-size: 1rem; font-weight: 600; color: var(--dj-text-primary);
+    line-height: 1.6; margin-bottom: 16px;
+  }
+  .game-screen .kings-action {
+    font-size: 1.1rem; font-weight: 700; color: var(--dj-accent);
+    text-transform: uppercase;
+  }
+  /* Dare Pull */
+  .game-screen .dare-target {
+    font-size: 2rem; font-weight: 700; color: var(--dj-accent);
+    text-transform: uppercase; margin-bottom: 16px;
+    text-shadow: 0 0 20px color-mix(in srgb, var(--dj-accent) 30%, transparent);
+  }
+  .game-screen .dare-text {
+    width: 85%; padding: 20px; border-radius: 12px;
+    background: var(--dj-surface); border: 1px solid #333;
+    font-size: 0.9rem; color: var(--dj-text-primary);
+    text-align: center; line-height: 1.6;
+  }
+  .game-screen .dare-timer {
+    margin-top: 16px; font-size: 0.8rem; color: var(--dj-text-secondary);
+  }
+  .game-screen .dare-timer strong { color: var(--dj-accent); }
+  /* Quick Vote */
+  .game-screen .qv-question {
+    font-size: 1.1rem; font-weight: 700; color: var(--dj-text-primary);
+    text-align: center; margin-bottom: 24px; line-height: 1.5;
+    padding: 0 12px;
+  }
+  .game-screen .qv-options { width: 85%; display: flex; flex-direction: column; gap: 12px; }
+  .game-screen .qv-btn {
+    padding: 18px; border-radius: 12px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1rem; font-weight: 700; text-align: center;
+    text-transform: uppercase; cursor: pointer; border: 2px solid;
+  }
+  .game-screen .qv-btn.yes {
+    background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.3);
+    color: var(--dj-action-confirm);
+  }
+  .game-screen .qv-btn.no {
+    background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3);
+    color: var(--dj-action-danger);
+  }
+  .game-screen .qv-timer {
+    margin-top: 16px; font-size: 0.8rem; color: var(--dj-text-secondary);
+    text-align: center;
+  }
+  .game-screen .qv-timer strong { color: var(--dj-accent); }
+  /* Quick Vote Results */
+  .game-screen .qv-results { width: 85%; margin-top: 20px; }
+  .game-screen .qv-result-bar {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .game-screen .qv-label { width: 36px; font-size: 0.8rem; font-weight: 700; text-align: right; }
+  .game-screen .qv-label.yes-label { color: var(--dj-action-confirm); }
+  .game-screen .qv-label.no-label { color: var(--dj-action-danger); }
+  .game-screen .qv-track {
+    flex: 1; height: 20px; background: rgba(255,255,255,0.06);
+    border-radius: 4px; overflow: hidden;
+  }
+  .game-screen .qv-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+  .game-screen .qv-fill.yes-fill { background: var(--dj-action-confirm); }
+  .game-screen .qv-fill.no-fill { background: var(--dj-action-danger); }
+  .game-screen .qv-count { width: 20px; font-size: 0.75rem; color: var(--dj-text-secondary); }
+
+  /* Flow arrow between sections */
+  .flow-arrow {
+    text-align: center; padding: 8px 0;
+    color: var(--dj-text-secondary); font-size: 1.2rem;
+  }
+
+  /* Section dividers */
+  .section-divider {
+    max-width: 900px; margin: 0 auto 2rem;
+    border-top: 1px solid #1a1a2e;
+    padding-top: 1rem;
+  }
+  .section-divider .phase-name {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--dj-text-secondary);
+  }
+
+  @media (max-width: 700px) {
+    .screen-section { flex-direction: column-reverse; align-items: center; }
+    .screen-info { min-width: unset; text-align: center; }
+    .screen-info .detail-list { text-align: left; }
+    body { padding: 1rem; }
+  }
+</style>
+</head>
+<body data-vibe="general">
+
+<h1>KARAMANIA</h1>
+<p class="subtitle">Full DJ State Walkthrough — Every screen, in sequence (15 screens)</p>
+
+<!-- VIBE SWITCHER -->
+<div class="vibe-switcher">
+  <button class="vibe-btn active" onclick="setVibe('general',this)">🎤 General</button>
+  <button class="vibe-btn" onclick="setVibe('kpop',this)">💖 K-pop</button>
+  <button class="vibe-btn" onclick="setVibe('rock',this)">🎸 Rock</button>
+  <button class="vibe-btn" onclick="setVibe('ballad',this)">🎵 Ballad</button>
+  <button class="vibe-btn" onclick="setVibe('edm',this)">🎧 EDM</button>
+</div>
+
+<!-- ========== PHASE: JOIN ========== -->
+<div class="section-divider">
+  <div class="phase-name">Phase 1 — Join</div>
+</div>
+
+<!-- SCREEN 1: LOBBY -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(108,99,255,0.15); color:var(--dj-action-primary);">LOBBY</div>
+    <h2>Join & Name Entry</h2>
+    <p>User scans QR code → lands here. Zero accounts, zero downloads. Name entry is the only friction. Join button activates AudioContext (the critical first tap).</p>
+    <ul class="detail-list">
+      <li><strong>Entry:</strong> QR code → PWA URL with party code</li>
+      <li><strong>Input:</strong> Name only (no avatar, no email)</li>
+      <li><strong>Audio unlock:</strong> JOIN tap creates AudioContext</li>
+      <li><strong>Participant dots:</strong> Show who's already in</li>
+    </ul>
+    <div class="timing"><strong>Time budget:</strong> <8 seconds from scan to joined</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone lobby-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag">lobby</span>
+          <span class="people-count">4 joined</span>
+        </div>
+        <div class="divider"></div>
+        <div class="lobby-hero">
+          <div class="app-logo">KARAMANIA</div>
+          <div class="app-tagline">Your phone. The party.</div>
+          <input class="name-input" placeholder="Your name" value="Duc" readonly>
+          <button class="join-btn">JOIN PARTY</button>
+        </div>
+        <div class="lobby-footer">
+          <div class="participant-dots">
+            <div class="p-dot filled">L</div>
+            <div class="p-dot filled">M</div>
+            <div class="p-dot filled">T</div>
+            <div class="p-dot filled">H</div>
+            <div class="p-dot">?</div>
+            <div class="p-dot">?</div>
+          </div>
+          <div class="waiting-text">Waiting for host to start...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓</div>
+
+<!-- SCREEN 2: ICEBREAKER -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(108,99,255,0.15); color:var(--dj-action-primary);">LOBBY → ICEBREAKER</div>
+    <h2>Icebreaker Tap</h2>
+    <p>First group interaction. Everyone answers simultaneously, results revealed together. Teaches the core pattern: private input → public output. Also serves as AudioContext activation fallback for late joiners.</p>
+    <ul class="detail-list">
+      <li><strong>Pattern taught:</strong> Tap → wait → reveal together</li>
+      <li><strong>Audio:</strong> First tap unlocks AudioContext</li>
+      <li><strong>Social:</strong> Low-stakes, no wrong answer</li>
+      <li><strong>Duration:</strong> ~15 seconds total</li>
+    </ul>
+    <div class="timing"><strong>Aha moment:</strong> First synchronized reveal — "every phone showed the same thing at the same time!"</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone icebreaker-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag">icebreaker</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">8 in</span>
+        </div>
+        <div class="divider"></div>
+        <div class="ice-hero">
+          <div class="ice-prompt">First question</div>
+          <div class="ice-question">Tonight's karaoke anthem will be...</div>
+          <div class="ice-options">
+            <div class="ice-option">🎤 A power ballad</div>
+            <div class="ice-option selected">🎸 Something we'll regret</div>
+            <div class="ice-option">💃 A dance banger</div>
+            <div class="ice-option">😭 An emotional wreck</div>
+          </div>
+          <div class="ice-note">Everyone answers. Results revealed together.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PHASE: PARTY CARD DEAL ========== -->
+<div class="section-divider">
+  <div class="phase-name">Phase 2 — Party Card Deal (pre-song moment)</div>
+</div>
+
+<!-- SCREEN: PARTY CARD DEAL -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(170,102,255,0.15); color:#aa66ff;">PARTY CARD DEAL</div>
+    <h2>Challenge Card — Singer's View</h2>
+    <p>DJ auto-deals one card per singer. 19 curated challenges across three types: vocal modifiers (blue), performance modifiers (purple), and group involvement (gold). Accept the dare, dismiss it, or burn your one free redraw.</p>
+    <ul class="detail-list">
+      <li><strong>Auto-deal:</strong> DJ picks from pool, no repeats until exhausted</li>
+      <li><strong>Singer choice:</strong> Accept, Dismiss, or Redraw (1 free)</li>
+      <li><strong>Audience sees:</strong> "🃏 CHALLENGE INCOMING..." with anticipation</li>
+      <li><strong>Soft deadline:</strong> 8s auto-dismiss, never blocks the music</li>
+      <li><strong>Group cards:</strong> Pick random participants, announced on all phones</li>
+    </ul>
+    <div class="timing"><strong>Core differentiator:</strong> Every performance becomes unique. "Will they do the dare?" creates anticipation before the first note.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone card-deal-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag" style="color:#aa66ff;">🃏 party card</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="divider"></div>
+        <div class="card-hero">
+          <div class="card-incoming">Your challenge</div>
+          <div class="party-card performance">
+            <div class="card-type-badge performance">PERFORMANCE</div>
+            <div class="card-emoji">🎭</div>
+            <div class="card-title">Method Actor</div>
+            <div class="card-desc">Perform like it's Broadway. Full theatrical gestures, dramatic pauses, drop to one knee at the bridge.</div>
+          </div>
+          <div class="card-actions">
+            <button class="card-btn accept">✓ Accept</button>
+            <button class="card-btn dismiss">✕ Pass</button>
+            <button class="card-btn redraw" style="position:relative;">🔄 Redraw<span class="free-badge">1 FREE</span></button>
+          </div>
+          <div class="card-timer">Auto-dismiss in 6s</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ Singer accepts or dismisses → Song starts ↓</div>
+
+<!-- ========== PHASE: SONG ========== -->
+<div class="section-divider">
+  <div class="phase-name">Phase 3 — Song (60-70% of session time)</div>
+</div>
+
+<!-- SCREEN 3: SONG STATE -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(74,222,128,0.15); color:var(--dj-action-confirm);">SONG</div>
+    <h2>Song State — Lean-In Mode</h2>
+    <p>Where users spend most of their time. Phone is a participation device: soundboard taps audible to the room, emoji reactions visible on all screens. Near-silent app — real karaoke is the soundtrack.</p>
+    <ul class="detail-list">
+      <li><strong>Soundboard:</strong> 6 sounds (3×2 grid), taps audible via Web Audio</li>
+      <li><strong>Reactions:</strong> 5 emoji, visible on all screens as scatter</li>
+      <li><strong>Participants:</strong> Compact list, activity status</li>
+      <li><strong>Song Over:</strong> Host-only, 500ms long-press</li>
+      <li><strong>Audio state:</strong> Web Audio graph near-dormant</li>
+    </ul>
+    <div class="timing"><strong>Attention mode:</strong> Lean-in. Casual glances between songs. Phone at side or on table.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone song-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag" style="color:var(--dj-action-confirm);">♪ song</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="divider"></div>
+        <div class="song-header">
+          <div class="song-title" style="font-size:0.75rem;color:var(--dj-text-secondary);">🎵 Ballad</div>
+          <div class="singer-chip">🎤 Linh is singing</div>
+        </div>
+        <div class="divider"></div>
+        <div class="soundboard">
+          <div class="sb-btn">👏 Clap</div>
+          <div class="sb-btn">🔔 Cheer</div>
+          <div class="sb-btn">😂 Laugh</div>
+          <div class="sb-btn">🎵 Sing</div>
+          <div class="sb-btn">🥁 Drum</div>
+          <div class="sb-btn">📯 Horn</div>
+        </div>
+        <div class="reactions-row">
+          <div class="react-btn">🔥</div>
+          <div class="react-btn">❤️</div>
+          <div class="react-btn">😍</div>
+          <div class="react-btn">💀</div>
+          <div class="react-btn">😂</div>
+        </div>
+        <div class="participants-mini">
+          <div class="p-row"><div class="p-av">L</div><span class="p-nm">Linh</span><span class="p-st">singing</span></div>
+          <div class="p-row"><div class="p-av">D</div><span class="p-nm">Duc</span><span class="p-st">active</span></div>
+          <div class="p-row"><div class="p-av">M</div><span class="p-nm">Minh</span><span class="p-st idle">idle</span></div>
+        </div>
+        <div class="song-over-area">
+          <div class="song-over-btn">HOLD — SONG OVER!</div>
+          <div class="song-over-hint">Long-press to end song (host only)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ Toggle: Lean-in ↔ Lightstick Mode ↓</div>
+
+<!-- SCREEN: LIGHTSTICK MODE -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(108,99,255,0.15); color:var(--dj-action-primary);">SONG → LIGHTSTICK</div>
+    <h2>Lightstick Mode</h2>
+    <p>Phone becomes a concert lightstick. Full-screen animated glow — hold it up and sway. Creates a physical-room concert atmosphere in a dark KTV room when multiple phones glow together. Free-form: no synchronization, each person picks their color.</p>
+    <ul class="detail-list">
+      <li><strong>Toggle:</strong> One tap from lean-in mode to enter</li>
+      <li><strong>Color picker:</strong> 5 dots along bottom, tap to change</li>
+      <li><strong>Hype signal:</strong> Still available — flash/strobe button</li>
+      <li><strong>Exit:</strong> Tap anywhere or swipe down</li>
+      <li><strong>No sync:</strong> Each phone independent — organic feel</li>
+    </ul>
+    <div class="timing"><strong>Participation:</strong> Lightstick mode active time = passive tier (1 pt). The phone is a prop, not a screen.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone lightstick-screen">
+      <div class="ps">
+        <div class="lightstick-glow"></div>
+        <div class="top-bar" style="position:relative;z-index:2;opacity:0.5;">
+          <span class="state-tag">♪ lightstick</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="lightstick-content">
+          <div class="lightstick-label">Sway your phone</div>
+          <div class="color-picker">
+            <div class="color-dot active" style="background:#6c63ff;"></div>
+            <div class="color-dot" style="background:#ff0080;"></div>
+            <div class="color-dot" style="background:#4ade80;"></div>
+            <div class="color-dot" style="background:#ffd700;"></div>
+            <div class="color-dot" style="background:#00c8ff;"></div>
+          </div>
+          <div class="lightstick-bottom">
+            <button class="ls-btn hype">⚡ Hype</button>
+            <button class="ls-btn exit">✕ Exit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ Capture bubble appears at reaction peaks ↓</div>
+
+<!-- SCREEN: CAPTURE BUBBLE (overlay on Song State) -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(108,99,255,0.15); color:var(--dj-action-primary);">OVERLAY → CAPTURE</div>
+    <h2>Prompted Media Capture</h2>
+    <p>Floating bubble appears at key moments: reaction peaks, post-ceremony, session start/end. Any participant pops it to capture a photo, video (5s max), or audio snippet. Non-intrusive — ignore it and it fades. Building the raw content pipeline for v3 highlight reels.</p>
+    <ul class="detail-list">
+      <li><strong>Trigger:</strong> Server-side reaction peak detection</li>
+      <li><strong>Pop → Capture:</strong> 2 taps total (pop + select type)</li>
+      <li><strong>Photo:</strong> Inline on all browsers</li>
+      <li><strong>Video/Audio:</strong> Inline on Chrome, native picker on iOS</li>
+      <li><strong>Upload:</strong> Background queue, never blocks party</li>
+      <li><strong>Also:</strong> Persistent capture icon in toolbar (manual anytime)</li>
+    </ul>
+    <div class="timing"><strong>Design rule:</strong> Max 1 bubble per 60s. Never during voting or silence phase. Auto-dismiss after 15s.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone song-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag" style="color:var(--dj-action-confirm);">♪ song</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="divider"></div>
+        <div class="song-header">
+          <div class="song-title" style="font-size:0.75rem;color:var(--dj-text-secondary);">🎸 Rock</div>
+          <div class="singer-chip">🎤 Duc is singing · 🎭 Method Actor</div>
+        </div>
+        <div class="divider"></div>
+        <div class="soundboard">
+          <div class="sb-btn">👏 Clap</div>
+          <div class="sb-btn">🔔 Cheer</div>
+          <div class="sb-btn">😂 Laugh</div>
+          <div class="sb-btn">🎵 Sing</div>
+          <div class="sb-btn">🥁 Drum</div>
+          <div class="sb-btn">📯 Horn</div>
+        </div>
+        <div class="reactions-row">
+          <div class="react-btn">🔥</div>
+          <div class="react-btn">❤️</div>
+          <div class="react-btn">😍</div>
+          <div class="react-btn">💀</div>
+          <div class="react-btn">😂</div>
+        </div>
+        <div style="padding:6px 16px;display:flex;gap:8px;">
+          <div style="padding:8px 14px;border-radius:8px;background:rgba(108,99,255,0.08);border:1px solid rgba(108,99,255,0.2);font-size:0.7rem;color:var(--dj-action-primary);cursor:pointer;">💡 Lightstick</div>
+          <div style="padding:8px 14px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);font-size:0.7rem;color:var(--dj-text-secondary);cursor:pointer;">⚡ Hype</div>
+          <div style="padding:8px 14px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);font-size:0.7rem;color:var(--dj-text-secondary);cursor:pointer;">📸</div>
+        </div>
+        <!-- Capture Bubble Overlay -->
+        <div class="capture-bubble-overlay">
+          <div class="capture-expanded">
+            <div class="cap-btn">📷</div>
+            <div class="cap-btn">📹</div>
+            <div class="cap-btn">🎤</div>
+          </div>
+          <div class="capture-bubble">📸</div>
+        </div>
+        <div class="song-over-area">
+          <div class="song-over-btn">HOLD — SONG OVER!</div>
+          <div class="song-over-hint">Long-press to end song (host only)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PHASE: CEREMONY ========== -->
+<div class="section-divider">
+  <div class="phase-name">Phase 4 — Ceremony (the defining experience)</div>
+</div>
+
+<div class="flow-arrow">↓ Host long-presses "Song Over!" ↓</div>
+
+<!-- SCREEN 4: VOTING -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(255,215,0,0.15); color:var(--dj-accent);">CEREMONY → VOTE</div>
+    <h2>Voting Phase (T+0 to T+4s)</h2>
+    <p>4-second hard window. Visual countdown creates game-show urgency. Everyone votes for anyone except themselves. Drumroll builds across all devices.</p>
+    <ul class="detail-list">
+      <li><strong>Duration:</strong> Exactly 4 seconds, server-enforced</li>
+      <li><strong>Input:</strong> Single tap on one nominee</li>
+      <li><strong>Timer:</strong> Circular countdown (conic-gradient)</li>
+      <li><strong>Audio:</strong> Drumroll building on all devices</li>
+      <li><strong>Sync:</strong> Server sends revealAt timestamp at T+0</li>
+    </ul>
+    <div class="timing"><strong>Attention mode:</strong> Active. All eyes on phones.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone voting-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag" style="color:var(--dj-accent);">★ ceremony</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="divider"></div>
+        <div class="vote-header">
+          <div class="vote-category">Vote now</div>
+          <div class="vote-title">Best Vocalist</div>
+        </div>
+        <div class="vote-timer"><div class="timer-inner">2</div></div>
+        <div class="nominee-list">
+          <div class="nominee">
+            <div class="nom-avatar">L</div>
+            <div class="nom-name">Linh</div>
+            <div class="nom-check"></div>
+          </div>
+          <div class="nominee voted">
+            <div class="nom-avatar">D</div>
+            <div class="nom-name">Duc</div>
+            <div class="nom-check">✓</div>
+          </div>
+          <div class="nominee">
+            <div class="nom-avatar">M</div>
+            <div class="nom-name">Minh</div>
+            <div class="nom-check"></div>
+          </div>
+          <div class="nominee">
+            <div class="nom-avatar">T</div>
+            <div class="nom-name">Trang</div>
+            <div class="nom-check"></div>
+          </div>
+          <div class="nominee">
+            <div class="nom-avatar">H</div>
+            <div class="nom-name">Huy</div>
+            <div class="nom-check"></div>
+          </div>
+        </div>
+        <div class="vote-footer">Tap to vote · You can't vote for yourself</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ Vote window closes ↓</div>
+
+<!-- SCREEN 5: SILENCE -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(255,255,255,0.08); color:#666;">CEREMONY → SILENCE</div>
+    <h2>The Silence (T+4s to T+6s)</h2>
+    <p>ALL audio cuts. ALL screens go near-black. Just the category name pulsing faintly. The room physically quiets. This is the highest-tension moment — humans mirror device behavior.</p>
+    <ul class="detail-list">
+      <li><strong>Duration:</strong> 1.5-2 seconds</li>
+      <li><strong>Audio:</strong> Complete silence on all devices</li>
+      <li><strong>Visual:</strong> Near-black, category pulsing faintly</li>
+      <li><strong>Sync:</strong> ±200ms tolerance (imperceptible)</li>
+      <li><strong>Effect:</strong> Room goes quiet. Tension peaks.</li>
+    </ul>
+    <div class="timing"><strong>The magic:</strong> When every phone goes dark and silent simultaneously, conversation stops involuntarily.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone silence-screen">
+      <div class="ps">
+        <div class="silence-content">
+          <div class="silence-category">Best Vocalist</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ revealAt timestamp fires ↓</div>
+
+<!-- SCREEN 6: REVEAL -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(255,215,0,0.15); color:var(--dj-accent);">CEREMONY → REVEAL</div>
+    <h2>The Reveal (T+6s)</h2>
+    <p>Every phone erupts simultaneously. Host phone: full-volume fanfare. Participant phones: 60% crowd roar. Winner's phone: unique sound + extra haptic. The room physically reacts — laughter, pointing, friendly arguing.</p>
+    <ul class="detail-list">
+      <li><strong>Animation:</strong> scale + elasticOut (800ms)</li>
+      <li><strong>Audio:</strong> Spatial — host loud, participants crowd</li>
+      <li><strong>Vote chart:</strong> Shows margin of victory</li>
+      <li><strong>Confetti:</strong> Sprite sheet scatter (vibe-specific emoji)</li>
+      <li><strong>Winner phone:</strong> Unique celebration + share card</li>
+    </ul>
+    <div class="timing"><strong>Physical reaction target:</strong> Laughter + pointing within 3 seconds. "The Friendly Accusation Roar."</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone reveal-screen">
+      <div class="ps">
+        <div class="reveal-glow"></div>
+        <div class="confetti-layer">
+          <span style="left:5%; animation-delay:0s;">✨</span>
+          <span style="left:20%; animation-delay:0.3s;">🎉</span>
+          <span style="left:40%; animation-delay:0.6s;">🌟</span>
+          <span style="left:60%; animation-delay:0.2s;">🎊</span>
+          <span style="left:80%; animation-delay:0.8s;">✨</span>
+          <span style="left:92%; animation-delay:0.4s;">🌟</span>
+        </div>
+        <div class="top-bar" style="position:relative;z-index:2;">
+          <span class="state-tag" style="color:var(--dj-accent);">★ reveal</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="reveal-content">
+          <div class="reveal-category">Best Vocalist</div>
+          <div class="reveal-emoji">🎤</div>
+          <div class="reveal-name">LINH</div>
+          <div class="reveal-subtitle">Absolute showstopper</div>
+          <div class="vote-results">
+            <div class="vr-bar">
+              <span class="vr-name">Linh</span>
+              <div class="vr-track"><div class="vr-fill win" style="width:62%"></div></div>
+              <span class="vr-pct">62%</span>
+            </div>
+            <div class="vr-bar">
+              <span class="vr-name">Duc</span>
+              <div class="vr-track"><div class="vr-fill lose" style="width:25%"></div></div>
+              <span class="vr-pct">25%</span>
+            </div>
+            <div class="vr-bar">
+              <span class="vr-name">Minh</span>
+              <div class="vr-track"><div class="vr-fill lose" style="width:13%"></div></div>
+              <span class="vr-pct">13%</span>
+            </div>
+          </div>
+        </div>
+        <div class="reveal-reactions">
+          <div class="rr-btn">🔥</div>
+          <div class="rr-btn">👏</div>
+          <div class="rr-btn">😂</div>
+          <div class="rr-btn">💀</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ If second ceremony queued ↓</div>
+
+<!-- SCREEN 7: QUICK CEREMONY -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(255,215,0,0.1); color:var(--dj-accent);">CEREMONY → QUICK</div>
+    <h2>Quick Ceremony (~6s)</h2>
+    <p>No voting. DJ auto-selects winner from participation data. Brief anticipation → quick reveal with single chime. The shoutout, not the game show. Always follows a Full ceremony, never leads.</p>
+    <ul class="detail-list">
+      <li><strong>No voting:</strong> DJ picks from reaction/soundboard data</li>
+      <li><strong>Duration:</strong> ~6 seconds total</li>
+      <li><strong>Audio:</strong> Single chime, no fanfare</li>
+      <li><strong>Visual:</strong> Simpler — no bar chart, no confetti</li>
+      <li><strong>Purpose:</strong> Keeps energy up without ceremony fatigue</li>
+    </ul>
+    <div class="timing"><strong>Max back-to-back:</strong> 1 Full + 1 Quick, then mandatory interlude.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone quick-screen">
+      <div class="ps">
+        <div class="top-bar" style="position:relative;z-index:2;">
+          <span class="state-tag" style="color:var(--dj-accent);">★ quick</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="quick-content">
+          <div class="quick-label">SHOUTOUT</div>
+          <div class="quick-category">Room MVP</div>
+          <div class="quick-emoji">🏆</div>
+          <div class="quick-name">DUC</div>
+          <div class="quick-reason">Most soundboard taps this round — absolute hype machine</div>
+        </div>
+        <div class="quick-footer">Auto-selected by the DJ engine</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PHASE: INTERLUDE ========== -->
+<div class="section-divider">
+  <div class="phase-name">Phase 5 — Interlude Games</div>
+</div>
+
+<!-- INTERLUDE: KINGS CUP -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(255,215,0,0.15); color:var(--dj-accent);">INTERLUDE → KINGS CUP</div>
+    <h2>Kings Cup — Group Rule Card</h2>
+    <p>A rule card applies to a group based on shared experience. Everyone self-selects — no individual targeting. Perfect for the first 30 minutes: low pressure, high inclusion, Trang-friendly.</p>
+    <ul class="detail-list">
+      <li><strong>Mechanic:</strong> Group-based, self-selecting</li>
+      <li><strong>Duration:</strong> 10 seconds display, then auto-advance</li>
+      <li><strong>No enforcement:</strong> If it applies to you, you decide</li>
+      <li><strong>Examples:</strong> "Everyone who's been to Đà Lạt..." / "If your song is queued..."</li>
+    </ul>
+    <div class="timing"><strong>Front-loaded:</strong> Played in first 30 min. Universal, no wrong answer, no individual spotlight.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone game-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag" style="color:var(--dj-accent);">♛ interlude</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="divider"></div>
+        <div class="game-hero">
+          <div class="game-label">KINGS CUP</div>
+          <div class="game-icon">👑</div>
+          <div class="kings-card">
+            <div class="kings-rule">Everyone who has been to<br>Đà Lạt this year...</div>
+            <div class="kings-action">Sing the next chorus together!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ Or... ↓</div>
+
+<!-- INTERLUDE: DARE PULL -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(239,68,68,0.15); color:var(--dj-action-danger);">INTERLUDE → DARE PULL</div>
+    <h2>Dare Pull — Random Target</h2>
+    <p>A dare assigned to a random participant. Name reveals with a slot-machine animation for drama. Social dynamics handle opt-outs — if they don't want to, they just laugh it off. Never front-loaded: individual dares only after 30+ minutes when trust is earned.</p>
+    <ul class="detail-list">
+      <li><strong>Mechanic:</strong> Random participant, random dare</li>
+      <li><strong>Reveal:</strong> Slot-machine name cycling → dramatic pause → name</li>
+      <li><strong>Duration:</strong> 15 seconds for dare to happen (IRL)</li>
+      <li><strong>No enforcement:</strong> App doesn't track completion</li>
+    </ul>
+    <div class="timing"><strong>Trust gate:</strong> Only after minute 30. Individual spotlight requires earned group comfort.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone game-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag" style="color:var(--dj-action-danger);">🎲 interlude</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="divider"></div>
+        <div class="game-hero">
+          <div class="game-label">DARE PULL</div>
+          <div class="game-icon">🎲</div>
+          <div class="dare-target">MINH!</div>
+          <div class="dare-text">Do your best impression<br>of the last singer</div>
+          <div class="dare-timer">⏱️ <strong>12s</strong> remaining</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ Or... ↓</div>
+
+<!-- INTERLUDE: QUICK VOTE -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(74,222,128,0.15); color:var(--dj-action-confirm);">INTERLUDE → QUICK VOTE</div>
+    <h2>Quick Vote — Binary Opinion Poll</h2>
+    <p>A binary opinion question. Everyone votes within 6 seconds. Results reveal as a bar chart. No winner, no loser — just the room discovering where they stand. The most universally engaging interlude: everyone has opinions.</p>
+    <ul class="detail-list">
+      <li><strong>Mechanic:</strong> Binary choice, 6s hard window</li>
+      <li><strong>Results:</strong> Bar chart with vote split + count</li>
+      <li><strong>Duration:</strong> 6s voting + 5s results reveal</li>
+      <li><strong>No judgment:</strong> Just opinions, no right answer</li>
+    </ul>
+    <div class="timing"><strong>Trang moment:</strong> "Pineapple on pizza?" → strong opinion → taps NEVER → "See?!" First words about the app.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone game-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag" style="color:var(--dj-action-confirm);">📊 interlude</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="divider"></div>
+        <div class="game-hero">
+          <div class="game-label">QUICK VOTE</div>
+          <div class="qv-question">Is Bohemian Rhapsody overrated?</div>
+          <div class="qv-results">
+            <div class="qv-result-bar">
+              <span class="qv-label yes-label">YES</span>
+              <div class="qv-track"><div class="qv-fill yes-fill" style="width:62%;"></div></div>
+              <span class="qv-count">5</span>
+            </div>
+            <div class="qv-result-bar">
+              <span class="qv-label no-label">NO</span>
+              <div class="qv-track"><div class="qv-fill no-fill" style="width:38%;"></div></div>
+              <span class="qv-count">3</span>
+            </div>
+          </div>
+          <div class="qv-timer" style="margin-top:20px;">Results revealed!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ Then: vote for next singer ↓</div>
+
+<!-- SCREEN 8: INTERLUDE VOTE -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(108,99,255,0.15); color:var(--dj-action-primary);">INTERLUDE</div>
+    <h2>Vote for Next Singer</h2>
+    <p>Bridge between ceremony and next song. "Vote for next singer" instead of "vote for next song" — avoids face-saving issues when someone's beloved song loses. Winner taps a genre tag (one tap) before walking to the mic, feeding contextual ceremonies and challenges.</p>
+    <ul class="detail-list">
+      <li><strong>Who not what:</strong> Vote for the person, not the song</li>
+      <li><strong>Genre tag:</strong> Winner taps one genre before singing</li>
+      <li><strong>Contextual DJ:</strong> Genre history feeds ceremony categories + challenges</li>
+      <li><strong>Timer:</strong> Auto-advances after 15-20 seconds</li>
+      <li><strong>Fallback:</strong> If no votes, DJ picks the least-recently-singing person</li>
+    </ul>
+    <div class="timing"><strong>Cultural design:</strong> Vietnamese KTV — voting for a person is encouragement; voting against a song is personal.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone interlude-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag" style="color:var(--dj-action-primary);">♫ interlude</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="divider"></div>
+        <div class="inter-header">
+          <div class="inter-label">Up next</div>
+          <div class="inter-title">Who's singing next?</div>
+          <div class="inter-subtitle">Vote for a friend — they pick the song!</div>
+        </div>
+        <div class="singer-options">
+          <div class="singer-card leading">
+            <div class="singer-av">D</div>
+            <div class="singer-info">
+              <div class="singer-name">Duc</div>
+              <div class="singer-song-hint" style="font-size:0.6rem;color:var(--dj-text-secondary);">Last sang: 🎸 Rock</div>
+            </div>
+            <div class="singer-votes">5 votes</div>
+          </div>
+          <div class="singer-card">
+            <div class="singer-av">T</div>
+            <div class="singer-info">
+              <div class="singer-name">Trang</div>
+              <div class="singer-song-hint" style="font-size:0.6rem;color:var(--dj-text-secondary);">Haven't sung yet</div>
+            </div>
+            <div class="singer-votes">2 votes</div>
+          </div>
+          <div class="singer-card">
+            <div class="singer-av">H</div>
+            <div class="singer-info">
+              <div class="singer-name">Huy</div>
+              <div class="singer-song-hint" style="font-size:0.6rem;color:var(--dj-text-secondary);">Last sang: 🎵 Ballad</div>
+            </div>
+            <div class="singer-votes">1 vote</div>
+          </div>
+        </div>
+        <div class="pool-hint" style="padding:8px 16px;text-align:center;">
+          <span style="display:inline-block;padding:4px 10px;border-radius:10px;background:rgba(108,99,255,0.08);border:1px solid rgba(108,99,255,0.2);font-size:0.6rem;color:var(--dj-action-primary);">Tonight: 🎵3 Ballad · 🎸2 Rock · 💃1 Dance</span>
+        </div>
+        <div class="inter-timer">Next singer in <strong>12s</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PHASE: FINALE ========== -->
+<div class="section-divider">
+  <div class="phase-name">Phase 6 — Finale (end of night)</div>
+</div>
+
+<!-- SCREEN 9: FINALE -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(255,215,0,0.15); color:var(--dj-accent);">FINALE</div>
+    <h2>End-of-Night Recap</h2>
+    <p>Full 60-second crescendo. Setlist poster assembles song by song. Night stats roll in. Share-ready 9:16 card generates. The morning-after FOMO machine.</p>
+    <ul class="detail-list">
+      <li><strong>Stats recap:</strong> Performances, ceremonies, reactions, genre mix</li>
+      <li><strong>Singer highlights:</strong> Who sang most, genre champions</li>
+      <li><strong>Share card:</strong> 9:16 Instagram Story dimensions</li>
+      <li><strong>Audio:</strong> Orchestral flourish, full volume all devices</li>
+      <li><strong>Post-MVP:</strong> Song-level setlist via music service integration</li>
+    </ul>
+    <div class="timing"><strong>Morning-after priority:</strong> FOMO first (share card), nostalgia second (setlist), pride third (personal stats).</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone finale-screen">
+      <div class="ps">
+        <div class="finale-confetti">
+          <span style="left:8%; animation-delay:0s;">🎉</span>
+          <span style="left:25%; animation-delay:0.5s;">✨</span>
+          <span style="left:45%; animation-delay:0.2s;">🌟</span>
+          <span style="left:65%; animation-delay:0.7s;">🎊</span>
+          <span style="left:85%; animation-delay:0.3s;">✨</span>
+        </div>
+        <div class="top-bar" style="position:relative;z-index:2;">
+          <span class="state-tag" style="color:var(--dj-accent);">★ finale</span>
+        </div>
+        <div class="finale-content">
+          <div class="finale-label">That's a wrap!</div>
+          <div class="finale-title">Linh's Party</div>
+          <div class="setlist-card">
+            <div class="setlist-header">Tonight's Performances</div>
+            <div class="setlist-item"><span class="sl-song">🎵 Ballad</span><span class="sl-singer">Linh</span></div>
+            <div class="setlist-item"><span class="sl-song">🎸 Rock</span><span class="sl-singer">Duc</span></div>
+            <div class="setlist-item"><span class="sl-song">🎵 Ballad</span><span class="sl-singer">Minh</span></div>
+            <div class="setlist-item"><span class="sl-song">💃 Dance</span><span class="sl-singer">Trang & Huy</span></div>
+            <div class="setlist-item"><span class="sl-song">🎤 Pop</span><span class="sl-singer">Linh</span></div>
+          </div>
+          <div class="finale-stats">
+            <div class="f-stat"><div class="f-stat-num">5</div><div class="f-stat-label">Songs</div></div>
+            <div class="f-stat"><div class="f-stat-num">4</div><div class="f-stat-label">Ceremonies</div></div>
+            <div class="f-stat"><div class="f-stat-num">127</div><div class="f-stat-label">Reactions</div></div>
+          </div>
+        </div>
+        <div class="share-btn-area">
+          <button class="share-btn">SHARE THE NIGHT ✨</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function setVibe(vibe, btn) {
+  document.body.setAttribute('data-vibe', vibe);
+  document.querySelectorAll('.vibe-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+
+</body>
+</html>

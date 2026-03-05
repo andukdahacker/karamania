@@ -1,0 +1,90 @@
+KARAMANIA
+The Party Layer for Karaoke
+
+--
+
+THE PROBLEM
+
+Every karaoke night has the same failure modes. The host becomes an unpaid MC — managing the queue, filling dead air, never actually having fun. Non-singers check out by song three, scrolling their phones in the corner. The performer finishes a song to awkward silence. And the best moments of the night? Gone. No one captured them.
+
+Karaoke rooms are social. Karaoke apps are not.
+
+--
+
+THE INSIGHT
+
+Nobody needs another karaoke app. The karaoke machine works fine. What's broken is everything around it — the dead air between songs, the lack of audience participation, the host who can't stop working, and the shy friend who never finds a way in.
+
+The gap isn't the music. It's the party.
+
+--
+
+THE PRODUCT
+
+Karamania is a second-screen companion app that turns karaoke nights into interactive group experiences. It doesn't play music. It doesn't replace anything. It runs alongside whatever karaoke system is already in the room.
+
+How it works:
+- Host opens the app and taps "Start Party"
+- A QR code appears — everyone scans it
+- No downloads, no accounts, no setup — just a browser tab
+- The app takes over from there
+
+An invisible DJ engine orchestrates the entire night automatically. Between songs: crowd voting, funny awards, mini-games, dares, and group moments. During songs: live emoji reactions, soundboard effects, and real-time hype from every phone in the room.
+
+The host's only job? Tap "Song Over" when someone finishes singing. One button. That's it. The rest of the night runs itself.
+
+--
+
+WHY IT WORKS
+
+For the host: "The app ran my party for me." She had fun at her own party for the first time.
+
+For the non-singer: 200+ reactions, 30+ soundboard hits, every ceremony voted in. More participation points than two of the singers. Never sang a note. Best time in the room.
+
+For the shy friend: Started by tapping one emoji. An hour later, she's singing a chorus with four others. Posted her award to Instagram: "apparently I'm a karaoke person now???"
+
+For the performer: Song ends. 15-second ceremony. Crowd votes. Award reveals: "Vocal Assassin." A moment card generates — styled like a concert poster. It's in the group chat before he sits down. A friend from another group DMs: "What app is that?"
+
+--
+
+THE MARKET
+
+The global karaoke app market is $7.5B, growing at 10% CAGR. Every player in the space is trying to BE the karaoke system — streaming music, managing lyrics, selling song packs.
+
+Nobody is building the party layer.
+
+Karamania occupies genuine white space: a companion app that makes the social experience better without touching music licensing, hardware, or venue infrastructure. It works at any karaoke venue, with any system, anywhere.
+
+--
+
+THE FLYWHEEL
+
+The product's shareable output IS the acquisition channel. Every setlist poster shared to Instagram Stories, every moment card sent to a group chat — that's organic marketing baked into features people already want to use.
+
+A friend sees a "Vocal Assassin" moment card. Asks "what app is that?" The answer is a QR code at the next karaoke night. Zero friction from discovery to first use.
+
+--
+
+GO-TO-MARKET
+
+Vietnam first. HCMC and Hanoi have massive karaoke cultures — friend groups hit karaoke rooms weekly. The target: 500+ parties per month in these two cities within 12 months.
+
+Launch strategy: One real friend group. One karaoke night. If they say "we're doing this again" — we have product-market fit. Then their friends host their own nights. Then their friends' friends.
+
+Viral coefficient target: 0.3 at 3 months, 0.5 at 12 months.
+
+--
+
+THE BET
+
+One technical innovation: the server-authoritative DJ engine — a real-time state machine that orchestrates a multi-hour social experience with automatic gap-filling, activity cycling, and dead air prevention. No existing product does this for in-person social events.
+
+Everything else is a design decision executed well or poorly. One bet, not four.
+
+--
+
+MVP: 5.5 weeks. Solo developer. Zero infrastructure cost at launch.
+
+Success metric: >80% "Would use again" from the first real session.
+
+Karamania. Because karaoke was always about the room, not the mic.

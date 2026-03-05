@@ -12,6 +12,15 @@ stepsCompleted:
   - step-10-nonfunctional
   - step-11-polish
   - step-12-complete
+  - step-e-01-discovery
+  - step-e-02-review
+  - step-e-03-edit
+lastEdited: '2026-03-05'
+editHistory:
+  - date: '2026-03-05'
+    changes: 'Added Party Cards system (19 curated challenges), Lightstick Mode, Camera Flash Hype Signal, Prompted Media Capture (bubble UX, photo/video/audio with iOS graceful degradation). Promoted interludes/icebreaker/democratic voting from fast-follow to core MVP. Updated Executive Summary, Product Scope, User Journeys, Journey Requirements Summary, DJ Engine FRs, Audience Participation FRs, Success Criteria, Sprint Plan, v3 Vision.'
+  - date: '2026-03-05'
+    changes: 'Validation fixes: Reconciled FR38-39 with FR67-73 bubble capture system. Added media capture moments to Minh and Duc journeys. Fixed 9 SMART FRs with measurable thresholds (FR23, FR28a, FR29, FR33, FR47, FR49, FR52, FR53). Removed implementation leakage from FR69. Quantified 6 vague NFRs (NFR6, NFR9, NFR12, NFR16, NFR18, NFR23). Fixed subjective adjectives in FR8, FR12, FR18b, FR19, FR20, FR22, FR26.'
 inputDocuments:
   - '_bmad-output/planning-artifacts/product-brief-karaoke-party-app-2026-03-04.md'
   - '_bmad-output/planning-artifacts/research/market-karaoke-party-companion-research-2026-03-03.md'
@@ -39,11 +48,11 @@ date: '2026-03-04'
 
 ## Executive Summary
 
-Karamania is a second-screen PWA companion that transforms group karaoke nights from passive singing sessions into interactive party experiences. Users join via QR code scan — zero downloads, zero accounts — and their phones become participation devices: reactions, soundboards, voting, and mini-games that keep the entire room engaged between songs.
+Karamania is a second-screen PWA companion that transforms group karaoke nights from interactive party experiences into full entertainment sessions. Users join via QR code scan — zero downloads, zero accounts — and their phones become participation devices: reactions, soundboards, voting, party card challenges, lightstick mode, and mini-games that keep the entire room engaged before, during, and between songs.
 
-**Core Differentiator:** The only product that runs alongside existing karaoke systems rather than replacing them. Eliminates music licensing, works at any venue, and creates genuine white space in a $7.5B market.
+**Core Differentiator:** The only product that runs alongside existing karaoke systems rather than replacing them. Eliminates music licensing, works at any venue, and creates genuine white space in a $7.5B market. Party Cards and audience participation modes (lightstick, hype signals) turn every song into a shared performance event — not just one person singing at a screen.
 
-**Core Innovation:** A server-authoritative DJ engine — a real-time state machine that automatically orchestrates party flow (song → ceremony → interlude → repeat), eliminating dead air and freeing the host from MC duties.
+**Core Innovation:** A server-authoritative DJ engine — a real-time state machine that automatically orchestrates party flow (party card deal → song → ceremony → interlude → repeat), eliminating dead air and freeing the host from MC duties. The Party Cards system adds a layer of unpredictability and challenge that makes each performance unique.
 
 **Target Users:** Vietnamese friend groups (ages 20-35) at commercial karaoke venues in HCMC and Hanoi. Four personas: the overwhelmed host (Linh), the non-singer (Minh), the shy joiner (Trang), and the performer seeking audience (Duc).
 
@@ -94,9 +103,14 @@ Karamania is a second-screen PWA companion that transforms group karaoke nights 
 | Viral coefficient (12-month) | New hosts from shared content / total hosts | >0.5 |
 
 **Participation Weighting:**
-- Passive (1 pt): emoji tap, reaction view
-- Active (3 pts): soundboard use, vote cast, moment capture tap
-- Engaged (5 pts): interlude game completion, ceremony vote, dare acceptance
+- Passive (1 pt): emoji tap, reaction view, lightstick mode active
+- Active (3 pts): soundboard use, vote cast, moment capture tap, hype signal activation, party card redraw
+- Engaged (5 pts): interlude game completion, ceremony vote, dare acceptance, party card challenge completion
+
+**Party Card Metrics:**
+- Party card acceptance rate tracked per session (target: >50% acceptance by song 5)
+- Challenge completion rate tracked (accepted cards where singer followed through)
+- Group involvement card participation rate (did picked participants engage)
 
 **Go/No-Go Gates (3 months):** If 5/6 core gates pass → proceed to v2. If 3-4 → iterate MVP. If <3 → reassess assumptions.
 
@@ -108,11 +122,18 @@ Karamania is a second-screen PWA companion that transforms group karaoke nights 
 
 - **Zero-friction party launch:** QR code / 4-digit code, PWA, no accounts, no downloads. Branded loading state with party lobby pre-rendered ("3 friends are waiting for you")
 - **Live audience reactions:** Emoji reactions during performances, basic soundboard (air horn, applause, sad trombone, "OHHHH!"), real-time feed on all phones. Host phone as primary audio source for big ceremony moments
+- **Party Cards system:** 19 curated singer challenges across 3 types — vocal modifiers (Chipmunk Mode, Barry White, The Whisperer, Robot Mode, Opera Singer, Accent Roulette, Beatboxer), performance modifiers (Blind Karaoke, Method Actor, The Statue, Slow Motion, The Drunk Uncle, News Anchor, Interpretive Dance), and group involvement (Name That Tune, Backup Dancers, Crowd Conductor, Tag Team, Hype Squad). App auto-deals one card per singer during pre-song state. Singer can accept, dismiss, or use one free redraw. Host can override. Group involvement cards pick random participants — no consent flow, social dynamics handle opt-outs
+- **Audience participation modes during songs:** Participants toggle between lean-in mode (lyrics/reactions) and lightstick mode (phone becomes a glowing visual prop). Camera flash/screen hype signal available as real-time performer encouragement
 - **Post-song ceremony:** Host taps "Song Over!" → 15-second crowd vote → auto-generated funny award → shareable moment card. Kills awkward post-song silence
-- **Dumb DJ engine:** Server-authoritative state machine cycling Song → Ceremony → Interlude → Volunteer/Vote → Repeat. Randomized, not adaptive. Log every state change for future Smart DJ training data
+- **Dumb DJ engine:** Server-authoritative state machine cycling Party Card Deal → Song → Ceremony → Interlude → Volunteer/Vote → Repeat. Randomized, not adaptive. Log every state change for future Smart DJ training data
 - **Host controls:** Subtle floating overlay (Next, Skip, Pause). One-thumb operation. Host stays a player, never becomes a manager
 - **Immersive sound design:** Web Audio API with pre-loaded buffers. State transition sounds for every DJ state change. Collective audio from all phones creates shared atmosphere
-- **Fast-follow (1-2 weeks after core):** First-60-seconds icebreaker, democratic voting (2-3 options), 3 interludes (Kings Cup, Dare Pull, Quick Vote), basic moment capture (prompted screenshots + manual "capture this!" button), end-of-night ceremony + setlist poster
+- **Icebreaker:** First-60-seconds activity all participants complete with a single tap, results visible to the group
+- **Democratic voting:** 2-3 options surfaced by DJ engine, everyone votes, majority wins
+- **Interlude games:** Kings Cup (group rule card), Dare Pull (random dare assigned to random player), Quick Vote (binary opinion poll). Front-loaded universal interludes in first 30 minutes for maximum group inclusion
+- **Prompted media capture:** Floating capture bubble at key moments (session start, reaction peaks, post-ceremony, session end). Any participant pops the bubble to capture photo/video (5s max)/audio. Inline on Android, graceful degradation on iOS (photo inline, video via native picker). Background upload, tagged for future highlight reel assembly
+- **End-of-night ceremony + setlist poster**
+- **Fast-follow (1-2 weeks after core):** Group sing-along mode, additional interlude games, moment capture enhancements
 
 ### Growth Features (Post-MVP)
 
@@ -128,9 +149,10 @@ v2 — "The Smart Party" (target: 6 months post-MVP)
 ### Vision (Future)
 
 v3 — "The Memory Machine" (target: 12 months)
-- Automatic Memory Machine with smart triggers + quality filters
+- Automatic Memory Machine with smart triggers + quality filters (builds on V1 prompted media capture pipeline — raw content already collected)
 - Multi-phone sync capture, blooper reel, sound bite generator
-- Morning-after highlight reel push notification
+- Morning-after highlight reel push notification (assembled from V1 captured media: photos, 5s video clips, audio snippets, tagged by session moment)
+- Flutter native migration unlocks seamless video/audio capture on iOS (removes V1 graceful degradation constraints)
 - Scrapbook assembly (cover, timeline, media, awards, stats, encore closing)
 - Karaoke Wrapped + Festival Wristband + Chronicle identity system
 - Flutter native migration for advanced capture capabilities
@@ -168,9 +190,9 @@ Linh smiles. She had fun at her own party.
 
 Minh doesn't sing. Everyone knows this. At regular karaoke nights, he's scrolling TikTok by song three.
 
-Tonight he scans the QR. Duc starts singing. Minh's phone shows a reaction bar. He hits the fire emoji. Again. "3x HYPE!" flashes. He discovers the soundboard: air horn at the chorus drop. The sound cuts through the room. Everyone laughs.
+Tonight he scans the QR. Duc starts singing. Minh's phone shows a reaction bar — but he toggles to lightstick mode. His screen glows neon blue, swaying with his hand. Two others switch too. Three phones waving in a dark karaoke room. He switches back to reactions. Hits the fire emoji. Again. "3x HYPE!" flashes. He discovers the soundboard: air horn at the chorus drop. The sound cuts through the room. Everyone laughs. Then he hits the camera flash hype — his phone flashlight pulses. The room flickers.
 
-Song ends. Ceremony pops. Minh votes, sees the award: "The Warm-Up Act." Screenshots the moment card, sends it to the group chat.
+Song ends. Ceremony pops. Minh votes, sees the award: "The Warm-Up Act." A capture bubble pops — reaction peak detected. Minh taps it, films a 5-second clip of Duc taking a bow. One tap, auto-uploads. Screenshots the moment card, sends it to the group chat.
 
 DJ fires a Dare Pull. Minh gets: "Do your best impression of the last singer." He stands up, dramatically mumbles into an invisible mic. The room loses it.
 
@@ -192,6 +214,8 @@ Ceremony pops. She votes — one tap. Laughs at the award reveal with everyone.
 
 The DJ front-loads universal interludes in the first 30 minutes — activities every person participates in regardless. Quick Vote: "Pineapple on pizza?" She has a strong opinion. Taps "NEVER." She's in the majority. Says out loud: "See?!" First words she's spoken about the app.
 
+Two songs later, the app deals a party card to the next singer: "Backup Dancers — pick 2 people!" The singer points at Trang and someone else. She doesn't have to sing. She just has to stand behind and move. Low stakes. She's laughing before the chorus starts.
+
 Three songs later, Kings Cup: "Everyone who's been to Đà Lạt this year, sing the next chorus together." She looks around. Four hands up. The chorus hits. She mouths along. Not loud. But she's doing it.
 
 An hour in. Group sing-along: a 2000s hit everyone knows. The whole room is singing. Trang is singing. She didn't volunteer. The room pulled her in. No name on screen. Just "everyone join in."
@@ -202,13 +226,15 @@ End of night: "The Silent Storm" — most consistent reactor who never took a so
 
 Three songs in, it's Duc's turn. His signature song. He tells Linh to hit play.
 
-Every phone displays: "🎤 DUC IS UP NEXT" — a pre-song hype card bridging the physical moment of him walking to the mic. Countdown sound from the host's phone. The room quiets.
+Every phone displays: "🎤 DUC IS UP NEXT" — a pre-song hype card bridging the physical moment of him walking to the mic. Then the party card deals: "Method Actor — perform like it's Broadway." Duc grins. Accepts. Countdown sound from the host's phone. The room quiets.
 
-He sings. Reactions pour in — fire emojis, hearts, the occasional laugh when he oversells a note. Minh hits the air horn twice at the chorus. Duc can't see reactions (he's watching lyrics) but he can hear the soundboard cutting through from phones around the room.
+He sings — full theatrical gestures, dropping to one knee at the bridge, pointing at the audience during the chorus. Reactions pour in — fire emojis, hearts, the occasional laugh when he oversells a note. Minh hits the air horn twice at the chorus. Half the room is in lightstick mode, phones swaying. Duc can't see reactions (he's watching lyrics) but he can hear the soundboard cutting through and see the glow from the corner of his eye.
 
-He finishes. Ceremony: "RATE DUC'S PERFORMANCE." Votes in. Reveal: 4.7/5. Award: "Vocal Assassin." Moment card generates — song title, name, award, score, styled like a concert poster. Duc taps share. It's in the group chat before he sits down.
+He finishes. Ceremony: "RATE DUC'S PERFORMANCE." Votes in. Reveal: 4.7/5. Award: "Vocal Assassin." A capture bubble floats in — post-ceremony trigger. Duc pops it, takes a selfie with the award still on screen. Moment card generates — song title, name, award, score, party card challenge completed, styled like a concert poster. Duc taps share. It's in the group chat before he sits down.
 
-Two songs later, someone dares him: "Sing the next one in a whisper voice." Terrible. Hilarious. "The Whisperer" award. That card gets more shares than his good performance.
+Two songs later, the app deals him "The Whisperer — sing the whole song as a dramatic whisper." Terrible. Hilarious. "The Whisperer" award. That card gets more shares than his good performance.
+
+Next round: "Tag Team" card. Mid-chorus, Minh's name flashes on every phone — "TAG IN!" Minh jumps up, grabs the invisible mic, belts out three words, and sits back down. The room erupts.
 
 End of night: "Performance of the Night." Setlist poster shows his name next to three songs. Posts to Instagram. Friend from another group DMs: "What app is that?"
 
@@ -249,16 +275,20 @@ Taps "Start Party." QR and code appear. Lobby: "1 player — works best with 3+ 
 | Host QR re-display mid-session | Late Joiner | Core |
 | DJ state machine (auto-cycling) | Linh, Minh, Trang | Core |
 | DJ bridge moments (first song prompt, song selection, mic handoff) | Linh, Duc | Core |
-| Icebreaker (first-60-seconds) | Trang, Linh | Fast-follow |
+| Icebreaker (first-60-seconds) | Trang, Linh | Core |
 | Real-time emoji reactions + streaks | Minh, Trang, Duc | Core |
 | Soundboard with room audio | Minh, Duc | Core |
 | Sound design (state transition audio cues) | All journeys | Core |
+| Party Cards system (19 curated challenges) | Duc, Trang, Minh | Core |
+| Lightstick mode (phone-as-prop during songs) | Minh, Duc | Core |
+| Camera flash/screen hype signal | Minh | Core |
 | Post-song ceremony (vote + award + card) | All personas | Core |
+| Prompted media capture (photo/video/audio bubbles) | All personas | Core |
 | Moment card with share intent | Duc, Minh | Core |
-| Interlude games (Kings Cup, Dare, Quick Vote) | Minh, Trang | Fast-follow |
-| Front-loaded universal interludes (first 30 min) | Trang | Fast-follow |
+| Interlude games (Kings Cup, Dare, Quick Vote) | Minh, Trang | Core |
+| Front-loaded universal interludes (first 30 min) | Trang | Core |
 | Pre-song hype card (bridge moment) | Duc | Core |
-| Democratic voting ("What's next?") | Linh, Minh | Fast-follow |
+| Democratic voting ("What's next?") | Linh, Minh | Core |
 | Group sing-along mode | Trang | Fast-follow |
 | End-of-night ceremony + setlist poster | All personas | Core |
 | Late-join catch-up (current stats only) | Late Joiner | Core |
@@ -451,6 +481,10 @@ Build order enforced — each depends on the previous:
 | Soundboard (4-6 sounds, host = primary audio for big moments) | Room audio is the atmosphere |
 | Sound design (state transition audio cues) | How the room knows something changed |
 | Pre-song hype card (bridge moment) | Duc's core value + physical-digital bridge |
+| Party Cards system (19 cards, deal/accept/dismiss/redraw) | Core differentiator — transforms every performance |
+| Lightstick mode + camera flash hype signal | Audience participation during songs beyond reactions |
+| Icebreaker (first-60-seconds) | Sets the tone, unlocks AudioContext |
+| Prompted media capture (bubble UX, background upload) | Raw content pipeline for highlight reel. Graceful degradation on iOS |
 | Moment card with share intent | Only viral artifact in core launch |
 | Screen Wake Lock (Chrome API + iOS video hack) | Without this, half the room misses ceremonies |
 | Solo/empty party state ("works best with 3+ friends") | First-time host experience |
@@ -465,13 +499,12 @@ Build order enforced — each depends on the previous:
 | Three-tier reconnection model (brief/medium/long) | Basic reconnect sufficient for dry run on wifi |
 | Adaptive heartbeat (5s active / 15s song) | Battery optimization not critical for 1-hour test |
 | Late-join catch-up card (current stats) | Dry run starts with everyone present |
-| Icebreaker (first-60-seconds) | Can test core loop without it |
 | Democratic voting ("What's next?") | DJ random selection works for dry run |
-| 3 interludes (Kings Cup, Dare Pull, Quick Vote) | Core loop works with just ceremony + reactions |
-| Front-loaded universal interludes (first 30 min) | Requires interludes to exist first |
+| 3 interludes (Kings Cup, Dare Pull, Quick Vote) | Core engagement between songs |
+| Front-loaded universal interludes (first 30 min) | Maximum group inclusion for shy joiners |
 | Basic moment capture (prompted screenshots) | Nice-to-have for first test |
 | End-of-night ceremony + setlist poster | Critical for real session |
-| Awards algorithm (non-singing recognition) | Needs real session data to tune |
+| Awards algorithm (non-singing recognition, party card completion) | Needs real session data to tune |
 
 **Sprint 4 — Real World Test + Polish (5 days):**
 - Real karaoke night with friends. Screen record on 2-3 phones
@@ -541,15 +574,16 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 - **FR5:** Host can start the party when ready, transitioning all connected phones to the first activity
 - **FR6:** Guest can join a party mid-session and receive a catch-up summary of current party stats
 - **FR7:** Host can re-display the QR code and party code at any point during an active session
-- **FR8:** System displays a graceful empty-party state when fewer than 3 players are present, with a share prompt
-- **FR53:** System provides immediate visual feedback during the join process showing party status and player count before the connection is fully established
+- **FR8:** System displays a waiting state when fewer than 3 players are present, showing current player count, a QR code, and a share prompt to invite more participants
+- **FR53:** System provides visual feedback within 200ms during the join process showing party status and player count before the WebSocket connection is fully established
 
 ### 2. DJ Engine & Party Flow
 
-- **FR9:** System automatically cycles through activity states (song → ceremony → interlude → volunteer/vote → repeat) without manual intervention, governed by a formal state diagram with defined transitions, guards, and timeouts
+- **FR9:** System automatically cycles through activity states (party card deal → song → ceremony → interlude → volunteer/vote → repeat) without manual intervention, governed by a formal state diagram with defined transitions, guards, and timeouts
 - **FR10:** System provides bridge moment activities during physical-world transitions (first song prompt, song selection, mic handoff)
+- **FR54:** System deals a random party card to the next singer during the pre-song state, selected from the curated pool of 19 cards. App auto-deals by default; host can override card selection or disable dealing for a turn
 - **FR11:** System can enter a pause state, triggered by host action or by detecting 90+ seconds of inactivity across all users
-- **FR12:** System resumes from pause to the appropriate next state when host un-pauses or activity resumes
+- **FR12:** System resumes from pause to the next state in the DJ cycle (if mid-song → song, if mid-ceremony → ceremony, if mid-interlude → interlude) when host un-pauses or activity resumes
 - **FR13:** System presents democratic voting with 2-3 options for the group to decide what happens next
 - **FR14:** System selects ceremony weight following defined rules: Full for first song and post-interlude songs, never two consecutive Full ceremonies, default to Quick after song 5, Skip available via host override
 - **FR15:** System front-loads universal participation activities in the first 30 minutes of a session
@@ -560,30 +594,58 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 - **FR16:** Host can signal that a song has ended via a persistent, always-visible trigger during song state
 - **FR17:** System displays a pre-song hype announcement on all phones showing the next performer's name
 - **FR18a:** System collects crowd votes during a Full ceremony with a 15-second window, accepting votes as participants pick up their phones (staggered participation)
-- **FR18b:** System auto-generates a ceremony award title from a categorized template pool matched to the performance score
+- **FR18b:** System auto-generates a ceremony award title from a categorized template pool: scores 1-2 map to comedic/ironic titles, 3 to neutral titles, 4-5 to praise titles
 - **FR18c:** System generates a moment card combining performer details, award, and crowd score at the end of a Full ceremony
-- **FR19:** System conducts a Quick ceremony: rapid thumbs up/down poll with a one-liner reaction
-- **FR20:** System generates award titles from a pool of 20+ templates, categorized by score range to match performance quality
+- **FR19:** System conducts a Quick ceremony: 10-second thumbs up/down poll with a one-liner reaction auto-generated from the vote split
+- **FR20:** System generates award titles from a pool of 20+ templates, categorized by score range: 1-2 (comedic/ironic), 3 (neutral), 4-5 (praise) — random selection within the matched category
 - **FR21:** System supports group sing-along activities where all participants are included without individual spotlight
 
 ### 4. Audience Participation
 
-- **FR22:** All participants can send emoji reactions during performances, visible in real-time on all connected phones
-- **FR23:** System tracks reaction streaks and displays streak milestones to the reacting user
+- **FR22:** All participants can send emoji reactions during performances, visible within 100ms (per NFR2) on all connected phones
+- **FR23:** System tracks reaction streaks and displays streak milestones at 5, 10, 20, and 50 consecutive reactions to the reacting user
 - **FR24:** All participants can trigger soundboard effects (4-6 sounds) that play audibly through their phone speaker
 - **FR25:** System plays the primary ceremony audio (fanfares, reveals) through the host's phone as the dominant audio source
-- **FR26:** System plays distinct audio cues for every DJ state transition so the room perceives activity changes
+- **FR26:** System plays a unique audio cue (minimum 4 distinct sounds: song start, ceremony start, interlude start, party card deal) for every DJ state transition, each at least 0.5s duration
 - **FR27:** All participants can vote in ceremony scoring and democratic activity selection
-- **FR28a:** System supports a library of interlude mini-games deployable by the DJ engine
+- **FR28a:** System supports a library of 3 interlude mini-games (Kings Cup, Dare Pull, Quick Vote) deployable by the DJ engine, selected via weighted random with no immediate repeats
 - **FR28b:** MVP interlude library includes: Kings Cup (group rule card), Dare Pull (random dare assigned to random player), Quick Vote (binary opinion poll)
+
+### 4b. Party Cards
+
+- **FR55:** System maintains a curated pool of 19 party cards across three types: vocal modifiers (7 cards), performance modifiers (7 cards), and group involvement (5 cards)
+- **FR56:** Vocal modifier cards: Chipmunk Mode (highest pitch possible), Barry White (deepest voice), The Whisperer (dramatic whisper), Robot Mode (monotone deadpan), Opera Singer (belt like La Scala), Accent Roulette (app assigns random accent), Beatboxer (add beatbox between lines)
+- **FR57:** Performance modifier cards: Blind Karaoke (sing facing away from screen), Method Actor (full Broadway drama), The Statue (no body movement), Slow Motion (all movements slow-mo), The Drunk Uncle (wedding toast gone wrong), News Anchor (dead serious delivery), Interpretive Dance (every lyric gets a gesture)
+- **FR58:** Group involvement cards: Name That Tune (group guesses song from intro), Backup Dancers (singer picks 2 people who must dance behind them), Crowd Conductor (singer directs who sings when during chorus), Tag Team (app picks random participant to take over at chorus), Hype Squad (app assigns 2 audience members who must stand and cheer the entire song)
+- **FR59:** Singer can accept or dismiss a dealt party card with a single tap. Singer gets one free redraw per turn — after redraw, must accept or dismiss
+- **FR60:** Group involvement cards (Tag Team, Backup Dancers, Hype Squad) select random participants and announce the selection on all phones. No consent flow — social dynamics handle opt-outs
+- **FR61:** System tracks party card acceptance rate and challenge completion per session
+- **FR62:** Completed party card challenges contribute to ceremony awards and weighted participation scoring (Engaged tier: 5 pts)
+
+### 4c. Audience Participation Modes (During Song)
+
+- **FR63:** During song state, audience participants can toggle between lean-in mode (reactions/soundboard) and lightstick mode (phone screen becomes a glowing visual prop)
+- **FR64:** Lightstick mode renders a full-screen animated glow effect. User can change color. Free-form — no synchronization required between devices
+- **FR65:** Audience participants can activate a camera flash/screen hype signal as real-time encouragement to the performer. Screen-based pulse effect with optional device flashlight activation
+- **FR66:** Lightstick mode and hype signal are available alongside reactions — participants can switch between modes freely during a song
+
+### 4d. Prompted Media Capture
+
+- **FR67:** System displays a floating capture bubble at key moments: session start, reaction peaks (auto-detected spike in reaction rate), post-ceremony pause, and session end. Bubble is dismissable by ignoring it — no interruption to non-interested participants
+- **FR68:** Any participant can pop the capture bubble to initiate a media capture: photo, video (5s max), or audio snippet. One-tap to pop, one-tap to start capture
+- **FR69:** System captures photo, video, and audio inline on browsers that support media recording APIs. On browsers without inline video/audio support, photo capture remains inline and video/audio falls back to device-native capture picker. Capture completes without navigating away from the app in all cases
+- **FR70:** Captured media is tagged with session ID, timestamp, capture trigger type (peak/ceremony/manual), and current DJ state for future highlight reel assembly
+- **FR71:** Media uploads are queued and sent in background — capture never blocks the party experience. Failed uploads retry automatically on next stable connection
+- **FR72:** All captured media is stored server-side per session, accessible to all session participants post-session
+- **FR73:** System auto-detects reaction peaks (sustained reaction rate spike above baseline threshold) and triggers a capture bubble on all phones. Peak detection logic is server-side to ensure consistent triggering
 
 ### 5. Host Controls
 
-- **FR29:** Host has a persistent overlay providing party control without leaving the participant experience
+- **FR29:** Host has a persistent floating action button (bottom-right corner) that expands to a control overlay within 1 tap, providing party control without leaving the participant experience
 - **FR30:** Host can skip the current activity and advance to the next DJ state
 - **FR31:** Host can manually pause and resume the DJ engine
 - **FR32:** Host can override the DJ's next activity selection
-- **FR33:** Host can access all party controls without leaving the participant view
+- **FR33:** Host can access skip, pause, queue management, kick player, and end party controls from the overlay (FR29) without navigating away from the participant view
 
 ### 6. Memory & Sharing
 
@@ -591,9 +653,9 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 - **FR35:** Participant can share a moment card via native mobile share sheet
 - **FR36:** System generates an end-of-night setlist poster showing all songs, performers, date, and awards
 - **FR37:** Participant can share the setlist poster via native mobile share sheet
-- **FR38:** System prompts participants to capture moments at key points during the session (prompted screenshots)
-- **FR39:** Any participant can manually flag a moment for capture via a "capture this!" action
-- **FR52:** System orchestrates an end-of-night finale sequence presenting awards, session highlights, setlist poster, and post-session feedback in a structured ceremony flow
+- **FR38:** System prompts participants to capture moments via the floating capture bubble (see FR67) at 4 defined trigger points: session start, reaction peaks (FR72 threshold), post-ceremony reveals, and session end
+- **FR39:** Any participant can manually initiate a media capture at any time via a persistent capture icon in the participant toolbar — independent of the bubble prompt system
+- **FR52:** System orchestrates an end-of-night finale sequence in 4 steps: (1) top 3 awards reveal with animation, (2) session stats summary (songs, reactions, participation), (3) setlist poster with share prompt, (4) one-tap post-session feedback ("Would you use again?" 1-5 scale) — total finale duration 60-90 seconds
 
 ### 7. Session Intelligence & Analytics
 
@@ -607,9 +669,9 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 
 - **FR45:** System maintains real-time WebSocket connections between all participant phones and the server
 - **FR46:** System detects participant disconnection via heartbeat monitoring and updates participant lists accordingly
-- **FR47:** System automatically reconnects a disconnected participant and syncs them to the current state without user action
+- **FR47:** System automatically reconnects a disconnected participant within a 5-minute window and syncs them to the current DJ state within 2 seconds of reconnection without user action
 - **FR48:** System preserves a participant's session history and participation scores through disconnection events
-- **FR49:** System continues operating normally when any participant (including host) disconnects — no single point of failure
+- **FR49:** System continues operating normally when any participant (including host) disconnects — DJ engine proceeds, votes count present participants only, host controls transfer to next-longest-connected participant after 60s host absence
 - **FR50:** System prevents phone screen auto-lock during active participation states on supported browsers
 
 ## Non-Functional Requirements
@@ -621,7 +683,7 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 - **NFR3:** Soundboard audio must begin playback within 50ms of tap on the originating device
 - **NFR4:** Ceremony vote collection must complete within exactly 15 seconds of server-side timer, regardless of client clock variations
 - **NFR5:** The app must maintain 60fps rendering and <100ms input response time with up to 12 simultaneously connected participants, each sending reactions at peak rate (2 taps/second)
-- **NFR6:** Audio assets must be pre-loaded and playable without network delay after initial session load
+- **NFR6:** Audio assets must be pre-loaded and playable within 50ms of trigger after initial session load — no network round-trip on playback
 - **NFR7:** Total JS bundle size must remain under 100KB gzipped (excluding audio assets)
 - **NFR26:** Event stream logging must be asynchronous and must not add more than 5ms latency to any user-facing operation
 - **NFR27:** Ceremony reveal must appear on all connected devices within a 100ms window of each other, using server-coordinated reveal timing (server sends reveal timestamp, clients schedule synchronized display)
@@ -629,10 +691,10 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 ### Reliability
 
 - **NFR8:** The DJ engine must continue operating if any participant (including host) disconnects — zero single points of failure
-- **NFR9:** A participant's reconnection after a brief network interruption (<5s) must be transparent with no visible UI disruption
+- **NFR9:** A participant's reconnection after a brief network interruption (<5s) must complete without showing an error state, loading spinner, or page reload — the participant's view resumes at the current DJ state
 - **NFR10:** Session state must be fully recoverable from the server — no client-only state that would be lost on page refresh
 - **NFR11:** The system must handle concurrent ceremony votes from all participants without race conditions or vote loss
-- **NFR12:** The system must gracefully degrade when participant count drops below 3 (simplified activities, adjusted voting thresholds)
+- **NFR12:** When participant count drops below 3, the system skips group interludes (Kings Cup, Dare Pull), disables party cards that require 3+ participants, reduces ceremony voting to pass/fail (no score), and continues DJ engine cycling with song → simple ceremony → song
 - **NFR13:** On server restart, active sessions are gracefully terminated with a "session ended unexpectedly" message to all connected clients. Full session persistence and recovery deferred to v2
 - **NFR28:** Client memory usage must not grow by more than 10MB over a 3-hour session with typical interaction patterns. No memory leaks in reaction rendering, ceremony animations, or WebSocket message handling
 
@@ -640,9 +702,9 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 
 - **NFR14:** All primary interactions (reactions, voting, soundboard) must be completable with a single tap on a target no smaller than 48x48px
 - **NFR15:** No interaction in the app requires text input beyond the initial name entry
-- **NFR16:** All participant-facing screens must be comprehensible without reading instructions — the UI must be self-evident
+- **NFR16:** All participant-facing screens must be usable on first encounter without instructions — every interactive element uses standard mobile patterns (tap, swipe), icons include text labels, and new features show a single-sentence tooltip on first appearance only
 - **NFR17:** All text and interactive elements must meet WCAG AA contrast ratio (4.5:1 for normal text, 3:1 for large text) against their backgrounds, verified in simulated low-light display conditions
-- **NFR18:** State transitions must be perceivable through audio cues alone, not requiring visual attention — participants may be watching the karaoke screen, not their phone
+- **NFR18:** State transitions must play a distinct audio cue (minimum 0.5s, unique per transition type: song start, ceremony start, interlude start, party card deal) audible at phone speaker volume — participants may be watching the karaoke screen, not their phone
 - **NFR19:** Host controls must be accessible within 1 second from any participant screen state (no navigation required)
 - **NFR20:** The app must not require any configuration, settings, or preferences from any participant — zero setup beyond name entry
 
@@ -650,7 +712,7 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 
 - **NFR21:** Party codes must expire after session end and not be reusable
 - **NFR22:** No personally identifiable information stored beyond display name and session participation data
-- **NFR23:** Rate limiting on reaction and soundboard events to prevent spam (diminishing returns model — not hard block, soft degradation)
+- **NFR23:** Rate limiting on reaction and soundboard events: after 10 events in 5 seconds, each subsequent event earns 50% fewer participation points and visual feedback dims proportionally. No hard block — user can always tap, but reward and feedback diminish to near-zero after 20 events in 5 seconds. Resets after 5 seconds of inactivity
 - **NFR24:** Session data must be isolated — no participant can access or affect another party's session
 - **NFR25:** WebSocket connections must be authenticated to their session — a connection cannot inject events into a different party
 

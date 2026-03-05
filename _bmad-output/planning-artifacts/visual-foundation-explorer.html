@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karamania — Visual Foundation Explorer v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Space+Grotesk:wght@400;600;700&family=Nunito:wght@400;600;700;800&family=Outfit:wght@400;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #0a0a0f;
+    color: #f0f0f0;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #ffd700, #ff6b6b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    text-align: center;
+    color: #8888aa;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+  }
+  .version-tag {
+    text-align: center;
+    color: #4ade80;
+    font-size: 0.75rem;
+    margin-bottom: 3rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .section-header {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 3rem 0 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #333;
+  }
+  .section-desc {
+    color: #8888aa;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    max-width: 800px;
+    line-height: 1.5;
+  }
+
+  /* ============================================
+     SHARED PHONE STYLES
+     ============================================ */
+  .phone-grid {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+  .phone-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .phone-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #f0f0f0;
+  }
+  .phone-sublabel {
+    font-size: 0.75rem;
+    color: #8888aa;
+    max-width: 220px;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .phone {
+    width: 250px;
+    height: 500px;
+    border-radius: 28px;
+    overflow: hidden;
+    position: relative;
+    border: 3px solid #333;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .phone-screen {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ============================================
+     ARCHITECTURE EXPLAINER
+     ============================================ */
+  .arch-box {
+    max-width: 800px;
+    margin: 0 auto 2rem;
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid #333;
+  }
+  .arch-box h3 { margin-bottom: 12px; font-size: 1rem; }
+  .arch-code {
+    background: #0a0a0f;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Space Grotesk', monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: #ccc;
+    overflow-x: auto;
+  }
+  .arch-code .comment { color: #666; }
+  .arch-code .attr { color: #6c63ff; }
+  .arch-code .prop { color: #4ade80; }
+  .arch-code .val { color: #ffd700; }
+  .arch-note {
+    margin-top: 12px;
+    font-size: 0.8rem;
+    color: #8888aa;
+    line-height: 1.5;
+  }
+
+  /* ============================================
+     SECTION 1: VIBE-ADAPTIVE COLORS
+     ============================================ */
+
+  /* Shared ceremony structure */
+  .vibe-phone .phone-screen {
+    display: flex;
+    flex-direction: column;
+  }
+  .vibe-phone .phone-status {
+    padding: 10px 14px 6px;
+    font-size: 0.6rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .vibe-phone .ceremony-category {
+    text-align: center;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 16px;
+  }
+  .vibe-phone .ceremony-winner {
+    text-align: center;
+    margin-top: 20px;
+  }
+  .vibe-phone .winner-emoji {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .vibe-phone .winner-name {
+    font-size: 1.8rem;
+    font-weight: 900;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .vibe-phone .winner-award {
+    font-size: 0.8rem;
+    margin-top: 4px;
+  }
+  .vibe-phone .vote-bar-section {
+    margin: 20px 16px 0;
+  }
+  .vibe-phone .vote-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 0.75rem;
+  }
+  .vibe-phone .vote-bar .name { width: 40px; text-align: right; }
+  .vibe-phone .vote-bar .bar {
+    flex: 1; height: 16px; border-radius: 4px; overflow: hidden;
+  }
+  .vibe-phone .vote-bar .bar-fill { height: 100%; border-radius: 4px; }
+  .vibe-phone .vote-bar .pct { width: 28px; font-size: 0.7rem; }
+  .vibe-phone .reaction-bar {
+    margin-top: auto;
+    padding: 12px 16px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+  .vibe-phone .reaction-btn {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; cursor: pointer;
+  }
+  .vibe-phone .confetti {
+    position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  }
+  .vibe-phone .confetti span {
+    position: absolute; font-size: 1rem;
+    animation: confettiFall 3.5s linear infinite; opacity: 0.6;
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 0.8; }
+    100% { transform: translateY(520px) rotate(720deg); opacity: 0; }
+  }
+  @keyframes glowPulse {
+    0%, 100% { opacity: 0.4; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.08); }
+  }
+  .vibe-glow {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+
+  /* ---------- GENERAL VIBE ---------- */
+  .vibe-general .phone-screen { background: #1a0a2e; }
+  .vibe-general .phone-status { color: rgba(255,215,0,0.5); }
+  .vibe-general .ceremony-category { color: #8888aa; }
+  .vibe-general .winner-name { color: #ffd700; text-shadow: 0 0 30px rgba(255,215,0,0.4); }
+  .vibe-general .winner-award { color: #c0a0ff; }
+  .vibe-general .vote-bar .name { color: #8888aa; }
+  .vibe-general .vote-bar .bar { background: #252542; }
+  .vibe-general .vote-bar .bar-fill.w { background: linear-gradient(90deg, #ffd700, #ffaa00); }
+  .vibe-general .vote-bar .bar-fill.o { background: #6c63ff; }
+  .vibe-general .vote-bar .pct { color: #8888aa; }
+  .vibe-general .reaction-btn { background: rgba(108,99,255,0.2); border: 1px solid rgba(108,99,255,0.4); }
+  .vibe-general .vibe-glow { background: radial-gradient(circle, rgba(255,215,0,0.12) 0%, transparent 70%); }
+
+  /* ---------- K-POP VIBE ---------- */
+  .vibe-kpop .phone-screen {
+    background: #1a0a20;
+    background-image: radial-gradient(ellipse at 50% 0%, rgba(255,0,128,0.1) 0%, transparent 60%);
+  }
+  .vibe-kpop .phone-status { color: rgba(255,0,128,0.5); }
+  .vibe-kpop .ceremony-category { color: #ff69b4; }
+  .vibe-kpop .winner-name {
+    background: linear-gradient(135deg, #ff69b4, #ff0080, #cc00ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 20px rgba(255,0,128,0.3));
+  }
+  .vibe-kpop .winner-award { color: #ff80bf; }
+  .vibe-kpop .vote-bar .name { color: #996688; }
+  .vibe-kpop .vote-bar .bar { background: #2a1a25; }
+  .vibe-kpop .vote-bar .bar-fill.w { background: linear-gradient(90deg, #ff69b4, #ff0080); box-shadow: 0 0 8px rgba(255,0,128,0.3); }
+  .vibe-kpop .vote-bar .bar-fill.o { background: #cc00ff; opacity: 0.5; }
+  .vibe-kpop .vote-bar .pct { color: #996688; }
+  .vibe-kpop .reaction-btn { background: rgba(255,0,128,0.15); border: 1px solid rgba(255,0,128,0.35); }
+  .vibe-kpop .vibe-glow { background: radial-gradient(circle, rgba(255,0,128,0.12) 0%, transparent 70%); }
+
+  /* ---------- ROCK VIBE ---------- */
+  .vibe-rock .phone-screen {
+    background: #1a0a0a;
+    background-image: radial-gradient(ellipse at 50% 100%, rgba(255,60,0,0.08) 0%, transparent 60%);
+  }
+  .vibe-rock .phone-status { color: rgba(255,68,68,0.5); }
+  .vibe-rock .ceremony-category { color: #cc4444; }
+  .vibe-rock .winner-name {
+    background: linear-gradient(135deg, #ff4444, #ff6600, #ffaa00);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 20px rgba(255,68,0,0.3));
+  }
+  .vibe-rock .winner-award { color: #cc6644; }
+  .vibe-rock .vote-bar .name { color: #886655; }
+  .vibe-rock .vote-bar .bar { background: #2a1a15; }
+  .vibe-rock .vote-bar .bar-fill.w { background: linear-gradient(90deg, #ff4444, #ff6600); box-shadow: 0 0 8px rgba(255,68,0,0.3); }
+  .vibe-rock .vote-bar .bar-fill.o { background: #884422; }
+  .vibe-rock .vote-bar .pct { color: #886655; }
+  .vibe-rock .reaction-btn { background: rgba(255,68,68,0.15); border: 1px solid rgba(255,68,68,0.35); }
+  .vibe-rock .vibe-glow { background: radial-gradient(circle, rgba(255,68,0,0.12) 0%, transparent 70%); }
+
+  /* ---------- BALLAD VIBE ---------- */
+  .vibe-ballad .phone-screen {
+    background: linear-gradient(180deg, #1a1215 0%, #201518 50%, #1a1215 100%);
+  }
+  .vibe-ballad .phone-status { color: rgba(255,153,102,0.4); }
+  .vibe-ballad .ceremony-category { color: #cc8866; }
+  .vibe-ballad .winner-name {
+    background: linear-gradient(135deg, #ff9966, #ffcc88);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .vibe-ballad .winner-award { color: #cc9977; }
+  .vibe-ballad .vote-bar .name { color: #886655; }
+  .vibe-ballad .vote-bar .bar { background: #2a2020; }
+  .vibe-ballad .vote-bar .bar-fill.w { background: linear-gradient(90deg, #ff9966, #ffcc88); }
+  .vibe-ballad .vote-bar .bar-fill.o { background: #886655; }
+  .vibe-ballad .vote-bar .pct { color: #886655; }
+  .vibe-ballad .reaction-btn { background: rgba(255,153,102,0.12); border: 1px solid rgba(255,153,102,0.3); }
+  .vibe-ballad .vibe-glow { background: radial-gradient(circle, rgba(255,153,102,0.1) 0%, transparent 70%); }
+
+  /* ---------- EDM VIBE ---------- */
+  .vibe-edm .phone-screen {
+    background: #0a1a1a;
+    background-image:
+      radial-gradient(ellipse at 30% 20%, rgba(0,255,200,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 80%, rgba(0,200,255,0.06) 0%, transparent 50%);
+  }
+  .vibe-edm .phone-status { color: rgba(0,255,200,0.5); }
+  .vibe-edm .ceremony-category { color: #00c8ff; text-shadow: 0 0 8px rgba(0,200,255,0.3); }
+  .vibe-edm .winner-name {
+    background: linear-gradient(135deg, #00ffc8, #00c8ff, #6c63ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 20px rgba(0,255,200,0.3));
+  }
+  .vibe-edm .winner-award { color: #66ccaa; }
+  .vibe-edm .vote-bar .name { color: #668877; }
+  .vibe-edm .vote-bar .bar { background: #152525; }
+  .vibe-edm .vote-bar .bar-fill.w { background: linear-gradient(90deg, #00ffc8, #00c8ff); box-shadow: 0 0 10px rgba(0,255,200,0.3); }
+  .vibe-edm .vote-bar .bar-fill.o { background: #6c63ff; opacity: 0.5; }
+  .vibe-edm .vote-bar .pct { color: #668877; }
+  .vibe-edm .reaction-btn { background: rgba(0,255,200,0.1); border: 1px solid rgba(0,255,200,0.3); }
+  .vibe-edm .vibe-glow { background: radial-gradient(circle, rgba(0,255,200,0.1) 0%, transparent 70%); }
+
+  /* ============================================
+     SECTION 2: TYPOGRAPHY (unchanged)
+     ============================================ */
+  .typo-grid {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+  .typo-card {
+    width: 280px;
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid #333;
+  }
+  .typo-card h3 { margin-bottom: 4px; }
+  .typo-card .typo-sub { font-size: 0.8rem; color: #8888aa; margin-bottom: 16px; }
+  .typo-card .typo-sample { margin-bottom: 20px; }
+  .typo-card .sample-hero { margin-bottom: 8px; line-height: 1.1; }
+  .typo-card .sample-sub { font-size: 0.85rem; margin-bottom: 12px; }
+  .typo-card .sample-body { font-size: 0.8rem; line-height: 1.5; color: #aaa; margin-bottom: 12px; }
+  .typo-card .sample-button {
+    display: inline-block; padding: 10px 24px; border-radius: 8px;
+    font-size: 0.85rem; font-weight: 700;
+  }
+  .typo-card .scale { margin-top: 16px; border-top: 1px solid #333; padding-top: 12px; }
+  .typo-card .scale-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .typo-card .scale-label { font-size: 0.7rem; color: #666; }
+
+  .typo-bold { font-family: 'Space Grotesk', sans-serif; }
+  .typo-bold .sample-hero { font-size: 2rem; font-weight: 700; color: #ffd700; }
+  .typo-bold .sample-sub { font-weight: 600; color: #c0a0ff; }
+  .typo-bold .sample-button { background: #ffd700; color: #0a0a0f; font-family: 'Space Grotesk', sans-serif; }
+  .typo-bold .scale-row span:first-child { font-family: 'Space Grotesk', sans-serif; }
+
+  .typo-sleek { font-family: 'Outfit', sans-serif; }
+  .typo-sleek .sample-hero { font-size: 1.8rem; font-weight: 600; color: #f0f0f0; letter-spacing: -0.5px; }
+  .typo-sleek .sample-sub { font-weight: 400; color: #8888aa; letter-spacing: 0.5px; }
+  .typo-sleek .sample-button { background: #6c63ff; color: #fff; font-family: 'Outfit', sans-serif; letter-spacing: 0.5px; }
+  .typo-sleek .scale-row span:first-child { font-family: 'Outfit', sans-serif; }
+
+  .typo-playful { font-family: 'Nunito', sans-serif; }
+  .typo-playful .sample-hero { font-size: 1.9rem; font-weight: 800; color: #ff9966; }
+  .typo-playful .sample-sub { font-weight: 600; color: #ffcc99; }
+  .typo-playful .sample-button { background: #ff6b6b; color: #fff; font-family: 'Nunito', sans-serif; border-radius: 24px; }
+  .typo-playful .scale-row span:first-child { font-family: 'Nunito', sans-serif; }
+
+  /* ============================================
+     SECTION 3: DENSITY (unchanged)
+     ============================================ */
+  .density-phone .phone-screen { background: #0a0a0f; display: flex; flex-direction: column; }
+  .density-phone .song-header { padding: 14px 16px 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .density-phone .song-title { font-size: 0.9rem; font-weight: 700; color: #f0f0f0; }
+  .density-phone .song-artist { font-size: 0.75rem; color: #8888aa; margin-top: 2px; }
+  .density-phone .singer-tag {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    background: rgba(108,99,255,0.2); border: 1px solid rgba(108,99,255,0.3);
+    font-size: 0.7rem; color: #a09aff; margin-top: 6px;
+  }
+  .density-phone .soundboard { display: grid; gap: 8px; padding: 12px 16px; }
+  .density-phone .sound-btn {
+    background: #1a1a2e; border: 1px solid #333; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px; color: #f0f0f0; font-size: 0.8rem;
+  }
+  .density-phone .reactions-section { padding: 0 16px; }
+  .density-phone .reactions-label { font-size: 0.65rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .density-phone .reaction-bubbles { display: flex; gap: 8px; flex-wrap: wrap; }
+  .density-phone .reaction-bubble {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.25);
+    display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+  }
+  .density-phone .participants-section { padding: 0 16px; }
+  .density-phone .participant-row {
+    display: flex; align-items: center; gap: 8px; padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .density-phone .p-avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: #252542;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; color: #8888aa;
+  }
+  .density-phone .p-name { font-size: 0.8rem; color: #ccc; flex: 1; }
+  .density-phone .p-status { font-size: 0.65rem; color: #4ade80; }
+  .density-phone .song-over-btn {
+    margin: auto 16px 16px; padding: 14px;
+    background: rgba(239,68,68,0.15); border: 2px solid rgba(239,68,68,0.4);
+    border-radius: 12px; color: #ef4444; font-weight: 700;
+    text-align: center; font-size: 0.9rem;
+  }
+
+  .density-sparse .soundboard { grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 20px; }
+  .density-sparse .sound-btn { padding: 18px 12px; font-size: 0.85rem; border-radius: 14px; }
+  .density-sparse .reactions-section { padding: 12px 20px; }
+  .density-sparse .reaction-bubble { width: 52px; height: 52px; font-size: 1.4rem; }
+  .density-sparse .participants-section { display: none; }
+  .density-sparse .song-over-btn { padding: 18px; font-size: 1rem; border-radius: 16px; margin: auto 20px 20px; }
+
+  .density-medium .soundboard { grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 12px 16px; }
+  .density-medium .sound-btn { padding: 14px 8px; font-size: 0.75rem; }
+  .density-medium .reactions-section { padding: 10px 16px; }
+  .density-medium .reaction-bubble { width: 44px; height: 44px; }
+  .density-medium .participants-section { padding: 8px 16px; }
+  .density-medium .song-over-btn { padding: 14px; }
+
+  .density-dense .soundboard { grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; padding: 8px 12px; }
+  .density-dense .sound-btn { padding: 10px 4px; font-size: 0.65rem; border-radius: 8px; }
+  .density-dense .reactions-section { padding: 6px 12px; }
+  .density-dense .reactions-label { margin-bottom: 4px; }
+  .density-dense .reaction-bubble { width: 36px; height: 36px; font-size: 1rem; }
+  .density-dense .participants-section { padding: 4px 12px; }
+  .density-dense .participant-row { padding: 4px 0; }
+  .density-dense .p-avatar { width: 24px; height: 24px; font-size: 0.6rem; }
+  .density-dense .p-name { font-size: 0.75rem; }
+  .density-dense .song-over-btn { padding: 10px; font-size: 0.8rem; margin: auto 12px 12px; }
+
+  /* ============================================
+     TOKEN TABLE
+     ============================================ */
+  .token-table {
+    width: 100%;
+    max-width: 800px;
+    margin: 1.5rem auto;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  .token-table th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 2px solid #333;
+    color: #8888aa;
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .token-table td {
+    padding: 6px 12px;
+    border-bottom: 1px solid #1a1a2e;
+    color: #ccc;
+  }
+  .token-table .swatch {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border-radius: 3px;
+    vertical-align: middle;
+    margin-right: 6px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .token-table .token-name { font-family: 'Space Grotesk', monospace; color: #4ade80; }
+  .token-table tr.base-row td { color: #666; }
+
+  /* ============================================
+     RECOMMENDATION
+     ============================================ */
+  .combo-section {
+    margin-top: 3rem; padding: 24px;
+    background: #1a1a2e; border-radius: 16px; border: 1px solid #333;
+    max-width: 800px; margin-left: auto; margin-right: auto;
+  }
+  .combo-section h3 { margin-bottom: 12px; font-size: 1.1rem; }
+  .combo-section p { color: #8888aa; font-size: 0.9rem; line-height: 1.6; }
+  .combo-section ul { margin-top: 8px; padding-left: 20px; }
+  .combo-section li { color: #ccc; font-size: 0.9rem; margin-bottom: 8px; line-height: 1.5; }
+  .combo-section li strong { color: #ffd700; }
+
+  @media (max-width: 1400px) {
+    .phone-grid { gap: 1rem; }
+    .phone { width: 220px; height: 440px; }
+    .vibe-phone .winner-name { font-size: 1.5rem; }
+    .vibe-phone .winner-emoji { font-size: 2.5rem; }
+  }
+  @media (max-width: 900px) {
+    .phone-grid, .typo-grid { flex-direction: column; align-items: center; }
+    .phone { width: 260px; height: 500px; }
+    body { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Karamania Visual Foundation Explorer</h1>
+<p class="subtitle">Vibe-Adaptive Color System — same dark base, different energy per night</p>
+<p class="version-tag">v2 — Genre-Adaptive Palettes</p>
+
+<!-- ============================================
+     ARCHITECTURE EXPLAINER
+     ============================================ -->
+<div class="arch-box">
+  <h3>How It Works: One Attribute, Five Vibes</h3>
+  <div class="arch-code">
+    <span class="comment">&lt;!-- Host picks vibe at party creation --&gt;</span><br>
+    <span class="attr">&lt;body</span> <span class="prop">data-dj-state</span>=<span class="val">"ceremony"</span> <span class="prop">data-dj-vibe</span>=<span class="val">"kpop"</span><span class="attr">&gt;</span><br><br>
+    <span class="comment">/* Dark surfaces stay constant across ALL vibes */</span><br>
+    <span class="prop">--dj-bg</span>: <span class="val">#0a0a0f</span>;  <span class="comment">/* always dark */</span><br>
+    <span class="prop">--dj-surface</span>: <span class="val">#1a1a2e</span>; <span class="comment">/* always dark */</span><br>
+    <span class="prop">--dj-text</span>: <span class="val">#f0f0f0</span>;  <span class="comment">/* always readable */</span><br><br>
+    <span class="comment">/* Only ACCENTS change per vibe */</span><br>
+    <span class="attr">[data-dj-vibe="general"]</span> { <span class="prop">--dj-accent</span>: <span class="val">#ffd700</span>; }<br>
+    <span class="attr">[data-dj-vibe="kpop"]</span>&nbsp;&nbsp;&nbsp; { <span class="prop">--dj-accent</span>: <span class="val">#ff0080</span>; }<br>
+    <span class="attr">[data-dj-vibe="rock"]</span>&nbsp;&nbsp;&nbsp;&nbsp; { <span class="prop">--dj-accent</span>: <span class="val">#ff4444</span>; }<br>
+    <span class="attr">[data-dj-vibe="ballad"]</span>&nbsp; { <span class="prop">--dj-accent</span>: <span class="val">#ff9966</span>; }<br>
+    <span class="attr">[data-dj-vibe="edm"]</span>&nbsp;&nbsp;&nbsp;&nbsp; { <span class="prop">--dj-accent</span>: <span class="val">#00ffc8</span>; }
+  </div>
+  <div class="arch-note">
+    Implementation cost: ~20 lines of CSS custom property overrides. Zero JS logic. Zero new components.<br>
+    The host taps one emoji when creating the party. That sets <code>data-dj-vibe</code> for the entire session.
+  </div>
+</div>
+
+<!-- ============================================
+     SECTION 1: VIBE-ADAPTIVE CEREMONY REVEALS
+     ============================================ -->
+<div class="section-header">1. Vibe-Adaptive Ceremony Reveals</div>
+<p class="section-desc">Same ceremony. Same layout. Same dark base. Only the accent energy changes. Each vibe shows the ceremony reveal for "Best Vocalist" — see how the color mood transforms the feeling.</p>
+
+<div class="phone-grid">
+
+  <!-- GENERAL -->
+  <div class="phone-wrapper">
+    <div class="phone-label">🎤 General</div>
+    <div class="phone-sublabel">Gold + purple. Elegant, awards-show energy. The default.</div>
+    <div class="phone vibe-phone vibe-general">
+      <div class="phone-screen">
+        <div class="vibe-glow"></div>
+        <div class="confetti">
+          <span style="left:8%; animation-delay:0s;">✨</span>
+          <span style="left:35%; animation-delay:0.4s;">🌟</span>
+          <span style="left:60%; animation-delay:0.7s;">🎉</span>
+          <span style="left:85%; animation-delay:0.2s;">✨</span>
+        </div>
+        <div class="phone-status">ceremony</div>
+        <div class="ceremony-category">Best Vocalist</div>
+        <div class="ceremony-winner">
+          <span class="winner-emoji">🎤</span>
+          <div class="winner-name">LINH</div>
+          <div class="winner-award">Absolute showstopper</div>
+        </div>
+        <div class="vote-bar-section">
+          <div class="vote-bar">
+            <span class="name">Linh</span>
+            <div class="bar"><div class="bar-fill w" style="width:65%"></div></div>
+            <span class="pct">65%</span>
+          </div>
+          <div class="vote-bar">
+            <span class="name">Duc</span>
+            <div class="bar"><div class="bar-fill o" style="width:25%"></div></div>
+            <span class="pct">25%</span>
+          </div>
+          <div class="vote-bar">
+            <span class="name">Minh</span>
+            <div class="bar"><div class="bar-fill o" style="width:10%"></div></div>
+            <span class="pct">10%</span>
+          </div>
+        </div>
+        <div class="reaction-bar">
+          <div class="reaction-btn">🔥</div>
+          <div class="reaction-btn">👏</div>
+          <div class="reaction-btn">😂</div>
+          <div class="reaction-btn">💀</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- K-POP -->
+  <div class="phone-wrapper">
+    <div class="phone-label">💖 K-pop</div>
+    <div class="phone-sublabel">Hot pink + magenta. Idol energy, fan-chant vibes.</div>
+    <div class="phone vibe-phone vibe-kpop">
+      <div class="phone-screen">
+        <div class="vibe-glow"></div>
+        <div class="confetti">
+          <span style="left:12%; animation-delay:0.1s;">💖</span>
+          <span style="left:40%; animation-delay:0.5s;">✨</span>
+          <span style="left:65%; animation-delay:0.8s;">💜</span>
+          <span style="left:88%; animation-delay:0.3s;">💖</span>
+        </div>
+        <div class="phone-status">ceremony</div>
+        <div class="ceremony-category">Best Vocalist</div>
+        <div class="ceremony-winner">
+          <span class="winner-emoji">🎤</span>
+          <div class="winner-name">LINH</div>
+          <div class="winner-award">Main vocal energy</div>
+        </div>
+        <div class="vote-bar-section">
+          <div class="vote-bar">
+            <span class="name">Linh</span>
+            <div class="bar"><div class="bar-fill w" style="width:65%"></div></div>
+            <span class="pct">65%</span>
+          </div>
+          <div class="vote-bar">
+            <span class="name">Duc</span>
+            <div class="bar"><div class="bar-fill o" style="width:25%"></div></div>
+            <span class="pct">25%</span>
+          </div>
+          <div class="vote-bar">
+            <span class="name">Minh</span>
+            <div class="bar"><div class="bar-fill o" style="width:10%"></div></div>
+            <span class="pct">10%</span>
+          </div>
+        </div>
+        <div class="reaction-bar">
+          <div class="reaction-btn">🔥</div>
+          <div class="reaction-btn">👏</div>
+          <div class="reaction-btn">😍</div>
+          <div class="reaction-btn">💀</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROCK -->
+  <div class="phone-wrapper">
+    <div class="phone-label">🎸 Rock</div>
+    <div class="phone-sublabel">Red + orange fire. Raw energy, mosh pit intensity.</div>
+    <div class="phone vibe-phone vibe-rock">
+      <div class="phone-screen">
+        <div class="vibe-glow"></div>
+        <div class="confetti">
+          <span style="left:10%; animation-delay:0.2s;">🔥</span>
+          <span style="left:38%; animation-delay:0.6s;">⚡</span>
+          <span style="left:62%; animation-delay:0.9s;">🔥</span>
+          <span style="left:86%; animation-delay:0.4s;">⚡</span>
+        </div>
+        <div class="phone-status">ceremony</div>
+        <div class="ceremony-category">Best Vocalist</div>
+        <div class="ceremony-winner">
+          <span class="winner-emoji">🎤</span>
+          <div class="winner-name">LINH</div>
+          <div class="winner-award">Shredded the vocals</div>
+        </div>
+        <div class="vote-bar-section">
+          <div class="vote-bar">
+            <span class="name">Linh</span>
+            <div class="bar"><div class="bar-fill w" style="width:65%"></div></div>
+            <span class="pct">65%</span>
+          </div>
+          <div class="vote-bar">
+            <span class="name">Duc</span>
+            <div class="bar"><div class="bar-fill o" style="width:25%"></div></div>
+            <span class="pct">25%</span>
+          </div>
+          <div class="vote-bar">
+            <span class="name">Minh</span>
+            <div class="bar"><div class="bar-fill o" style="width:10%"></div></div>
+            <span class="pct">10%</span>
+          </div>
+        </div>
+        <div class="reaction-bar">
+          <div class="reaction-btn">🔥</div>
+          <div class="reaction-btn">🤘</div>
+          <div class="reaction-btn">😂</div>
+          <div class="reaction-btn">💀</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BALLAD -->
+  <div class="phone-wrapper">
+    <div class="phone-label">🎵 Ballad</div>
+    <div class="phone-sublabel">Warm amber + coral. Intimate, emotional, không khí.</div>
+    <div class="phone vibe-phone vibe-ballad">
+      <div class="phone-screen">
+        <div class="vibe-glow"></div>
+        <div class="confetti">
+          <span style="left:15%; animation-delay:0.3s;">🌟</span>
+          <span style="left:42%; animation-delay:0.7s;">✨</span>
+          <span style="left:68%; animation-delay:1.0s;">🌟</span>
+          <span style="left:90%; animation-delay:0.5s;">✨</span>
+        </div>
+        <div class="phone-status">ceremony</div>
+        <div class="ceremony-category">Best Vocalist</div>
+        <div class="ceremony-winner">
+          <span class="winner-emoji">🎤</span>
+          <div class="winner-name">LINH</div>
+          <div class="winner-award">Hit us right in the feels</div>
+        </div>
+        <div class="vote-bar-section">
+          <div class="vote-bar">
+            <span class="name">Linh</span>
+            <div class="bar"><div class="bar-fill w" style="width:65%"></div></div>
+            <span class="pct">65%</span>
+          </div>
+          <div class="vote-bar">
+            <span class="name">Duc</span>
+            <div class="bar"><div class="bar-fill o" style="width:25%"></div></div>
+            <span class="pct">25%</span>
+          </div>
+          <div class="vote-bar">
+            <span class="name">Minh</span>
+            <div class="bar"><div class="bar-fill o" style="width:10%"></div></div>
+            <span class="pct">10%</span>
+          </div>
+        </div>
+        <div class="reaction-bar">
+          <div class="reaction-btn">❤️</div>
+          <div class="reaction-btn">😭</div>
+          <div class="reaction-btn">👏</div>
+          <div class="reaction-btn">🥹</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDM -->
+  <div class="phone-wrapper">
+    <div class="phone-label">🎧 EDM</div>
+    <div class="phone-sublabel">Cyan + teal neon. Club energy, bass-drop reveals.</div>
+    <div class="phone vibe-phone vibe-edm">
+      <div class="phone-screen">
+        <div class="vibe-glow"></div>
+        <div class="confetti">
+          <span style="left:10%; animation-delay:0s;">💎</span>
+          <span style="left:36%; animation-delay:0.5s;">✨</span>
+          <span style="left:64%; animation-delay:0.8s;">💎</span>
+          <span style="left:88%; animation-delay:0.3s;">✨</span>
+        </div>
+        <div class="phone-status">ceremony</div>
+        <div class="ceremony-category">Best Vocalist</div>
+        <div class="ceremony-winner">
+          <span class="winner-emoji">🎤</span>
+          <div class="winner-name">LINH</div>
+          <div class="winner-award">Dropped the vocals hard</div>
+        </div>
+        <div class="vote-bar-section">
+          <div class="vote-bar">
+            <span class="name">Linh</span>
+            <div class="bar"><div class="bar-fill w" style="width:65%"></div></div>
+            <span class="pct">65%</span>
+          </div>
+          <div class="vote-bar">
+            <span class="name">Duc</span>
+            <div class="bar"><div class="bar-fill o" style="width:25%"></div></div>
+            <span class="pct">25%</span>
+          </div>
+          <div class="vote-bar">
+            <span class="name">Minh</span>
+            <div class="bar"><div class="bar-fill o" style="width:10%"></div></div>
+            <span class="pct">10%</span>
+          </div>
+        </div>
+        <div class="reaction-bar">
+          <div class="reaction-btn">🔥</div>
+          <div class="reaction-btn">👏</div>
+          <div class="reaction-btn">🎧</div>
+          <div class="reaction-btn">💀</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOKEN TABLE -->
+<div class="section-header" style="margin-top:1rem;">Vibe Token Map</div>
+<p class="section-desc">What actually changes per vibe. Dark surfaces and text stay constant — only 4 accent tokens shift.</p>
+
+<table class="token-table">
+  <thead>
+    <tr>
+      <th>Token</th>
+      <th>🎤 General</th>
+      <th>💖 K-pop</th>
+      <th>🎸 Rock</th>
+      <th>🎵 Ballad</th>
+      <th>🎧 EDM</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="base-row">
+      <td class="token-name">--dj-bg</td>
+      <td colspan="5" style="color:#666; text-align:center;">Always #0a0a0f (dark base — constant across all vibes)</td>
+    </tr>
+    <tr class="base-row">
+      <td class="token-name">--dj-surface</td>
+      <td colspan="5" style="color:#666; text-align:center;">Always #1a1a2e (surface — constant across all vibes)</td>
+    </tr>
+    <tr class="base-row">
+      <td class="token-name">--dj-text-primary</td>
+      <td colspan="5" style="color:#666; text-align:center;">Always #f0f0f0 (readable — constant across all vibes)</td>
+    </tr>
+    <tr>
+      <td class="token-name">--dj-accent</td>
+      <td><span class="swatch" style="background:#ffd700;"></span>#ffd700</td>
+      <td><span class="swatch" style="background:#ff0080;"></span>#ff0080</td>
+      <td><span class="swatch" style="background:#ff4444;"></span>#ff4444</td>
+      <td><span class="swatch" style="background:#ff9966;"></span>#ff9966</td>
+      <td><span class="swatch" style="background:#00ffc8;"></span>#00ffc8</td>
+    </tr>
+    <tr>
+      <td class="token-name">--dj-ceremony-glow</td>
+      <td><span class="swatch" style="background:#ffd700;"></span>#ffd700</td>
+      <td><span class="swatch" style="background:#ff69b4;"></span>#ff69b4</td>
+      <td><span class="swatch" style="background:#ff6600;"></span>#ff6600</td>
+      <td><span class="swatch" style="background:#ffcc88;"></span>#ffcc88</td>
+      <td><span class="swatch" style="background:#00c8ff;"></span>#00c8ff</td>
+    </tr>
+    <tr>
+      <td class="token-name">--dj-ceremony-bg</td>
+      <td><span class="swatch" style="background:#1a0a2e;"></span>#1a0a2e</td>
+      <td><span class="swatch" style="background:#1a0a20;"></span>#1a0a20</td>
+      <td><span class="swatch" style="background:#1a0a0a;"></span>#1a0a0a</td>
+      <td><span class="swatch" style="background:#1a1210;"></span>#1a1210</td>
+      <td><span class="swatch" style="background:#0a1a1a;"></span>#0a1a1a</td>
+    </tr>
+    <tr>
+      <td class="token-name">--dj-action-primary</td>
+      <td><span class="swatch" style="background:#6c63ff;"></span>#6c63ff</td>
+      <td><span class="swatch" style="background:#cc00ff;"></span>#cc00ff</td>
+      <td><span class="swatch" style="background:#cc4422;"></span>#cc4422</td>
+      <td><span class="swatch" style="background:#cc8866;"></span>#cc8866</td>
+      <td><span class="swatch" style="background:#00c8ff;"></span>#00c8ff</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============================================
+     SECTION 2: TYPOGRAPHY
+     ============================================ -->
+<div class="section-header">2. Typography</div>
+<p class="section-desc">Constant across all vibes — type doesn't change with genre. Users glance at phones in a dark room between songs.</p>
+
+<div class="typo-grid">
+  <div class="typo-card typo-bold">
+    <h3 style="font-family:'Space Grotesk'; font-weight:700; color:#ffd700;">A. Bold & Loud</h3>
+    <div class="typo-sub">Space Grotesk — Thick, geometric, punchy</div>
+    <div class="typo-sample">
+      <div class="sample-hero">BEST VOCALIST</div>
+      <div class="sample-sub">Linh wins by a landslide!</div>
+      <div class="sample-body">Everyone's phones erupt. The room goes wild. Linh takes a bow.</div>
+      <div class="sample-button">VOTE NOW</div>
+    </div>
+    <div class="scale">
+      <div class="scale-row"><span style="font-size:1.5rem; font-weight:700;">Award Title</span><span class="scale-label">24px / 700</span></div>
+      <div class="scale-row"><span style="font-size:1rem; font-weight:600;">Winner Name</span><span class="scale-label">16px / 600</span></div>
+      <div class="scale-row"><span style="font-size:0.8rem; font-weight:400;">Body text</span><span class="scale-label">13px / 400</span></div>
+    </div>
+  </div>
+
+  <div class="typo-card typo-sleek">
+    <h3 style="font-family:'Outfit'; font-weight:600; color:#f0f0f0;">B. Sleek & Modern</h3>
+    <div class="typo-sub">Outfit — Clean, geometric, premium feel</div>
+    <div class="typo-sample">
+      <div class="sample-hero">Best Vocalist</div>
+      <div class="sample-sub" style="color:#8888aa;">Linh wins by a landslide</div>
+      <div class="sample-body">Everyone's phones erupt. The room goes wild. Linh takes a bow.</div>
+      <div class="sample-button">Vote Now</div>
+    </div>
+    <div class="scale">
+      <div class="scale-row"><span style="font-size:1.5rem; font-weight:600; font-family:'Outfit';">Award Title</span><span class="scale-label">24px / 600</span></div>
+      <div class="scale-row"><span style="font-size:1rem; font-weight:400; font-family:'Outfit';">Winner Name</span><span class="scale-label">16px / 400</span></div>
+      <div class="scale-row"><span style="font-size:0.8rem; font-weight:400; font-family:'Outfit';">Body text</span><span class="scale-label">13px / 400</span></div>
+    </div>
+  </div>
+
+  <div class="typo-card typo-playful">
+    <h3 style="font-family:'Nunito'; font-weight:800; color:#ff9966;">C. Playful & Warm</h3>
+    <div class="typo-sub">Nunito — Rounded, friendly, party energy</div>
+    <div class="typo-sample">
+      <div class="sample-hero">Best Vocalist</div>
+      <div class="sample-sub">Linh wins by a landslide!</div>
+      <div class="sample-body">Everyone's phones erupt. The room goes wild. Linh takes a bow.</div>
+      <div class="sample-button">Vote Now!</div>
+    </div>
+    <div class="scale">
+      <div class="scale-row"><span style="font-size:1.5rem; font-weight:800; font-family:'Nunito';">Award Title</span><span class="scale-label">24px / 800</span></div>
+      <div class="scale-row"><span style="font-size:1rem; font-weight:600; font-family:'Nunito';">Winner Name</span><span class="scale-label">16px / 600</span></div>
+      <div class="scale-row"><span style="font-size:0.8rem; font-weight:400; font-family:'Nunito';">Body text</span><span class="scale-label">13px / 400</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================
+     SECTION 3: DENSITY
+     ============================================ -->
+<div class="section-header">3. UI Density</div>
+<p class="section-desc">Song State screen — where users spend 60-70% of their time. Also constant across vibes.</p>
+
+<div class="phone-grid">
+  <div class="phone-wrapper">
+    <div class="phone-label">A. Sparse</div>
+    <div class="phone-sublabel">Big targets, breathing room. Drunk-proof. No participant list.</div>
+    <div class="phone density-phone density-sparse">
+      <div class="phone-screen">
+        <div class="song-header">
+          <div class="song-title">Chúng Ta Không Thuộc Về Nhau</div>
+          <div class="song-artist">Sơn Tùng M-TP</div>
+          <div class="singer-tag">Linh is singing</div>
+        </div>
+        <div class="soundboard">
+          <div class="sound-btn">👏 Clap</div>
+          <div class="sound-btn">🔔 Cheer</div>
+          <div class="sound-btn">😂 Laugh</div>
+          <div class="sound-btn">🎵 Sing along</div>
+        </div>
+        <div class="reactions-section">
+          <div class="reactions-label">Quick reactions</div>
+          <div class="reaction-bubbles">
+            <div class="reaction-bubble">🔥</div>
+            <div class="reaction-bubble">❤️</div>
+            <div class="reaction-bubble">😍</div>
+            <div class="reaction-bubble">💀</div>
+          </div>
+        </div>
+        <div class="song-over-btn">Hold — Song Over!</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phone-wrapper">
+    <div class="phone-label">B. Medium</div>
+    <div class="phone-sublabel">Balanced. Soundboard + reactions + compact participant list.</div>
+    <div class="phone density-phone density-medium">
+      <div class="phone-screen">
+        <div class="song-header">
+          <div class="song-title">Chúng Ta Không Thuộc Về Nhau</div>
+          <div class="song-artist">Sơn Tùng M-TP</div>
+          <div class="singer-tag">Linh is singing</div>
+        </div>
+        <div class="soundboard">
+          <div class="sound-btn">👏 Clap</div>
+          <div class="sound-btn">🔔 Cheer</div>
+          <div class="sound-btn">😂 Laugh</div>
+          <div class="sound-btn">🎵 Sing</div>
+          <div class="sound-btn">🥁 Drum</div>
+          <div class="sound-btn">📯 Horn</div>
+        </div>
+        <div class="reactions-section">
+          <div class="reactions-label">Quick reactions</div>
+          <div class="reaction-bubbles">
+            <div class="reaction-bubble">🔥</div>
+            <div class="reaction-bubble">❤️</div>
+            <div class="reaction-bubble">😍</div>
+            <div class="reaction-bubble">💀</div>
+            <div class="reaction-bubble">😂</div>
+          </div>
+        </div>
+        <div class="participants-section">
+          <div class="participant-row"><div class="p-avatar">L</div><span class="p-name">Linh</span><span class="p-status">singing</span></div>
+          <div class="participant-row"><div class="p-avatar">D</div><span class="p-name">Duc</span><span class="p-status">active</span></div>
+          <div class="participant-row"><div class="p-avatar">M</div><span class="p-name">Minh</span><span class="p-status">idle</span></div>
+        </div>
+        <div class="song-over-btn">Hold — Song Over!</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phone-wrapper">
+    <div class="phone-label">C. Dense</div>
+    <div class="phone-sublabel">Maximum info. Full participant list, compact everything.</div>
+    <div class="phone density-phone density-dense">
+      <div class="phone-screen">
+        <div class="song-header" style="padding:10px 12px 8px;">
+          <div class="song-title" style="font-size:0.8rem;">Chúng Ta Không Thuộc Về Nhau</div>
+          <div class="song-artist" style="font-size:0.65rem;">Sơn Tùng M-TP</div>
+          <div class="singer-tag" style="font-size:0.6rem; padding:1px 8px;">Linh is singing</div>
+        </div>
+        <div class="soundboard">
+          <div class="sound-btn">👏</div><div class="sound-btn">🔔</div>
+          <div class="sound-btn">😂</div><div class="sound-btn">🎵</div>
+          <div class="sound-btn">🥁</div><div class="sound-btn">📯</div>
+          <div class="sound-btn">🎸</div><div class="sound-btn">🪇</div>
+        </div>
+        <div class="reactions-section">
+          <div class="reactions-label">Reactions</div>
+          <div class="reaction-bubbles">
+            <div class="reaction-bubble">🔥</div><div class="reaction-bubble">❤️</div>
+            <div class="reaction-bubble">😍</div><div class="reaction-bubble">💀</div>
+            <div class="reaction-bubble">😂</div><div class="reaction-bubble">👑</div>
+          </div>
+        </div>
+        <div class="participants-section">
+          <div class="participant-row"><div class="p-avatar">L</div><span class="p-name">Linh</span><span class="p-status">singing</span></div>
+          <div class="participant-row"><div class="p-avatar">D</div><span class="p-name">Duc</span><span class="p-status">active</span></div>
+          <div class="participant-row"><div class="p-avatar">M</div><span class="p-name">Minh</span><span class="p-status">idle</span></div>
+          <div class="participant-row"><div class="p-avatar">T</div><span class="p-name">Trang</span><span class="p-status">active</span></div>
+          <div class="participant-row"><div class="p-avatar">H</div><span class="p-name">Huy</span><span class="p-status">active</span></div>
+          <div class="participant-row"><div class="p-avatar">N</div><span class="p-name">Nga</span><span class="p-status">idle</span></div>
+        </div>
+        <div class="song-over-btn">Hold — Song Over!</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================
+     SALLY'S UPDATED RECOMMENDATION
+     ============================================ -->
+<div class="combo-section">
+  <h3>Sally's Updated Recommendation</h3>
+  <p>The vibe-adaptive system means you don't pick ONE color mood — the host picks the night's energy, and the palette follows. Here's what to decide:</p>
+  <ul>
+    <li><strong>Color: Vibe-Adaptive (all 5 vibes)</strong> — General as default, with K-pop/Rock/Ballad/EDM as host-selected options. Dark surfaces stay constant for readability. Only 4 accent tokens shift per vibe (~20 lines of CSS). Near-zero implementation cost.</li>
+    <li><strong>Typography: A (Bold & Loud)</strong> with Space Grotesk — Constant across all vibes. Award titles SHOUT in any genre. Maximum dark-room readability. The font doesn't need to change per vibe — the color accent does all the genre-signaling work.</li>
+    <li><strong>Density: B (Medium)</strong> — Constant across all vibes. Balanced for 3-hour sessions. Sparse is too empty, Dense is too risky for party conditions.</li>
+    <li><strong>Bonus: Vibe-specific confetti + reactions</strong> — K-pop gets 💖💜, Rock gets 🔥⚡, Ballad gets ✨🌟, EDM gets 💎✨. Same sprite sheet system, just different emoji pool per vibe. Also near-zero cost.</li>
+    <li><strong>Bonus: Vibe-flavored award copy</strong> — "Absolute showstopper" (General) vs "Main vocal energy" (K-pop) vs "Shredded the vocals" (Rock). Stored in <code>constants/copy.js</code> as vibe-keyed strings. One file, five flavor variations.</li>
+  </ul>
+  <p style="margin-top: 12px; color: #4ade80;">Host picks vibe with one emoji tap at party creation. One attribute. Five moods. Zero extra components.</p>
+</div>
+
+</body>
+</html>
