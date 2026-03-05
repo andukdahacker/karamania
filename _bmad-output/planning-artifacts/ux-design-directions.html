@@ -266,63 +266,48 @@
     color: var(--dj-text-secondary); margin-top: 4px;
   }
 
-  /* ============ SCREEN 4: VOTING ============ */
-  .voting-screen .ps { background: var(--dj-ceremony-bg); }
-  .voting-screen .vote-header {
-    padding: 16px; text-align: center;
+  /* ============ SCREEN 4: ANTICIPATION ============ */
+  .anticipation-screen .ps { background: var(--dj-ceremony-bg); }
+  .anticipation-screen .antic-content {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 24px;
   }
-  .voting-screen .vote-category {
+  .anticipation-screen .antic-category {
     font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px;
-    color: var(--dj-accent); margin-bottom: 4px;
+    color: var(--dj-accent); margin-bottom: 8px;
   }
-  .voting-screen .vote-title {
-    font-size: 1.3rem; font-weight: 700;
+  .anticipation-screen .antic-title {
+    font-size: 1.3rem; font-weight: 700; margin-bottom: 24px;
   }
-  .voting-screen .vote-timer {
-    width: 80px; height: 80px; margin: 12px auto;
-    border-radius: 50%; border: 4px solid #333;
+  .anticipation-screen .antic-drumroll {
+    width: 100px; height: 100px; border-radius: 50%;
+    border: 4px solid var(--dj-accent);
     display: flex; align-items: center; justify-content: center;
-    font-size: 1.8rem; font-weight: 700; color: var(--dj-accent);
-    position: relative;
-    background: conic-gradient(var(--dj-accent) 65%, #333 65%);
+    font-size: 2.5rem; margin-bottom: 20px;
+    animation: drumrollPulse 0.6s ease-in-out infinite;
+    box-shadow: 0 0 30px color-mix(in srgb, var(--dj-accent) 20%, transparent);
   }
-  .voting-screen .vote-timer .timer-inner {
-    width: 64px; height: 64px; border-radius: 50%;
-    background: var(--dj-ceremony-bg);
-    display: flex; align-items: center; justify-content: center;
+  @keyframes drumrollPulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.08); opacity: 1; }
   }
-  .voting-screen .nominee-list {
-    padding: 0 16px; flex: 1;
+  .anticipation-screen .antic-bars {
+    display: flex; gap: 4px; align-items: flex-end; height: 40px; margin-bottom: 16px;
   }
-  .voting-screen .nominee {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px; margin-bottom: 8px;
-    border-radius: 12px; background: var(--dj-surface);
-    border: 2px solid transparent; cursor: pointer;
-    transition: all 0.15s;
+  .anticipation-screen .antic-bar {
+    width: 6px; border-radius: 3px; background: var(--dj-accent);
+    animation: barBounce 0.8s ease-in-out infinite;
   }
-  .voting-screen .nominee:hover { border-color: var(--dj-action-primary); }
-  .voting-screen .nominee.voted {
-    border-color: var(--dj-accent);
-    background: rgba(255,215,0,0.08);
+  @keyframes barBounce {
+    0%, 100% { height: 8px; opacity: 0.4; }
+    50% { height: 32px; opacity: 1; }
   }
-  .voting-screen .nom-avatar {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: var(--dj-surface-elevated);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.75rem; color: var(--dj-text-secondary);
+  .anticipation-screen .antic-hint {
+    font-size: 0.7rem; color: var(--dj-text-secondary);
+    text-transform: uppercase; letter-spacing: 2px;
+    animation: silencePulse 1.5s ease-in-out infinite;
   }
-  .voting-screen .nom-name { font-size: 0.9rem; font-weight: 600; flex: 1; }
-  .voting-screen .nom-check {
-    width: 24px; height: 24px; border-radius: 50%;
-    border: 2px solid #444; display: flex;
-    align-items: center; justify-content: center;
-  }
-  .voting-screen .nominee.voted .nom-check {
-    background: var(--dj-accent); border-color: var(--dj-accent);
-    color: #000; font-size: 0.7rem;
-  }
-  .voting-screen .vote-footer {
+  .anticipation-screen .antic-footer {
     padding: 12px 16px; text-align: center;
     font-size: 0.65rem; color: var(--dj-text-secondary);
   }
@@ -385,24 +370,18 @@
   .reveal-screen .reveal-subtitle {
     font-size: 0.85rem; color: var(--dj-ceremony-glow); margin-top: 4px;
   }
-  .reveal-screen .vote-results {
-    width: 100%; margin-top: 24px;
+  .reveal-screen .reveal-context {
+    width: 100%; margin-top: 20px; padding: 12px 16px;
+    border-radius: 12px; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08); text-align: center;
   }
-  .reveal-screen .vr-bar {
-    display: flex; align-items: center; gap: 6px;
-    margin-bottom: 8px; font-size: 0.75rem;
+  .reveal-screen .reveal-context-label {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--dj-text-secondary); margin-bottom: 6px;
   }
-  .reveal-screen .vr-name { width: 44px; text-align: right; color: var(--dj-text-secondary); }
-  .reveal-screen .vr-track {
-    flex: 1; height: 16px; background: rgba(255,255,255,0.06);
-    border-radius: 4px; overflow: hidden;
+  .reveal-screen .reveal-context-text {
+    font-size: 0.75rem; color: var(--dj-text-primary); line-height: 1.5;
   }
-  .reveal-screen .vr-fill { height: 100%; border-radius: 4px; }
-  .reveal-screen .vr-fill.win {
-    background: linear-gradient(90deg, var(--dj-accent), var(--dj-ceremony-glow));
-  }
-  .reveal-screen .vr-fill.lose { background: var(--dj-action-primary); opacity: 0.5; }
-  .reveal-screen .vr-pct { width: 28px; font-size: 0.7rem; color: var(--dj-text-secondary); }
   .reveal-screen .reveal-reactions {
     position: relative; z-index: 2;
     padding: 12px 16px; display: flex; gap: 10px; justify-content: center;
@@ -443,50 +422,7 @@
     font-size: 0.65rem; color: var(--dj-text-secondary);
   }
 
-  /* ============ SCREEN 8: INTERLUDE ============ */
-  .interlude-screen .inter-header {
-    padding: 16px; text-align: center;
-  }
-  .interlude-screen .inter-label {
-    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px;
-    color: var(--dj-text-secondary); margin-bottom: 4px;
-  }
-  .interlude-screen .inter-title {
-    font-size: 1.1rem; font-weight: 700;
-  }
-  .interlude-screen .inter-subtitle {
-    font-size: 0.75rem; color: var(--dj-text-secondary); margin-top: 4px;
-  }
-  .interlude-screen .singer-options {
-    padding: 0 16px; flex: 1;
-  }
-  .interlude-screen .singer-card {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px; margin-bottom: 8px; border-radius: 12px;
-    background: var(--dj-surface); border: 2px solid transparent;
-    cursor: pointer;
-  }
-  .interlude-screen .singer-card:hover { border-color: var(--dj-action-primary); }
-  .interlude-screen .singer-card.leading { border-color: var(--dj-accent); }
-  .interlude-screen .singer-av {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: var(--dj-surface-elevated);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.8rem; color: var(--dj-text-secondary); flex-shrink: 0;
-  }
-  .interlude-screen .singer-card.leading .singer-av {
-    background: rgba(255,215,0,0.15); color: var(--dj-accent);
-  }
-  .interlude-screen .singer-info { flex: 1; min-width: 0; }
-  .interlude-screen .singer-name { font-size: 0.85rem; font-weight: 600; }
-  .interlude-screen .singer-votes {
-    font-size: 0.7rem; color: var(--dj-accent); font-weight: 600;
-  }
-  .interlude-screen .inter-timer {
-    padding: 12px 16px; text-align: center;
-    font-size: 0.7rem; color: var(--dj-text-secondary);
-  }
-  .interlude-screen .inter-timer strong { color: var(--dj-accent); }
+  /* ============ SCREEN 8: (removed — singer vote replaced by Quick Pick / Spin) ============ */
 
   /* ============ SCREEN 9: FINALE ============ */
   .finale-screen .ps {
@@ -775,6 +711,117 @@
   .game-screen .qv-fill.yes-fill { background: var(--dj-action-confirm); }
   .game-screen .qv-fill.no-fill { background: var(--dj-action-danger); }
   .game-screen .qv-count { width: 20px; font-size: 0.75rem; color: var(--dj-text-secondary); }
+
+  /* ============ SCREEN: SESSION TIMELINE ============ */
+  .timeline-screen .ps { background: #0a0a0f; }
+  .timeline-screen .tl-header {
+    padding: 16px 16px 8px; display: flex;
+    justify-content: space-between; align-items: center;
+  }
+  .timeline-screen .tl-greeting {
+    font-size: 1rem; font-weight: 700; color: var(--dj-text-primary);
+  }
+  .timeline-screen .tl-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--dj-action-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; color: #fff; font-weight: 700;
+  }
+  .timeline-screen .tl-actions {
+    display: flex; gap: 8px; padding: 8px 16px 12px;
+  }
+  .timeline-screen .tl-action-btn {
+    flex: 1; padding: 14px 12px; border-radius: 12px; border: none;
+    font-family: 'Space Grotesk', sans-serif; font-size: 0.8rem;
+    font-weight: 700; text-transform: uppercase; cursor: pointer;
+    text-align: center;
+  }
+  .timeline-screen .tl-action-btn.host {
+    background: var(--dj-accent); color: #000;
+  }
+  .timeline-screen .tl-action-btn.join {
+    background: var(--dj-surface); color: var(--dj-text-primary);
+    border: 2px solid #333;
+  }
+  .timeline-screen .tl-section-label {
+    padding: 8px 16px; font-size: 0.6rem; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--dj-text-secondary);
+  }
+  .timeline-screen .tl-session {
+    margin: 0 16px 8px; padding: 12px; border-radius: 12px;
+    background: var(--dj-surface); border: 1px solid rgba(255,255,255,0.06);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .timeline-screen .tl-session:hover { border-color: var(--dj-action-primary); }
+  .timeline-screen .tl-session-top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 6px;
+  }
+  .timeline-screen .tl-session-date {
+    font-size: 0.7rem; color: var(--dj-text-secondary);
+  }
+  .timeline-screen .tl-session-count {
+    font-size: 0.6rem; color: var(--dj-action-confirm);
+  }
+  .timeline-screen .tl-session-venue {
+    font-size: 0.85rem; font-weight: 600; color: var(--dj-text-primary);
+    margin-bottom: 4px;
+  }
+  .timeline-screen .tl-session-award {
+    display: inline-block; padding: 2px 8px; border-radius: 8px;
+    font-size: 0.6rem; background: rgba(255,215,0,0.1);
+    color: var(--dj-accent); margin-bottom: 6px;
+  }
+  .timeline-screen .tl-session-media {
+    display: flex; gap: 4px; margin-top: 6px;
+  }
+  .timeline-screen .tl-media-thumb {
+    width: 36px; height: 36px; border-radius: 6px;
+    background: var(--dj-surface-elevated);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem;
+  }
+  .timeline-screen .tl-again-btn {
+    display: inline-block; margin-top: 8px; padding: 6px 12px;
+    border-radius: 8px; font-size: 0.65rem; font-weight: 600;
+    background: rgba(108,99,255,0.1); color: var(--dj-action-primary);
+    border: 1px solid rgba(108,99,255,0.2); cursor: pointer;
+  }
+
+  /* ============ SCREEN: AUTH OVERLAY ============ */
+  .auth-screen .ps { background: #0a0a0f; }
+  .auth-screen .auth-content {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .auth-screen .auth-logo {
+    font-size: 1.8rem; font-weight: 700; color: var(--dj-accent);
+    margin-bottom: 4px;
+  }
+  .auth-screen .auth-tagline {
+    font-size: 0.7rem; color: var(--dj-text-secondary);
+    margin-bottom: 24px;
+  }
+  .auth-screen .auth-btn {
+    width: 80%; padding: 14px; border-radius: 12px; border: none;
+    font-family: 'Space Grotesk', sans-serif; font-size: 0.85rem;
+    font-weight: 600; cursor: pointer; margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .auth-screen .auth-btn.google {
+    background: #fff; color: #333;
+  }
+  .auth-screen .auth-btn.facebook {
+    background: #1877f2; color: #fff;
+  }
+  .auth-screen .auth-btn.guest {
+    background: var(--dj-surface); color: var(--dj-text-primary);
+    border: 2px solid #333;
+  }
+  .auth-screen .auth-note {
+    margin-top: 16px; font-size: 0.6rem; color: var(--dj-text-secondary);
+    text-align: center; line-height: 1.5;
+  }
 
   /* Flow arrow between sections */
   .flow-arrow {
@@ -1116,7 +1163,7 @@
 <body data-vibe="general">
 
 <h1>KARAMANIA</h1>
-<p class="subtitle">Full DJ State Walkthrough — Every screen, in sequence (20 screens)</p>
+<p class="subtitle">Full DJ State Walkthrough — Every screen, in sequence (Flutter native, iOS + Android)</p>
 
 <!-- VIBE SWITCHER -->
 <div class="vibe-switcher">
@@ -1137,14 +1184,14 @@
   <div class="screen-info">
     <div class="state-badge" style="background:rgba(108,99,255,0.15); color:var(--dj-action-primary);">LOBBY</div>
     <h2>Join & Name Entry</h2>
-    <p>User scans QR code → lands here. Zero accounts, zero downloads. Name entry is the only friction. Join button activates AudioContext (the critical first tap).</p>
+    <p>User scans QR code → web landing page → deep link into app (or app store redirect). Name entry is the only friction. Optional Google/Facebook sign-in for persistent timeline.</p>
     <ul class="detail-list">
-      <li><strong>Entry:</strong> QR code → PWA URL with party code</li>
-      <li><strong>Input:</strong> Name only (no avatar, no email)</li>
-      <li><strong>Audio unlock:</strong> JOIN tap creates AudioContext</li>
+      <li><strong>Entry:</strong> QR scan → web landing page → deep link into Flutter app</li>
+      <li><strong>Input:</strong> Name only (guest default), optional OAuth sign-in</li>
+      <li><strong>Audio:</strong> Native audio plays immediately — no unlock needed</li>
       <li><strong>Participant dots:</strong> Show who's already in</li>
     </ul>
-    <div class="timing"><strong>Time budget:</strong> <8 seconds from scan to joined</div>
+    <div class="timing"><strong>Time budget:</strong> <15 seconds from scan to joined (returning users <8s via deep link)</div>
   </div>
   <div class="phone-col">
     <div class="phone lobby-screen">
@@ -1315,10 +1362,10 @@
   <div class="screen-info">
     <div class="state-badge" style="background:rgba(108,99,255,0.15); color:var(--dj-action-primary);">LOBBY → ICEBREAKER</div>
     <h2>Icebreaker Tap</h2>
-    <p>First group interaction. Everyone answers simultaneously, results revealed together. Teaches the core pattern: private input → public output. Also serves as AudioContext activation fallback for late joiners.</p>
+    <p>First group interaction. Everyone answers simultaneously, results revealed together. Teaches the core pattern: private input → public output. Native audio plays immediately — no activation needed.</p>
     <ul class="detail-list">
       <li><strong>Pattern taught:</strong> Tap → wait → reveal together</li>
-      <li><strong>Audio:</strong> First tap unlocks AudioContext</li>
+      <li><strong>Audio:</strong> Native audio cue on reveal — plays immediately</li>
       <li><strong>Social:</strong> Low-stakes, no wrong answer</li>
       <li><strong>Duration:</strong> ~15 seconds total</li>
     </ul>
@@ -1605,11 +1652,11 @@
     <h2>Song State — Lean-In Mode</h2>
     <p>Where users spend most of their time. Phone is a participation device: soundboard taps audible to the room, emoji reactions visible on all screens. Near-silent app — real karaoke is the soundtrack.</p>
     <ul class="detail-list">
-      <li><strong>Soundboard:</strong> 6 sounds (3×2 grid), taps audible via Web Audio</li>
+      <li><strong>Soundboard:</strong> 6 sounds (3x2 grid), taps audible via native audio</li>
       <li><strong>Reactions:</strong> 5 emoji, visible on all screens as scatter</li>
       <li><strong>Participants:</strong> Compact list, activity status</li>
       <li><strong>Song Over:</strong> Host-only, 500ms long-press</li>
-      <li><strong>Audio state:</strong> Web Audio graph near-dormant</li>
+      <li><strong>Audio state:</strong> Audio engine near-dormant, animation ticker paused</li>
     </ul>
     <div class="timing"><strong>Attention mode:</strong> Lean-in. Casual glances between songs. Phone at side or on table.</div>
   </div>
@@ -1711,12 +1758,12 @@
     <ul class="detail-list">
       <li><strong>Trigger:</strong> Server-side reaction peak detection</li>
       <li><strong>Pop → Capture:</strong> 2 taps total (pop + select type)</li>
-      <li><strong>Photo:</strong> Inline on all browsers</li>
-      <li><strong>Video/Audio:</strong> Inline on Chrome, native picker on iOS</li>
+      <li><strong>Photo:</strong> Native camera via image_picker (both platforms)</li>
+      <li><strong>Video/Audio:</strong> Uniform native capture on iOS and Android</li>
       <li><strong>Upload:</strong> Background queue, never blocks party</li>
       <li><strong>Also:</strong> Persistent capture icon in toolbar (manual anytime)</li>
     </ul>
-    <div class="timing"><strong>Design rule:</strong> Max 1 bubble per 60s. Never during voting or silence phase. Auto-dismiss after 15s.</div>
+    <div class="timing"><strong>Design rule:</strong> Max 1 bubble per 60s. Never during ceremony anticipation or silence phase. Auto-dismiss after 15s.</div>
   </div>
   <div class="phone-col">
     <div class="phone song-screen">
@@ -1777,23 +1824,23 @@
 
 <div class="flow-arrow">↓ Host long-presses "Song Over!" ↓</div>
 
-<!-- SCREEN 4: VOTING -->
+<!-- SCREEN 4: ANTICIPATION -->
 <div class="screen-section">
   <div class="screen-info">
-    <div class="state-badge" style="background:rgba(255,215,0,0.15); color:var(--dj-accent);">CEREMONY → VOTE</div>
-    <h2>Voting Phase (T+0 to T+4s)</h2>
-    <p>4-second hard window. Visual countdown creates game-show urgency. Everyone votes for anyone except themselves. Drumroll builds across all devices.</p>
+    <div class="state-badge" style="background:rgba(255,215,0,0.15); color:var(--dj-accent);">CEREMONY → ANTICIPATION</div>
+    <h2>Anticipation Phase (T+0 to T+3s)</h2>
+    <p>No voting — awards are auto-generated from session context. Drumroll builds across all devices while the app generates the award. Phones dim, audio builds tension. The anticipation IS the experience.</p>
     <ul class="detail-list">
-      <li><strong>Duration:</strong> Exactly 4 seconds, server-enforced</li>
-      <li><strong>Input:</strong> Single tap on one nominee</li>
-      <li><strong>Timer:</strong> Circular countdown (conic-gradient)</li>
-      <li><strong>Audio:</strong> Drumroll building on all devices</li>
+      <li><strong>Duration:</strong> 2-3 seconds, server-coordinated</li>
+      <li><strong>No input:</strong> Participants just watch and feel the tension</li>
+      <li><strong>Audio:</strong> Drumroll building on all devices simultaneously</li>
+      <li><strong>Award engine:</strong> Context-driven (party card, reactions, song position, stats)</li>
       <li><strong>Sync:</strong> Server sends revealAt timestamp at T+0</li>
     </ul>
-    <div class="timing"><strong>Attention mode:</strong> Active. All eyes on phones.</div>
+    <div class="timing"><strong>Attention mode:</strong> Active. All eyes on phones. The drumroll pulls the room in.</div>
   </div>
   <div class="phone-col">
-    <div class="phone voting-screen">
+    <div class="phone anticipation-screen">
       <div class="ps">
         <div class="top-bar">
           <span class="state-tag" style="color:var(--dj-accent);">★ ceremony</span>
@@ -1801,51 +1848,36 @@
           <span class="people-count">8</span>
         </div>
         <div class="divider"></div>
-        <div class="vote-header">
-          <div class="vote-category">Vote now</div>
-          <div class="vote-title">Best Vocalist</div>
+        <div class="antic-content">
+          <div class="antic-category">Award incoming</div>
+          <div class="antic-title">Who will it be?</div>
+          <div class="antic-drumroll">🥁</div>
+          <div class="antic-bars">
+            <div class="antic-bar" style="animation-delay:0s;"></div>
+            <div class="antic-bar" style="animation-delay:0.1s;"></div>
+            <div class="antic-bar" style="animation-delay:0.2s;"></div>
+            <div class="antic-bar" style="animation-delay:0.3s;"></div>
+            <div class="antic-bar" style="animation-delay:0.4s;"></div>
+            <div class="antic-bar" style="animation-delay:0.3s;"></div>
+            <div class="antic-bar" style="animation-delay:0.2s;"></div>
+            <div class="antic-bar" style="animation-delay:0.1s;"></div>
+            <div class="antic-bar" style="animation-delay:0s;"></div>
+          </div>
+          <div class="antic-hint">Generating award...</div>
         </div>
-        <div class="vote-timer"><div class="timer-inner">2</div></div>
-        <div class="nominee-list">
-          <div class="nominee">
-            <div class="nom-avatar">L</div>
-            <div class="nom-name">Linh</div>
-            <div class="nom-check"></div>
-          </div>
-          <div class="nominee voted">
-            <div class="nom-avatar">D</div>
-            <div class="nom-name">Nam</div>
-            <div class="nom-check">✓</div>
-          </div>
-          <div class="nominee">
-            <div class="nom-avatar">M</div>
-            <div class="nom-name">Minh</div>
-            <div class="nom-check"></div>
-          </div>
-          <div class="nominee">
-            <div class="nom-avatar">T</div>
-            <div class="nom-name">Trang</div>
-            <div class="nom-check"></div>
-          </div>
-          <div class="nominee">
-            <div class="nom-avatar">H</div>
-            <div class="nom-name">Huy</div>
-            <div class="nom-check"></div>
-          </div>
-        </div>
-        <div class="vote-footer">Tap to vote · You can't vote for yourself</div>
+        <div class="antic-footer">Auto-generated from session context</div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="flow-arrow">↓ Vote window closes ↓</div>
+<div class="flow-arrow">↓ Anticipation builds... ↓</div>
 
 <!-- SCREEN 5: SILENCE -->
 <div class="screen-section">
   <div class="screen-info">
     <div class="state-badge" style="background:rgba(255,255,255,0.08); color:#666;">CEREMONY → SILENCE</div>
-    <h2>The Silence (T+4s to T+6s)</h2>
+    <h2>The Silence (T+3s)</h2>
     <p>ALL audio cuts. ALL screens go near-black. Just the category name pulsing faintly. The room physically quiets. This is the highest-tension moment — humans mirror device behavior.</p>
     <ul class="detail-list">
       <li><strong>Duration:</strong> 1.5-2 seconds</li>
@@ -1873,14 +1905,14 @@
 <div class="screen-section">
   <div class="screen-info">
     <div class="state-badge" style="background:rgba(255,215,0,0.15); color:var(--dj-accent);">CEREMONY → REVEAL</div>
-    <h2>The Reveal (T+6s)</h2>
-    <p>Every phone erupts simultaneously. Host phone: full-volume fanfare. Participant phones: 60% crowd roar. Winner's phone: unique sound + extra haptic. The room physically reacts — laughter, pointing, friendly arguing.</p>
+    <h2>The Reveal (T+3s, synchronized)</h2>
+    <p>Every phone erupts simultaneously. Host phone: full-volume fanfare. Participant phones: 60% crowd roar. Winner's phone: unique sound + extra haptic. Auto-generated award — no voting needed. The room physically reacts — laughter, pointing, friendly arguing.</p>
     <ul class="detail-list">
       <li><strong>Animation:</strong> scale + elasticOut (800ms)</li>
       <li><strong>Audio:</strong> Spatial — host loud, participants crowd</li>
-      <li><strong>Vote chart:</strong> Shows margin of victory</li>
+      <li><strong>Award:</strong> Context-driven (party card, reactions, song position)</li>
       <li><strong>Confetti:</strong> Sprite sheet scatter (vibe-specific emoji)</li>
-      <li><strong>Winner phone:</strong> Unique celebration + share card</li>
+      <li><strong>Winner phone:</strong> Unique celebration + moment card share</li>
     </ul>
     <div class="timing"><strong>Physical reaction target:</strong> Laughter + pointing within 3 seconds. "The Friendly Accusation Roar."</div>
   </div>
@@ -1905,22 +1937,9 @@
           <div class="reveal-emoji">🎤</div>
           <div class="reveal-name">LINH</div>
           <div class="reveal-subtitle">Absolute showstopper</div>
-          <div class="vote-results">
-            <div class="vr-bar">
-              <span class="vr-name">Linh</span>
-              <div class="vr-track"><div class="vr-fill win" style="width:62%"></div></div>
-              <span class="vr-pct">62%</span>
-            </div>
-            <div class="vr-bar">
-              <span class="vr-name">Nam</span>
-              <div class="vr-track"><div class="vr-fill lose" style="width:25%"></div></div>
-              <span class="vr-pct">25%</span>
-            </div>
-            <div class="vr-bar">
-              <span class="vr-name">Minh</span>
-              <div class="vr-track"><div class="vr-fill lose" style="width:13%"></div></div>
-              <span class="vr-pct">13%</span>
-            </div>
+          <div style="margin-top:20px;padding:12px 16px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);text-align:center;">
+            <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;color:var(--dj-text-secondary);margin-bottom:6px;">Why this award?</div>
+            <div style="font-size:0.75rem;color:var(--dj-text-primary);line-height:1.5;">Nailed the Method Actor challenge + 23 audience reactions during the bridge</div>
           </div>
         </div>
         <div class="reveal-reactions">
@@ -1934,17 +1953,17 @@
   </div>
 </div>
 
-<div class="flow-arrow">↓ If second ceremony queued ↓</div>
+<div class="flow-arrow">↓ Or a Quick ceremony instead... ↓</div>
 
 <!-- SCREEN 7: QUICK CEREMONY -->
 <div class="screen-section">
   <div class="screen-info">
     <div class="state-badge" style="background:rgba(255,215,0,0.1); color:var(--dj-accent);">CEREMONY → QUICK</div>
-    <h2>Quick Ceremony (~6s)</h2>
-    <p>No voting. DJ auto-selects winner from participation data. Brief anticipation → quick reveal with single chime. The shoutout, not the game show. Always follows a Full ceremony, never leads.</p>
+    <h2>Quick Ceremony (3-5s)</h2>
+    <p>Same auto-generated awards as Full, but faster. Brief anticipation → quick reveal with single chime. The shoutout, not the game show. Used mid-session and for back-to-back performances.</p>
     <ul class="detail-list">
-      <li><strong>No voting:</strong> DJ picks from reaction/soundboard data</li>
-      <li><strong>Duration:</strong> ~6 seconds total</li>
+      <li><strong>Auto-generated:</strong> Same context-driven engine as Full ceremony</li>
+      <li><strong>Duration:</strong> 3-5 seconds total</li>
       <li><strong>Audio:</strong> Single chime, no fanfare</li>
       <li><strong>Visual:</strong> Simpler — no bar chart, no confetti</li>
       <li><strong>Purpose:</strong> Keeps energy up without ceremony fatigue</li>
@@ -2096,71 +2115,7 @@
   </div>
 </div>
 
-<div class="flow-arrow">↓ Then: vote for next singer ↓</div>
-
-<!-- SCREEN 8: INTERLUDE VOTE -->
-<div class="screen-section">
-  <div class="screen-info">
-    <div class="state-badge" style="background:rgba(108,99,255,0.15); color:var(--dj-action-primary);">INTERLUDE</div>
-    <h2>Vote for Next Singer</h2>
-    <p>Bridge between ceremony and next song. "Vote for next singer" instead of "vote for next song" — avoids face-saving issues when someone's beloved song loses. Winner taps a genre tag (one tap) before walking to the mic, feeding contextual ceremonies and challenges.</p>
-    <ul class="detail-list">
-      <li><strong>Who not what:</strong> Vote for the person, not the song</li>
-      <li><strong>Genre tag:</strong> Winner taps one genre before singing</li>
-      <li><strong>Contextual DJ:</strong> Genre history feeds ceremony categories + challenges</li>
-      <li><strong>Timer:</strong> Auto-advances after 15-20 seconds</li>
-      <li><strong>Fallback:</strong> If no votes, DJ picks the least-recently-singing person</li>
-    </ul>
-    <div class="timing"><strong>Cultural design:</strong> Vietnamese KTV — voting for a person is encouragement; voting against a song is personal.</div>
-  </div>
-  <div class="phone-col">
-    <div class="phone interlude-screen">
-      <div class="ps">
-        <div class="top-bar">
-          <span class="state-tag" style="color:var(--dj-action-primary);">♫ interlude</span>
-          <span class="party-name">Linh's Party</span>
-          <span class="people-count">8</span>
-        </div>
-        <div class="divider"></div>
-        <div class="inter-header">
-          <div class="inter-label">Up next</div>
-          <div class="inter-title">Who's singing next?</div>
-          <div class="inter-subtitle">Vote for a friend — they pick the song!</div>
-        </div>
-        <div class="singer-options">
-          <div class="singer-card leading">
-            <div class="singer-av">D</div>
-            <div class="singer-info">
-              <div class="singer-name">Nam</div>
-              <div class="singer-song-hint" style="font-size:0.6rem;color:var(--dj-text-secondary);">Last sang: 🎸 Rock</div>
-            </div>
-            <div class="singer-votes">5 votes</div>
-          </div>
-          <div class="singer-card">
-            <div class="singer-av">T</div>
-            <div class="singer-info">
-              <div class="singer-name">Trang</div>
-              <div class="singer-song-hint" style="font-size:0.6rem;color:var(--dj-text-secondary);">Haven't sung yet</div>
-            </div>
-            <div class="singer-votes">2 votes</div>
-          </div>
-          <div class="singer-card">
-            <div class="singer-av">H</div>
-            <div class="singer-info">
-              <div class="singer-name">Huy</div>
-              <div class="singer-song-hint" style="font-size:0.6rem;color:var(--dj-text-secondary);">Last sang: 🎵 Ballad</div>
-            </div>
-            <div class="singer-votes">1 vote</div>
-          </div>
-        </div>
-        <div class="pool-hint" style="padding:8px 16px;text-align:center;">
-          <span style="display:inline-block;padding:4px 10px;border-radius:10px;background:rgba(108,99,255,0.08);border:1px solid rgba(108,99,255,0.2);font-size:0.6rem;color:var(--dj-action-primary);">Tonight: 🎵3 Ballad · 🎸2 Rock · 💃1 Dance</span>
-        </div>
-        <div class="inter-timer">Next singer in <strong>12s</strong></div>
-      </div>
-    </div>
-  </div>
-</div>
+<div class="flow-arrow">↓ Interlude → Song Selection (Quick Pick / Spin) → Party Card → Song → repeat... ↓</div>
 
 <!-- ========== PHASE: FINALE ========== -->
 <div class="section-divider">
@@ -2214,6 +2169,114 @@
         </div>
         <div class="share-btn-area">
           <button class="share-btn">SHARE THE NIGHT ✨</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PHASE: IDENTITY & MEMORIES ========== -->
+<div class="section-divider">
+  <div class="phase-name">Phase 8 — Identity & Memories (persistent experience)</div>
+</div>
+
+<!-- SCREEN: AUTH / JOIN -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(108,99,255,0.15); color:var(--dj-action-primary);">APP LAUNCH</div>
+    <h2>Sign In — Optional Identity</h2>
+    <p>First screen on fresh app launch. Google/Facebook OAuth via Firebase Auth, or skip to join as guest. Authentication is never required to join a party — it unlocks persistent timeline and media ownership. Guest-to-account upgrade available anytime without data loss.</p>
+    <ul class="detail-list">
+      <li><strong>Default path:</strong> Guest with name only (zero friction)</li>
+      <li><strong>OAuth:</strong> Google + Facebook via Firebase Auth</li>
+      <li><strong>What auth unlocks:</strong> Session Timeline, media ownership, profile</li>
+      <li><strong>Upgrade:</strong> Guest → account anytime, no data loss</li>
+      <li><strong>In-session:</strong> Auth doesn't affect permissions — guests = authenticated</li>
+    </ul>
+    <div class="timing"><strong>Design principle:</strong> Join first, sign up later. Auth friction = 0 for party joining.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone auth-screen">
+      <div class="ps">
+        <div class="auth-content">
+          <div class="auth-logo">KARAMANIA</div>
+          <div class="auth-tagline">Your phone. The party.</div>
+          <button class="auth-btn google">G  Continue with Google</button>
+          <button class="auth-btn facebook">f  Continue with Facebook</button>
+          <div style="width:80%;text-align:center;padding:12px 0;font-size:0.65rem;color:var(--dj-text-secondary);">or</div>
+          <button class="auth-btn guest">Join as Guest</button>
+          <div class="auth-note">Sign in to save your party history,<br>awards, and media captures</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ Authenticated user's home screen ↓</div>
+
+<!-- SCREEN: SESSION TIMELINE -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(255,215,0,0.15); color:var(--dj-accent);">HOME SCREEN</div>
+    <h2>Session Timeline — Memories</h2>
+    <p>Default home screen for authenticated users. Reverse-chronological list of past sessions. Each entry shows date, venue, participant count, user's top award, and media thumbnails. The morning-after experience: relive highlights, share sessions, and start new parties.</p>
+    <ul class="detail-list">
+      <li><strong>Data:</strong> Session summaries from Railway PostgreSQL</li>
+      <li><strong>Per entry:</strong> Date, venue, participants, top award, media</li>
+      <li><strong>Actions:</strong> Start Party, Join Party (always visible)</li>
+      <li><strong>Share:</strong> Shareable session link (read-only web view)</li>
+      <li><strong>"Let's go again!"</strong> Pre-composed invite to existing group</li>
+      <li><strong>Guest view:</strong> Start/Join Party only, prompt to create account</li>
+    </ul>
+    <div class="timing"><strong>Morning-after:</strong> Open app → see last night → share highlights → "Let's go again!" = the viral flywheel.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone timeline-screen">
+      <div class="ps">
+        <div class="tl-header">
+          <div class="tl-greeting">Hey, Linh</div>
+          <div class="tl-avatar">L</div>
+        </div>
+        <div class="tl-actions">
+          <button class="tl-action-btn host">Start Party</button>
+          <button class="tl-action-btn join">Join Party</button>
+        </div>
+        <div class="tl-section-label">Your Sessions</div>
+        <div class="tl-session">
+          <div class="tl-session-top">
+            <div class="tl-session-date">Sat, Mar 1 · 3h 12m</div>
+            <div class="tl-session-count">8 people</div>
+          </div>
+          <div class="tl-session-venue">Linh's Birthday KTV</div>
+          <div class="tl-session-award">🎤 Vocal Assassin</div>
+          <div class="tl-session-media">
+            <div class="tl-media-thumb">📷</div>
+            <div class="tl-media-thumb">📹</div>
+            <div class="tl-media-thumb">📷</div>
+            <div class="tl-media-thumb" style="font-size:0.5rem;color:var(--dj-text-secondary);">+4</div>
+          </div>
+          <div class="tl-again-btn">Let's go again!</div>
+        </div>
+        <div class="tl-session">
+          <div class="tl-session-top">
+            <div class="tl-session-date">Fri, Feb 21 · 2h 45m</div>
+            <div class="tl-session-count">6 people</div>
+          </div>
+          <div class="tl-session-venue">Friday Night Karaoke</div>
+          <div class="tl-session-award">🏆 Hype Lord</div>
+          <div class="tl-session-media">
+            <div class="tl-media-thumb">📷</div>
+            <div class="tl-media-thumb">📹</div>
+          </div>
+          <div class="tl-again-btn">Let's go again!</div>
+        </div>
+        <div class="tl-session" style="opacity:0.7;">
+          <div class="tl-session-top">
+            <div class="tl-session-date">Sat, Feb 15 · 1h 30m</div>
+            <div class="tl-session-count">4 people</div>
+          </div>
+          <div class="tl-session-venue">Test Session</div>
+          <div class="tl-session-award">🎵 Silent Storm</div>
         </div>
       </div>
     </div>

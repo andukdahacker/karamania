@@ -7,6 +7,8 @@ editHistory:
     changes: 'PRD alignment update: Added Party Cards System UX (deal flow, card categories, screen layout, timing rules). Added Song State modes (Lightstick Mode full-screen glow with color picker, Camera Flash Hype Signal with cooldown). Added Prompted Media Capture UX (floating capture bubble, pop-to-capture flow, iOS graceful degradation, background upload). Added Interlude Games UX (Kings Cup, Dare Pull, Quick Vote with screen layouts and interaction patterns). Updated core loop to include party_card_deal phase. Updated DJ state machine with party_card_deal state. Updated screen inventory (9→13 screens). Updated component inventory (18→26 components + new stores). Updated project scaffold, bundle analysis, mermaid diagrams, state transitions, reduced motion table.'
   - date: '2026-03-05'
     changes: 'Song Integration & Discovery update: Added complete Song Integration & Discovery UX section (TV pairing flow, playlist import UX, Intersection-Based Suggestion Engine, Quick Pick mode, Spin the Wheel mode, suggestion-only fallback). Added Journey 6 (Song Discovery flow). Replaced genre-tag-only Song Awareness section with full song intelligence system. Updated screen inventory (13→18 screens). Updated component inventory (26→34 components + new stores). Updated DJ state machine with song_selection states. Updated core loop, bundle analysis, component roadmap, project scaffold, state transitions, and timing patterns.'
+  - date: '2026-03-05'
+    changes: 'Major platform pivot and ceremony simplification: PWA → Flutter native app (iOS + Android). Replaced all Svelte/Tailwind/Vite/Web Audio references with Flutter/Dart equivalents. Updated Platform Strategy, Design System Foundation, Component Strategy, project scaffold, and all code examples to Flutter patterns. Removed ceremony voting entirely — awards are now context-driven (party card completion, reaction volume, song position, performer stats). Simplified three ceremony types to two (Full/Quick) with host skip option. Updated all ceremony beat-by-beat sequences, removed Voting Mechanics section, replaced with Award Generation Logic. Added Session Timeline & Memories UX (FR108-FR115): timeline home screen, session detail with media gallery, shareable session link, "Let'\''s go again!" invite action. Added Authentication & Identity UX (FR96-FR105): optional OAuth, guest upgrade, auth-gated timeline. Added Web Landing Page join flow UX. Updated screen inventory (18→22 screens). Updated all user journey flows, error patterns, audio patterns, responsive strategy, and accessibility for Flutter native. Removed all browser-specific workarounds (AudioContext unlock, PWA constraints, CSS bundle strategy).'
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/product-brief-karaoke-party-app-2026-03-04.md'
@@ -37,11 +39,11 @@ date: '2026-03-04'
 
 ### Project Vision
 
-Karamania is a second-screen PWA companion that transforms group karaoke nights from passive singing sessions into interactive party experiences. Users join via QR code — zero downloads, zero accounts — and their phones become participation devices: reactions, soundboards, voting, ceremonies, song discovery, and mini-games that keep the entire room engaged between songs.
+Karamania is a second-screen native mobile app (Flutter, iOS + Android) that transforms group karaoke nights from interactive party experiences into full entertainment sessions. Users join via QR code scan or party code — a lightweight web landing page deep-links into the installed app or redirects to the app store for first-time users. Optional accounts (Google/Facebook OAuth or guest with name-only). Phones become participation devices: reactions, soundboards, party card challenges, lightstick mode, song discovery, ceremonies, and mini-games that keep the entire room engaged before, during, and between songs.
 
-The app occupies genuine white space: no competitor serves as a companion layer for in-room group karaoke. By not playing music, Karamania sidesteps music licensing entirely and works at any venue. Two interconnected engines power the experience: (1) a server-authoritative DJ engine that automatically orchestrates party flow, eliminating dead air and freeing the host from MC duties, and (2) a Song Integration Engine that pairs with the YouTube TV via the Lounge API, passively detects every song played, imports friends' playlists, and surfaces personalized suggestions — eliminating "what should we sing?" decision fatigue.
+The app occupies genuine white space: no competitor serves as a companion layer for in-room group karaoke. By not playing music, Karamania sidesteps music licensing entirely and works at any venue. As a native app, Karamania delivers reliable background connectivity, seamless media capture on both platforms, push notifications, and consistent performance. Two interconnected engines power the experience: (1) a server-authoritative DJ engine that automatically orchestrates party flow (party card deal → song → ceremony → interlude → repeat), eliminating dead air and freeing the host from MC duties, and (2) a Song Integration Engine that pairs with the YouTube TV via the Lounge API, passively detects every song played, imports friends' playlists, and surfaces personalized suggestions through Quick Pick voting and Spin the Wheel — eliminating "what should we sing?" decision fatigue.
 
-Target market: Vietnamese friend groups (ages 20-35) at commercial karaoke venues in HCMC and Hanoi. MVP built by solo developer in ~7 weeks. Success metric: >80% "Would use again" post-session score.
+Target market: Vietnamese friend groups (ages 20-35) at commercial karaoke venues in HCMC and Hanoi. MVP built by solo developer in ~8 weeks. Success metric: >80% "Would use again" post-session score.
 
 ### Target Users
 
@@ -53,15 +55,15 @@ Target market: Vietnamese friend groups (ages 20-35) at commercial karaoke venue
 
 3. **Duc — "The Performer" (Spotlight Seeker):** 27, sales rep. Wants his performances to be events with crowd reactions, ceremony awards, and shareable moment cards. Content generator for the viral flywheel.
 
-4. **Trang — "The Reluctant Star" (Shy Joiner):** 22, accounting student. Goes because friends drag her. Design litmus test: if the app works for Trang, it works for everyone. Needs an engagement ladder (reactions → voting → interludes → group anthem) with zero forced participation.
+4. **Trang — "The Reluctant Star" (Shy Joiner):** 22, accounting student. Goes because friends drag her. Design litmus test: if the app works for Trang, it works for everyone. Needs an engagement ladder (reactions → interludes → song picks → group anthem) with zero forced participation.
 
-**Secondary:** Late joiners (mid-session onboarding with audio unlock fallback), disconnected users (transparent reconnection), solo host testing (first-time exploration).
+**Secondary:** Late joiners (mid-session onboarding), disconnected users (transparent reconnection), solo host testing (first-time exploration).
 
 **Design Principles from User Research:**
 - Design for 60-70% room adoption, not 100%
 - Minimum viable party size: 2-3 people must still be fun
 - Group size variation: 4 friends vs. 12 colleagues are different experiences
-- Battery consciousness: 2-3 hour sessions with WebSocket + Web Audio + screen-on
+- Battery consciousness: 2-3 hour sessions with WebSocket + native audio + screen-on. Adaptive heartbeat (5s active → 15s song) + wake lock release during song state
 
 ### Key Design Challenges
 
@@ -76,11 +78,11 @@ Target market: Vietnamese friend groups (ages 20-35) at commercial karaoke venue
 
 4. **Drunk-User-Friendly Interaction Design:** By mid-session, fine motor control degrades. All primary interactions require a single tap on targets no smaller than 48x48px (prefer 56x56px+). No text input beyond initial name entry. No precision, no multi-step flows.
 
-5. **Choreographed Reveals — State Synchronization as UX:** When a ceremony reveals an award, all 8 phones must show the reveal within a 100ms window of each other. If Duc sees "Vocal Assassin" while Minh's phone still shows the voting screen, the collective room reaction is destroyed. Ceremony reveals and major DJ transitions must use server-coordinated reveal timing (server sends future timestamp, clients schedule synchronized display). The room reaction IS the product — desynchronized reveals kill the magic.
+5. **Choreographed Reveals — State Synchronization as UX:** When a ceremony reveals an award, all 8 phones must show the reveal within a 200ms window of each other. If Duc sees "Vocal Assassin" while Minh's phone still shows the anticipation screen, the collective room reaction is destroyed. Ceremony reveals and major DJ transitions must use server-coordinated reveal timing (server sends future timestamp, clients schedule synchronized display). The room reaction IS the product — desynchronized reveals kill the magic.
 
 6. **Physical-Digital Synchronization:** The DJ engine cycles automatically while real-world events happen asynchronously (mic handoffs, food breaks, bathroom runs). Bridge moment activities and pause states must feel natural, not robotic. The 90-second inactivity auto-pause prevents the app from talking to an empty room.
 
-7. **First-Tap Audio Unlock & Fallback Paths:** iOS Safari requires a user gesture to unlock AudioContext. The icebreaker tap serves as the audio activation event. However, late joiners who bypass the icebreaker and users who refresh the page need a fallback "tap to unmute" interaction. This is a core design requirement, not an implementation detail — audio is the app's primary communication channel in passive mode.
+7. **App Download Friction for Join Flow:** Unlike a PWA, Karamania requires the app to be installed. The web landing page must minimize this friction: clean design, fast platform detection, deep-link into installed app, or quick app store redirect with "Download to join the party" messaging. Small app size (<50MB) and fast cold start (<3s) mitigate the friction. Once installed, subsequent joins are instant via deep link.
 
 ### Design Opportunities
 
@@ -94,7 +96,7 @@ Target market: Vietnamese friend groups (ages 20-35) at commercial karaoke venue
 
 ### Defining Experience
 
-The core experience of Karamania is **synchronized collective moments** — every phone in the room doing the same thing at the same time, creating a shared experience that transcends individual screens. The product's value is proven in the 15-second post-song ceremony: a fanfare erupts from 8 phones, a voting screen appears simultaneously, a countdown builds tension, and an award reveals in perfect sync. That collective gasp IS the product.
+The core experience of Karamania is **synchronized collective moments** — every phone in the room doing the same thing at the same time, creating a shared experience that transcends individual screens. The product's value is proven in the 10-second post-song ceremony: a fanfare erupts from 8 phones, a drumroll builds anticipation, and an auto-generated award reveals in perfect sync. That collective gasp IS the product.
 
 **The Core Loop:**
 Song Selection (Quick Pick / Spin the Wheel) → Party Card Deal → Song (passive/lean-in mode) → "Song Over!" trigger → Ceremony (active mode) → Interlude/Vote → Song Selection → Party Card Deal → Song
@@ -110,41 +112,58 @@ Beneath the loud moments, the DJ engine's quiet orchestration is what brings hos
 
 ### Platform Strategy
 
-**Platform:** Mobile-only PWA, portrait orientation exclusively
+**Platform:** Flutter native app (iOS + Android), portrait orientation exclusively
 **Viewport:** 320px (iPhone SE) to 428px (iPhone 14 Pro Max)
-**Primary browsers:** Chrome Android (60-70% expected), iOS Safari (20-30%)
-**Input:** Touch-only, single-tap interactions (except host "Song Over!" which uses long-press), no keyboard beyond name entry
-**Connectivity:** Persistent WebSocket, aggressive reconnection, no offline mode (real-time multiplayer requires connection)
-**Audio:** Web Audio API with pre-loaded buffers — audio is the mode-transition trigger, not a nice-to-have
-**Install:** No app store, no download. QR scan → browser → playing. PWA "Add to Home Screen" optional, never required
+**Primary platforms:** Android (60-70% expected), iOS (20-30%)
+**Input:** Touch-only, single-tap interactions (except host "Song Over!" which uses long-press), no keyboard beyond name entry and TV pairing code
+**Connectivity:** Persistent WebSocket (socket_io_client), aggressive reconnection, no offline mode (real-time multiplayer requires connection)
+**Audio:** Native audio engine (just_audio/audioplayers) with bundled assets — audio is the mode-transition trigger, not a nice-to-have. No browser AudioContext restrictions — audio plays immediately on any interaction
+**Install:** App Store + Google Play distribution. QR scan → web landing page → deep link into app (if installed) or app store redirect (if not)
+
+**Platform Advantages Over PWA:**
+- Push notifications available for party invites and morning-after highlights
+- Background WebSocket connectivity — app maintains connection when backgrounded
+- Native camera/microphone access — uniform photo, video (5s), and audio capture on both platforms
+- Native wake lock via wakelock_plus — uniform across iOS and Android
+- Native flashlight API for camera flash hype signal — works on both platforms
+- Consistent performance — no browser variability
 
 **Platform Constraints Driving Design:**
-- No push notifications (PWA limitation on iOS) — all engagement happens in-session
-- No background audio (iOS kills it) — audio only while tab is active
-- Screen Wake Lock varies by browser — Chrome API + iOS video hack during active states only
+- App download required for first-time join — web landing page mitigates friction
 - 4G network in karaoke room basements — optimize for intermittent connectivity
 - Budget Android devices dominant in Vietnam market — test on 3-year-old hardware. Share-worthy artifacts (moment cards, setlist posters) need defensive design: text truncation, dynamic font scaling, overflow handling for long display names. Test on worst device in the room, not the best
+- Battery optimization critical for 2-3 hour sessions — adaptive heartbeat (5s active → 15s song), wake lock release during song state
 
-**Join Flow Timing Budget (target: under 30 seconds perceived):**
-- QR scan → browser opens: 1-2s
-- DNS + TLS + first byte: 1-2s on 4G
-- HTML parse + JS load: 2-3s (<100KB gzipped)
+**Join Flow — Two Paths:**
+
+**Path A: App already installed (returning user / has app):**
+- QR scan → web landing page opens (1-2s)
+- Deep link fires → app opens with party code pre-filled (1s)
+- Optional: sign in or continue as guest (0-10s)
+- Name entry (if guest): 5-10s
 - WebSocket connect: 0.5s
-- Name entry: 5-10s (user time)
-- Icebreaker render: immediate
+- In the party. Total: ~10-15s
 
-The "3 friends are waiting for you" loading state is load-time camouflage — pre-render the lobby server-side so the first paint shows social proof before JS executes. Perceived speed matters more than actual speed.
+**Path B: First-time user (app not installed):**
+- QR scan → web landing page opens (1-2s)
+- Deep link fails → "Download Karamania to join!" with app store button
+- App store → download → install (~30-60s on 4G, <50MB app)
+- Open app → party code pre-filled via deferred deep link
+- Name entry: 5-10s
+- In the party. First-time friction accepted — all subsequent joins use Path A
+
+The "3 friends are waiting for you" loading state is anticipation camouflage — the lobby shows social proof while the WebSocket connects. Perceived speed matters more than actual speed.
 
 ### Effortless Interactions
 
-**Join (must feel instant):**
-QR scan → enter name → in the party. Two taps. Under 30 seconds perceived. The loading state shows "3 friends are waiting for you" — server-side pre-rendered social proof while assets load. The icebreaker fires immediately, teaching the app through play. No tutorial, no walkthrough, no "allow notifications" prompt.
+**Join (must feel instant for returning users):**
+QR scan → deep link into app → enter name → in the party. Under 15 seconds for returning users. First-time download adds friction but is a one-time cost. The loading state shows "3 friends are waiting for you" — social proof while WebSocket connects. The icebreaker fires immediately, teaching the app through play. No tutorial, no walkthrough. Optional sign-in (Google/Facebook) is non-blocking — users can join as guest and upgrade later.
 
 **React (must feel instinctive):**
 Single tap to send an emoji reaction. No selection menu for the primary reaction — tap the big button, emoji flies. Soundboard is 4-6 large buttons, always visible during song state. The phone is a game controller, not an app. Reaction UI designed for peripheral vision and quick glances — big, colorful, high-contrast, readable in a dim room at arm's length.
 
-**Vote (must feel urgent):**
-Ceremony voting appears with a countdown. One tap to rate. The countdown creates urgency; the stagger model ("Waiting for 2 more...") creates social pressure. No decision paralysis — options are simple (thumbs up/down for Quick, 1-5 scale for Full).
+**Celebrate (must feel automatic):**
+Ceremony awards are auto-generated from session context — no voting required. The host taps "Song Over!" and the app handles everything: anticipation build → award reveal → celebration. Awards are driven by party card completion, reaction volume, song position, and performer stats. Pure celebration, zero decision fatigue for participants.
 
 **Host "Song Over!" trigger (must be deliberate but fast):**
 500ms long-press with a satisfying fill animation + haptic feedback. Deliberate enough to prevent accidental triggers during frantic reaction tapping, but faster than a confirmation dialog. The fill animation gives Linh visual confirmation she's triggering it — finger down, circle fills, release at full, ceremony fires. No undo needed because the gesture itself prevents accidents. This replaces a single tap to solve the accidental-trigger problem without adding friction.
@@ -158,7 +177,7 @@ Moment card appears → one tap → native share sheet. No cropping, no editing,
 ### Critical Success Moments
 
 **1. The First Ceremony (The Aha Moment)**
-When the first song ends and every phone erupts simultaneously — this is when the room understands what Karamania is. Design the first ceremony of each session with an extra beat of suspense and a slightly longer reveal. However, the first ceremony tone must be **celebratory-neutral** — "THE FIRST SONG IS IN THE BOOKS!" rather than performance-quality-dependent praise. The first song might be terrible (someone picks a song they can't sing, bails halfway), and a grand "YOU WERE AMAZING" ceremony on a cringe performance creates embarrassment, not delight. Celebrate the milestone, not the quality. If the first ceremony doesn't make Trang look up from Instagram, the app has failed.
+When the first song ends and every phone erupts simultaneously — this is when the room understands what Karamania is. Design the first ceremony of each session with an extra beat of suspense and a slightly longer reveal. Awards are auto-generated from session context (party card completion, reaction volume, song position) — fun/random titles from a pool of 20+ templates, not performance ratings. The first ceremony tone must be **celebratory-neutral** — "THE FIRST SONG IS IN THE BOOKS!" rather than performance-quality-dependent praise. Celebrate the milestone, not the quality. If the first ceremony doesn't make Trang look up from Instagram, the app has failed.
 
 **2. Linh's 45-Minute Realization (The Retention Moment)**
 The moment Linh realizes she hasn't managed anything for 45 minutes. This isn't a visible UI event — it's the absence of friction. The DJ engine cycled through activities, bridge moments filled physical transitions, and Linh just... played. This invisible success determines whether she creates a second party. Design the DJ flow so smooth that host intervention feels optional, not required.
@@ -210,7 +229,7 @@ The emotional design is grounded in three Vietnamese social-emotional patterns s
 
 | Priority | Emotion | Description | Proxy Metric | Target |
 |---|---|---|---|---|
-| 1 | **"We're all in this together"** (Belonging) | Synchronized ceremonies, collective audio, every phone erupting at once. The foundational emotional promise | Ceremony participation rate — % of connected users who vote | >70% per ceremony |
+| 1 | **"We're all in this together"** (Belonging) | Synchronized ceremonies, collective audio, every phone erupting at once. The foundational emotional promise | Ceremony sync rate — % of connected phones that display ceremony within 500ms | >90% per ceremony |
 | 2 | **"I can't believe that just happened"** (Delight) | Surprise award reveals, unexpected dares, chaos of everyone tapping at once. Alive and unpredictable | Reaction velocity spikes — moments where >60% of room reacts within 3 seconds | Track frequency per session |
 | 3 | **"I was PART of that"** (Recognition) | Minh crowned Hype Lord. Trang awarded Silent Storm. Every person's contribution mattered | Non-singer inclusion — post-session "Did you feel included?" for users who never sang | Binary, track % positive |
 | 4 | **"I can just... enjoy this"** (Liberation) | Linh's relief. The DJ removes the burden of managing the night | Host override frequency — times host uses skip/pause/next per session | <3 overrides = liberation working |
@@ -224,7 +243,7 @@ The emotional design is grounded in three Vietnamese social-emotional patterns s
 | **Join** (scan → name → in) | Instant belonging | "3 friends are waiting for you" — social proof before interaction | Time-to-join (<30s target) |
 | **Icebreaker** ("Tap your decade") | Playful surprise | "Wait, THREE of you picked the 80s?!" — connection through discovery | Icebreaker completion rate (>90% target) |
 | **First Song** (passive/lean-in mode) | Casual engagement | Reaction tapping feels optional, not obligatory. Low pressure | First-reaction timestamp per user |
-| **First Ceremony** (the aha moment) | Collective astonishment | Every phone erupts simultaneously. "Wait, EVERYONE'S phone did that?!" | First ceremony vote participation rate |
+| **First Ceremony** (the aha moment) | Collective astonishment | Every phone erupts simultaneously. "Wait, EVERYONE'S phone did that?!" | First ceremony sync rate |
 | **Mid-Session Flow** (DJ cycling) | Sustained energy + variety | No two transitions feel the same. Surprises keep coming. No dead air | Dead air incidents (<2 per session) |
 | **Peak Moment** (hype streak, dare, group anthem) | Electric connection | The room is alive. Every phone is an instrument. Collective energy peaks | Reaction velocity spike frequency |
 | **Failure/Glitch** (disconnect, awkward pause) | Self-aware humor | "WELL THAT HAPPENED." The app laughs with you, never at you | Reconnection success rate + session continuation |
@@ -268,7 +287,7 @@ The emotional design is grounded in three Vietnamese social-emotional patterns s
 | Recognition | Hype streak notifications ("MINH IS ON FIRE"). End-of-night awards for non-singing behaviors. Supporter-role awards validate generosity. Participation weighting visible in awards, not in a scoreboard |
 | Liberation | Host controls as minimal overlay. Auto-cycling DJ with no host input required. Bridge moments fill physical transitions without prompting |
 | Nostalgia/FOMO | Setlist poster designed as concert memorabilia. 9:16 Instagram Story format. Karamania brand subtle but visible. Track share destination — group chat (nostalgia) vs. public social (FOMO) — to measure which morning-after emotion is firing |
-| Self-aware humor on failure | Reconnection toast: "You blinked. We kept going." Empty vote: "The crowd has spoken... by saying nothing." Glitch recovery: playful acknowledgment, never error messages |
+| Self-aware humor on failure | Reconnection toast: "You blinked. We kept going." No reactions? "The crowd was speechless... literally." Glitch recovery: playful acknowledgment, never error messages |
 | Face preservation | Award templates reviewed for face-safety. Score-categorized pools: high = impressive, low = character-celebrating. Zero templates that reference failure, skill level, or negative comparisons |
 
 ### Emotional Design Principles
@@ -278,8 +297,8 @@ The emotional design is grounded in three Vietnamese social-emotional patterns s
    *Implementation checkpoint: Every award template in the pool has been reviewed for tone — zero templates that reference performance failure, skill level, or negative comparisons. Award assignment is score-categorized (high → impressive, low → character-based), never score-shaming. First ceremony uses milestone framing ("FIRST SONG IN THE BOOKS"), not performance framing.*
 
 2. **Chaos Is a Feature.**
-   When things go sideways — disconnections, awkward pauses, nobody voting, a dare that bombs — the app leans in with self-aware humor. "WELL THAT HAPPENED" is the emotional recovery pattern. Technical failures become shared memories. The app has no failure state; even the worst night produces content worth sharing.
-   *Implementation checkpoint: Reconnection toast displays a playful message from approved copy pool, never a technical error string. Empty vote state triggers humorous fallback, not error/timeout. Every DJ error state has a defined recovery path with personality-appropriate copy.*
+   When things go sideways — disconnections, awkward pauses, nobody reacting, a dare that bombs — the app leans in with self-aware humor. "WELL THAT HAPPENED" is the emotional recovery pattern. Technical failures become shared memories. The app has no failure state; even the worst night produces content worth sharing.
+   *Implementation checkpoint: Reconnection toast displays a playful message from approved copy pool, never a technical error string. Zero-reaction ceremonies trigger humorous fallback award, not error/timeout. Every DJ error state has a defined recovery path with personality-appropriate copy.*
 
 3. **Surprise Prevents Staleness.**
    The 10th ceremony must feel as fresh as the 1st. Randomized award pools, varied ceremony weights, unpredictable DJ sequencing, and progressive interlude variety all serve this principle. The moment the app feels predictable, the emotional magic dies. Design for variety at every layer.
@@ -302,9 +321,9 @@ The emotional design is grounded in three Vietnamese social-emotional patterns s
 Locket's core innovation is **push over pull** — content appears on your home screen without opening the app. The sending flow is 3 seconds (tap widget → camera → photo auto-sends), with no editing tools, no like counts, no review screen. This deliberate removal of polish creates authenticity.
 
 Key UX insights for Karamania:
-- **Designed rawness as anti-performance signal.** Reactions should feel spontaneous, not curated. Emoji rain on a ceremony reveal should scatter with pre-rendered chaos patterns (CSS keyframe sprite sheets, randomly selected per burst), not clean grid animations. The visual mess signals authenticity while keeping performance cost near zero on budget Android
-- **Ambient push, not pull.** Between ceremonies, don't make party guests manually check for state changes. The DJ engine should push state transitions as visual/haptic alerts to idle phones. The party finds the guest, not the reverse. **Platform caveat:** Vibration API works on Chrome Android but is NOT supported on iOS Safari — haptic push is Chrome-only, with audio-only fallback for iOS
-- **Locket's Rollcall feature** — a timed, group-simultaneous interaction where everyone contributes to a shared artifact at the same time — directly maps to Karamania's ceremony voting model
+- **Designed rawness as anti-performance signal.** Reactions should feel spontaneous, not curated. Emoji rain on a ceremony reveal should scatter with pre-rendered chaos patterns (implicit animation sprite sheets, randomly selected per burst), not clean grid animations. The visual mess signals authenticity while keeping performance cost near zero on budget Android
+- **Ambient push, not pull.** Between ceremonies, don't make party guests manually check for state changes. The DJ engine should push state transitions as visual/haptic alerts to idle phones. The party finds the guest, not the reverse. Flutter's `HapticFeedback` provides uniform haptic support on both iOS and Android
+- **Locket's Rollcall feature** — a timed, group-simultaneous interaction where everyone contributes to a shared artifact at the same time — directly maps to Karamania's synchronized ceremony model
 
 Anti-patterns: Locket's feature discovery is poor (minimalist UI hides depth). Karamania must surface available actions clearly during each DJ state.
 
@@ -318,7 +337,7 @@ Duolingo's gamification architecture runs deeper than streaks:
 - **Streak Freeze as anxiety reducer:** The *availability* of insurance changes behavior even for people who never use it
 
 Key UX insights for Karamania:
-- **Ceremony completion screen = Duolingo's lesson complete screen.** Single dominant animation (award card flying in), one piece of social proof (who voted), one CTA ("Share" or "Next"). No secondary navigation. Every ceremony is a micro-celebration
+- **Ceremony completion screen = Duolingo's lesson complete screen.** Single dominant animation (award card flying in), one piece of social proof (reaction count), one CTA ("Share" or "Next"). No secondary navigation. Every ceremony is a micro-celebration
 - **Sound confirms, never shames.** Ascending two-note chime for positive feedback. Lower-energy thud for negative — not harsh, not embarrassing. Karamania's reaction sounds should confirm participation, not critique it
 - **Graduated celebration intensity across the session.** Mid-session Quick ceremonies get standard treatment. The finale ceremony gets the full Duolingo 365-day-streak treatment — confetti, orchestral flourish, the works
 
@@ -336,7 +355,7 @@ Kahoot's energy is engineered through five specific mechanisms:
 
 Key UX insights for Karamania:
 - **The silence-before-reveal.** When the ceremony countdown ends, cut ALL audio for 1 second. Then drop the award reveal with full sound and animation. The silence is the mechanism; the reveal is the payoff. Both Kahoot and Among Us use this — it's the single highest-ROI audio design pattern
-- **Split host/player screen design.** The host screen shows aggregate/global state; player phones show personal/private state. Voting happens privately, results appear publicly. This maintains surprise for everyone
+- **Split host/player screen design.** The host screen shows aggregate/global state; player phones show personal/private state. Reactions happen individually, awards reveal publicly. This maintains surprise for everyone
 
 Anti-patterns: Speed-to-answer penalizes slow readers — Karamania's participation should never reward speed. No reconnection on drop (Kahoot creates new nickname on rejoin) — unacceptable for a 3-hour party. Host must manually advance every question — Karamania's DJ must be genuinely autonomous.
 
@@ -349,7 +368,7 @@ Gather's core UX thesis: **physical metaphor for social behavior.** You walk som
 - **Bubble feature for semi-private conversations:** Two people can go semi-private while others see a conversation is happening but can't hear it. Mirrors physical whispering
 
 Key UX insights for Karamania:
-- **Passive presence signals.** A row of participant avatars with pulse animations when active (just reacted, just voted) vs. greyed-out when idle. Creates a real-time "where is everyone" read — Gather's avatar movement translated to a list view
+- **Passive presence signals.** A row of participant avatars with pulse animations when active (just reacted, just tapped soundboard) vs. greyed-out when idle. Creates a real-time "where is everyone" read — Gather's avatar movement translated to a list view
 - **Physical-room spatial audio through volume differentiation.** During a ceremony reveal, the host phone plays the primary fanfare at full volume while participant phones play a lighter version (crowd roar, cheering) at 60% volume. The host phone becomes the "stage," participant phones become the "audience." Multiple audio sources at different volumes in a physical room creates genuine spatial audio without any spatial audio API — just volume differentiation across devices. **This is a core differentiating experience no competitor has attempted**
 
 Anti-patterns: Gather is completely broken on mobile — validates Karamania's mobile-first approach. Accidental conversation joining (40% of users) — Karamania's irreversible actions (like "Song Over!") need deliberate gestures (long-press).
@@ -364,10 +383,10 @@ Among Us creates tension through **private input, public output** — everyone a
 - **No background music during gameplay:** Every sound effect hits harder because there's no soundtrack to compete with
 
 Key UX insights for Karamania:
-- **Two-phase reveal for MVP ceremony awards.** Phase 1: aggregate bar chart fills in real time as votes arrive (cheap — just broadcast running total, creates visible tension as bars grow). Phase 2: 1-second silence → winner reveal with full sound and animation. This delivers 80% of Among Us's sequential tension at 20% of the implementation cost. Full individual-vote sequential reveals (each vote arriving one by one with 8 coordinated server pushes) deferred to v2 as a ceremony upgrade
-- **Private input, public output for all voting.** Collect votes privately on individual phones. Reveal simultaneously on all screens. Prevents "I'll just vote what everyone voted" and keeps reveals genuinely surprising
+- **Dramatic reveal through anticipation build.** Drumroll builds tension across all phones simultaneously. 1-second silence → auto-generated award reveal with full sound and animation. This delivers Among Us's dramatic tension without requiring audience voting. The award is context-driven (party card completion, reaction volume, song position, performer stats)
+- **Private input, public output pattern.** Reactions happen individually on each phone. Award reveals simultaneously on all screens. The pattern applies to Quick Pick song voting and Quick Vote interludes — not ceremonies
 
-Anti-patterns: Discussion phases favor fast typists — Karamania voting must be tap/button only, never free text. "Nobody talks" problem in voice rooms — Karamania should have explicit voting confirmation to prevent passive non-engagement.
+Anti-patterns: Discussion phases favor fast typists — Karamania participation must be tap/button only, never free text. Among Us's vote-counting tension replaced by auto-generated award anticipation — simpler, faster, no decision fatigue.
 
 ### Transferable UX Patterns
 
@@ -376,9 +395,9 @@ Anti-patterns: Discussion phases favor fast typists — Karamania voting must be
 | # | Pattern | Source | Application | Defensibility |
 |---|---|---|---|---|
 | 1 | **Silence-Before-Reveal** | Kahoot + Among Us | Cut ALL audio for 1-2 seconds before every ceremony award reveal. Implementation: server sends `ceremony_silence` event, all clients mute simultaneously. 1 second later, `ceremony_reveal` event fires with timestamp for synchronized playback | Table stakes (easy to copy, but essential) |
-| 2 | **Two-Phase Reveal** (MVP) | Among Us adapted | Phase 1: real-time aggregate bar chart filling as votes arrive. Phase 2: silence → winner reveal. Full sequential individual-vote reveals in v2 | Defensible through tuning (optimal pacing learned from session data) |
-| 3 | **Private Input, Public Output** | Among Us + Kahoot | All voting happens privately on individual phones. Results reveal simultaneously on all screens. Maintains surprise, prevents social copying | Table stakes |
-| 4 | **Ambient Push, Not Pull** | Locket + Duolingo | Push state transitions as visual/haptic alerts to idle phones. Chrome Android: Vibration API. iOS Safari: audio-only fallback (no vibration support) | Table stakes |
+| 2 | **Anticipation-Build Reveal** | Among Us adapted | Drumroll + anticipation animation builds tension across all phones. Silence → auto-generated award reveal. No voting needed — context-driven awards from party cards, reactions, song position | Defensible through tuning (optimal pacing learned from session data) |
+| 3 | **Private Input, Public Output** | Among Us + Kahoot | Applied to Quick Pick song voting and Quick Vote interludes. Individual input on each phone, collective results revealed simultaneously. Maintains surprise for song selection | Table stakes |
+| 4 | **Ambient Push, Not Pull** | Locket + Duolingo | Push state transitions as visual/haptic alerts to idle phones. Flutter `HapticFeedback` provides uniform haptic on both platforms + audio cues | Table stakes |
 | 5 | **Graduated Celebration Intensity** | Duolingo | Three tiers: Quick ceremony = standard animation. Full ceremony = dramatic reveal. Finale = full fireworks (confetti, orchestral flourish, setlist poster assembly). DJ engine's ceremony weight selection at the right moment is the intelligence layer | Defensible (requires behavioral data to optimize weight selection) |
 
 **Core Differentiating Experience — Multi-Phone Spatial Audio:**
@@ -391,18 +410,18 @@ Anti-patterns: Discussion phases favor fast typists — Karamania voting must be
 
 | Pattern | Source | Application | Defensibility |
 |---|---|---|---|
-| **Designed rawness** | Locket | Reactions use pre-rendered sprite sheet scatter patterns (5-6 CSS keyframe animations, randomly selected). Looks chaotic, costs nearly zero performance. Save real physics for finale confetti only | Table stakes |
+| **Designed rawness** | Locket | Reactions use pre-rendered sprite sheet scatter patterns (5-6 implicit animations, randomly selected). Looks chaotic, costs nearly zero performance. Save real physics for finale confetti only | Table stakes |
 | **Sound confirms, never shames** | Duolingo | Ascending chime for positive, lower energy for negative. Never a harsh buzzer | Table stakes |
 | **Split host/player information** | Kahoot | Host sees aggregate state, players see personal state. Different views of the same moment | Table stakes |
 | **Passive presence signals** | Gather | Participant avatars pulse when active, grey when idle. Real-time room read | Table stakes |
-| **Song state as dramatic contrast** | Among Us | During song state: near-silent app (no ambient music, no loops). Only user-triggered soundboard + tiny reaction blips. Web Audio graph nearly dormant, RAF loop dormant = lowest power consumption. When ceremony fires: wake everything — audio graph, RAF, full animation pipeline. The contrast between silence and eruption IS the dramatic effect | Defensible (requires intentional restraint competitors won't have) |
+| **Song state as dramatic contrast** | Among Us | During song state: near-silent app (no ambient music, no loops). Only user-triggered soundboard + tiny reaction blips. Audio engine nearly dormant, animation ticker paused = lowest power consumption. When ceremony fires: wake everything — audio engine, animation controller, full animation pipeline. The contrast between silence and eruption IS the dramatic effect | Defensible (requires intentional restraint competitors won't have) |
 | **Preloaded state transitions** | Kahoot inferred | Every DJ state change has next-state assets (animation frames, audio buffers, UI components) preloaded BEFORE the transition fires. Ceremony reveal component is part of core bundle, not lazy-loaded. When countdown hits zero, the reveal is already in memory | Table stakes (but critical for perceived performance) |
 
 ### Anti-Patterns to Avoid
 
 | Anti-Pattern | Source | Why It's Dangerous for Karamania |
 |---|---|---|
-| **Speed-rewards in voting** | Kahoot | Penalizes slow readers and motor-impaired users. Ceremony voting is binary (did you vote?), never speed-ranked |
+| **Speed-rewards in participation** | Kahoot | Penalizes slow readers and motor-impaired users. Ceremony awards are auto-generated from context, never speed-ranked |
 | **Guilt-based notifications** | Duolingo | "People are waiting for you!" during a live session would create anxiety, not engagement. The DJ engine never guilt-trips |
 | **No reconnection preservation** | Kahoot | Kahoot creates new nickname on rejoin. For a 3-hour party, identity and score must persist through disconnects |
 | **Hidden feature discovery** | Locket | Minimalist UI that hides available actions. Every DJ state must clearly surface what the user can do NOW |
@@ -410,19 +429,17 @@ Anti-patterns: Discussion phases favor fast typists — Karamania voting must be
 | **Ranked participation during session** | Duolingo | Bottom-ranked users disengage. Participation scores appear only in end-of-night awards, never as live leaderboards |
 | **Manual host advancement required** | Kahoot | Fine for 10-question quiz, exhausting for 3-hour party. DJ engine must be genuinely autonomous |
 | **Accidental action triggers** | Gather | 40% of Gather users accidentally join conversations. Irreversible actions (Song Over!) use deliberate gestures (long-press) |
-| **Real-time physics on budget Android** | General | Animating 50+ emoji particles at 60fps while running WebSocket + Web Audio tanks performance. Use pre-rendered sprite sheet animations for reactions. Reserve real physics for one-time finale confetti only |
+| **Real-time physics on budget Android** | General | Animating 50+ emoji particles at 60fps while running WebSocket + native audio tanks performance. Use pre-rendered sprite sheet animations for reactions. Reserve real physics for one-time finale confetti only |
 
 ### Design Inspiration Strategy
 
 **Adopt Directly:**
-- Silence-before-reveal audio pattern (Kahoot + Among Us) — apply to every ceremony reveal via two-event WebSocket pattern (`silence` → `reveal`)
-- Private input, public output voting model (Among Us) — all ceremony votes collected privately
-- Ambient push for state transitions (Locket) — haptic (Chrome) / audio (iOS) alerts to idle phones
+- Silence-before-reveal audio pattern (Kahoot + Among Us) — apply to every ceremony reveal via two-event socket pattern (`silence` → `reveal`)
+- Ambient push for state transitions (Locket) — haptic + audio alerts to idle phones
 - Song state as near-silent lowest-power state (Among Us) — let real karaoke be the soundtrack, making ceremony eruptions dramatically louder by contrast
 
 **Adapt for Karamania:**
-- Sequential vote reveal → **Two-phase reveal for MVP** (real-time bar chart → silence → winner). Full sequential reveals as v2 ceremony upgrade when server-side timing orchestration is optimized with session data
-- Graduated celebration intensity (Duolingo) → Map to three ceremony weights (Full/Quick/Skip) and session position. First ceremony gets extra drama, mid-session is standard, finale gets everything
+- Graduated celebration intensity (Duolingo) → Map to two ceremony weights (Full/Quick) and session position. First ceremony gets extra drama, mid-session is standard, finale gets everything
 - Spatial audio proximity (Gather) → **Physical-room spatial audio via volume differentiation.** Host phone = full volume stage, participant phones = 60% volume crowd. Core differentiating experience
 - Designed rawness (Locket) → Pre-rendered sprite sheet scatter animations for reactions (5-6 patterns, randomly selected). Chaotic appearance, minimal performance cost
 
@@ -430,7 +447,7 @@ Anti-patterns: Discussion phases favor fast typists — Karamania voting must be
 - Speed-based scoring (Kahoot) — participation is binary, never timed
 - Manual host advancement (Kahoot) — DJ is autonomous
 - Guilt-based engagement (Duolingo) — warmth, not obligation
-- Free-text voting/discussion (Among Us) — tap only, Trang-friendly
+- Free-text discussion/input (Among Us) — tap only, Trang-friendly
 - Live ranked leaderboards (Duolingo) — awards at end of night only
 - Real-time physics for frequent animations (General) — sprite sheets for reactions, physics only for finale
 
@@ -438,46 +455,47 @@ Anti-patterns: Discussion phases favor fast typists — Karamania voting must be
 
 ### Design System Choice
 
-**Svelte + Tailwind CSS + Vite — Zero Component Library**
+**Flutter + Dart — Custom Widget Library**
 
-A custom-tuned minimal stack purpose-built for the Karamania experience. No off-the-shelf component library — every UI element is a thin Svelte component styled with Tailwind utility classes and orchestrated by CSS custom properties.
+A custom-tuned minimal stack purpose-built for the Karamania experience. No off-the-shelf UI component library — every widget is purpose-built for the DJ engine's state-driven paradigm with custom theming and animation.
 
 **Why this stack:**
 
 | Factor | Decision | Rationale |
 |---|---|---|
-| **Framework** | Svelte (SvelteKit not needed) | Built-in `transition:` directives for ceremony choreography. Reactive stores for WebSocket state. ~2KB runtime vs ~16KB Preact. Compiled away — no virtual DOM diffing during ceremony reveals |
-| **Styling** | Tailwind CSS (utility-first) | Eliminates naming decisions for solo dev. PurgeCSS strips unused utilities automatically. Pairs with CSS custom properties for theming |
-| **Build** | Vite | Native Svelte plugin, sub-second HMR. Built-in code splitting for two-tier bundle strategy |
-| **Component Library** | None | Component libraries add weight and fight the DJ engine's state-driven paradigm. 4 custom components in Sprint 1 is faster than configuring a library |
+| **Framework** | Flutter (Dart) | Single codebase for iOS + Android. Rich animation framework for ceremony choreography. Reactive state management via Riverpod or built-in ChangeNotifier. Compiled to native ARM — no JS bridge, no virtual DOM |
+| **Styling** | Custom ThemeData + design tokens | Centralized theme with DJ state-driven color switching. No CSS — Flutter's widget-based styling eliminates naming decisions |
+| **Build** | Flutter build system | Hot reload for rapid iteration. AOT compilation for release performance |
+| **Component Library** | None (Material as base only) | Component libraries fight the DJ engine's state-driven paradigm. Custom widgets in Sprint 1 is faster than fighting library conventions |
 
 ### Design Token System
 
-**12 Core Tokens — Inlined in `<head>` for Zero-Flash Load**
+**12 Core Tokens — Defined in Dart Theme Constants**
 
-```css
-:root {
-  /* Surfaces */
-  --dj-bg: #0a0a0f;
-  --dj-surface: #1a1a2e;
-  --dj-surface-elevated: #252542;
+```dart
+// lib/theme/dj_tokens.dart
+class DJTokens {
+  // Surfaces
+  static const bgColor = Color(0xFF0A0A0F);
+  static const surfaceColor = Color(0xFF1A1A2E);
+  static const surfaceElevated = Color(0xFF252542);
 
-  /* Text */
-  --dj-text-primary: #f0f0f0;
-  --dj-text-secondary: #8888aa;
-  --dj-text-accent: #ffd700;
+  // Text
+  static const textPrimary = Color(0xFFF0F0F0);
+  static const textSecondary = Color(0xFF8888AA);
+  static const textAccent = Color(0xFFFFD700);
 
-  /* Interactive */
-  --dj-action-primary: #6c63ff;
-  --dj-action-confirm: #4ade80;
-  --dj-action-danger: #ef4444;
+  // Interactive
+  static const actionPrimary = Color(0xFF6C63FF);
+  static const actionConfirm = Color(0xFF4ADE80);
+  static const actionDanger = Color(0xFFEF4444);
 
-  /* Ceremony */
-  --dj-ceremony-glow: #ffd700;
-  --dj-ceremony-bg: #1a0a2e;
+  // Ceremony
+  static const ceremonyGlow = Color(0xFFFFD700);
+  static const ceremonyBg = Color(0xFF1A0A2E);
 
-  /* Timing */
-  --dj-transition-fast: 150ms;
+  // Timing
+  static const transitionFast = Duration(milliseconds: 150);
 }
 ```
 
@@ -485,201 +503,234 @@ Why 12, not 30: Every additional token is a decision point during implementation
 
 ### DJ State Integration
 
-**Single Integration Point: `data-dj-state`**
+**Single Integration Point: DJ State Provider**
 
-The DJ engine's current state drives the entire visual system through one HTML attribute. This attribute also serves as the primary testing hook — `data-dj-state` is both design system integration AND test automation surface.
+The DJ engine's current state drives the entire visual system through a centralized state provider. The DJ state determines background colors, transition animations, and screen routing.
 
-```svelte
-<!-- App.svelte -->
-<body data-dj-state={$djState}>
-  <slot />
-</body>
+```dart
+// lib/state/dj_state_provider.dart
+class DJStateProvider extends ChangeNotifier {
+  DJState _current = DJState.lobby;
+  DJState get current => _current;
 
-<script>
-  import { djState } from './lib/stores/party.js';
-</script>
+  void onStateChanged(DJState newState) {
+    _current = newState;
+    notifyListeners();
+  }
+
+  Color get backgroundColor => switch (_current) {
+    DJState.lobby => const Color(0xFF0A0A1A),           // calm, inviting
+    DJState.songSelection => const Color(0xFF0F0A1E),   // energetic, anticipation
+    DJState.partyCardDeal => const Color(0xFF1A0A1A),   // playful tension
+    DJState.song => const Color(0xFF0A0A0F),            // subdued, ambient
+    DJState.ceremony => DJTokens.ceremonyBg,            // dramatic, saturated
+    DJState.interlude => const Color(0xFF0F1A2E),       // playful, varied
+    DJState.finale => const Color(0xFF1A0A2E),          // maximum drama
+  };
+}
 ```
 
-```css
-/* State-driven visual modes */
-[data-dj-state="lobby"]           { --dj-bg: #0a0a1a; /* calm, inviting */ }
-[data-dj-state="song_selection"]  { --dj-bg: #0f0a1e; /* energetic, anticipation — picking what's next */ }
-[data-dj-state="party_card_deal"] { --dj-bg: #1a0a1a; /* anticipation, playful tension */ }
-[data-dj-state="song"]            { --dj-bg: #0a0a0f; /* subdued, ambient — real karaoke is the show */ }
-[data-dj-state="ceremony"]        { --dj-bg: var(--dj-ceremony-bg); /* dramatic, saturated */ }
-[data-dj-state="interlude"]       { --dj-bg: #0f1a2e; /* playful, varied */ }
-[data-dj-state="finale"]          { --dj-bg: #1a0a2e; /* maximum drama */ }
+**Why this matters:** No widget needs to independently query state or check conditions. The provider pushes state changes, AnimatedContainer handles visual transitions, and the router displays the correct screen. Widgets just render — the provider handles the rest.
+
+### Canonical Flutter Patterns
+
+**Ceremony Reveal — Server-Coordinated Timing via Flutter Animations**
+
+```dart
+// widgets/ceremony_reveal.dart
+class CeremonyReveal extends StatefulWidget {
+  final CeremonyData data;
+  const CeremonyReveal({required this.data});
+
+  @override
+  State<CeremonyReveal> createState() => _CeremonyRevealState();
+}
+
+class _CeremonyRevealState extends State<CeremonyReveal>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+  bool _showReveal = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _scaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.elasticOut,
+    );
+
+    // Server sends anticipation event with future reveal timestamp
+    // Anticipation phase absorbs clock drift between devices
+    final delay = widget.data.revealAt - DateTime.now().millisecondsSinceEpoch;
+    Future.delayed(Duration(milliseconds: delay.clamp(0, 10000)), () {
+      if (mounted) {
+        setState(() => _showReveal = true);
+        _controller.forward();
+      }
+    });
+  }
+}
 ```
 
-**Why this matters:** No component needs to import state or check conditions. CSS does the visual switching automatically. Components just render — the attribute handles the rest.
+The key insight: server sends a future timestamp, client calculates the delay, and Flutter's animation controller handles the choreographed entrance. No manual orchestration needed.
 
-### Canonical Svelte Patterns
+**Keyed Lists for All Real-Time Data**
 
-**Ceremony Reveal — Server-Coordinated Timing via Svelte Transitions**
+Every real-time list (participants, reactions) MUST use `ValueKey` in ListView builders. Without keys, Flutter reuses widgets by index — causing wrong animations and ghost elements when the WebSocket pushes reordered data.
 
-```svelte
-{#if showReveal}
-  <div
-    in:scale={{duration: 800, delay: revealDelay, easing: elasticOut}}
-    data-testid="ceremony-reveal"
-  >
-    {award.title}
-  </div>
-{/if}
+**Single State Provider + Socket Handler**
 
-<script>
-  import { elasticOut } from 'svelte/easing';
-  import { scale } from 'svelte/transition';
-  import { ceremonyData } from '../lib/stores/party.js';
+```dart
+// lib/state/party_provider.dart
+class PartyProvider extends ChangeNotifier {
+  DJState _djState = DJState.lobby;
+  CeremonyPhase? _ceremonyPhase;
+  List<Participant> _participants = [];
 
-  let showReveal = false;
-  let revealDelay = 0;
+  DJState get djState => _djState;
+  CeremonyPhase? get ceremonyPhase => _ceremonyPhase;
+  List<Participant> get participants => _participants;
+  bool get isCeremony => _djState == DJState.ceremony;
 
-  // Server sends silence event with future reveal timestamp
-  // Anticipation phase absorbs clock drift between devices
-  socket.on('ceremony_silence', (data) => {
-    ceremonyData.set(data);
-    revealDelay = data.revealAt - Date.now();
-    setTimeout(() => showReveal = true, Math.max(0, revealDelay));
-  });
-</script>
+  // Mutations: called ONLY from Socket.io handler
+  void onStateChanged(DJState state) { _djState = state; notifyListeners(); }
+  void onPhaseChanged(CeremonyPhase phase) { _ceremonyPhase = phase; notifyListeners(); }
+}
 ```
 
-The `delay` parameter in Svelte's transition directive is the key insight: server sends a future timestamp, client calculates the delay, and Svelte handles the choreographed entrance. No manual animation orchestration needed.
+```dart
+// lib/socket/client.dart — Single WebSocket connection, dispatches to providers
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
-**Keyed `{#each}` Blocks for All Real-Time Lists**
+class SocketClient {
+  late final IO.Socket _socket;
+  final PartyProvider _partyProvider;
 
-```svelte
-{#each $participants as participant (participant.id)}
-  <div data-testid="participant-{participant.id}">
-    {participant.name}
-  </div>
-{/each}
+  SocketClient(this._partyProvider) {
+    _socket = IO.io(serverUrl, <String, dynamic>{
+      'transports': ['websocket'],
+    });
+    _socket.on('dj:stateChanged', (data) => _partyProvider.onStateChanged(DJState.fromJson(data)));
+    _socket.on('ceremony:phase', (data) => _partyProvider.onPhaseChanged(CeremonyPhase.fromJson(data)));
+  }
+}
 ```
 
-Every real-time list (participants, reactions, vote results) MUST use keyed `{#each}` blocks. Without keys, Svelte reuses DOM nodes by index — causing flickering, wrong animations, and ghost elements when the WebSocket pushes reordered data.
-
-**Single Reactive Store File (Svelte 5 Runes)**
-
-```typescript
-// stores/djStore.svelte.ts — Svelte 5 runes pattern (per Architecture decision)
-
-import type { DJState } from '@karamania/shared';
-
-// Module-scoped $state — NOT exported directly
-let currentState = $state<DJState>(initialState);
-let currentPhase = $state<string | null>(null);
-
-// Exported: read-only derived getters ONLY
-export const djStore = {
-  get current() { return currentState; },
-  get phase() { return currentPhase; },
-  get isCeremony() { return currentState.type.startsWith('CEREMONY'); },
-};
-
-// Mutations: named functions, called ONLY from Socket.io handler
-export function _onStateChanged(state: DJState) { currentState = state; }
-export function _onPhaseChanged(phase: string) { currentPhase = phase; }
-```
-
-```typescript
-// socket/client.ts — Single WebSocket connection, dispatches to stores
-import { io } from 'socket.io-client';
-import { _onStateChanged } from '../stores/djStore.svelte';
-
-const socket = io(SERVER_URL);
-socket.on('dj:stateChanged', (s) => _onStateChanged(s));
-socket.on('ceremony:phase', (p) => _onPhaseChanged(p));
-// ... all other event handlers dispatch to store mutation functions
-export { socket };
-```
-
-One file owns the WebSocket connection. Store files own reactive state via Svelte 5 `$state` runes. Components read stores via exported getters. No component ever creates its own socket listener or mutates store state directly.
+One class owns the WebSocket connection. Provider classes own reactive state. Widgets read providers via `context.watch<PartyProvider>()`. No widget ever creates its own socket listener or mutates provider state directly.
 
 ### Testing Strategy
 
-**DJ State Machine as Pure JS — 100% Test Coverage**
+**DJ State Machine as Pure Dart — 100% Test Coverage**
 
-The DJ state machine lives in a plain `.js` file, NOT a Svelte component. This means it's testable with standard unit test runners (Vitest) without any Svelte compilation step. State transitions, ceremony weight selection, timing logic — all pure functions, all fully tested.
+The DJ state machine lives on the server (Node.js). Client-side state parsing and transition logic live in plain Dart files, testable with standard `flutter_test`. State transitions, ceremony type selection, timing logic — all pure functions, all fully tested.
 
 **Testing Surface Conventions:**
 
 | Convention | Purpose |
 |---|---|
-| `data-dj-state` on `<body>` | Visual state verification + integration testing. Assert `document.body.dataset.djState === 'ceremony'` |
-| `data-testid` on all interactive elements | E2E and integration test hooks. Every tappable element gets `data-testid="action-name"` |
-| No visual component tests | Ceremony animations, transitions, and CSS-driven visuals are NOT unit tested. A dry-run ceremony flow in integration tests covers visual correctness. Testing CSS keyframe scatter patterns is wasted effort |
+| `Key` on state-driven containers | Widget test verification. Assert `find.byKey(Key('dj-state-ceremony'))` |
+| `Key` on all interactive elements | Integration test hooks. Every tappable widget gets `Key('action-name')` |
+| No visual animation tests | Ceremony animations, transitions, and visual effects are NOT unit tested. A dry-run ceremony flow in integration tests covers visual correctness. Testing animation curves is wasted effort |
 
-### Critical CSS Reset
+### Touch Behavior Foundation
 
-**Applied Globally — Non-Negotiable for Touch PWA**
+**Applied Globally — Non-Negotiable for Touch Native App**
 
-```css
-/* Layer 0: PWA touch reset */
-@layer reset {
-  * { user-select: none; }
-  input, textarea { user-select: text; }
-  * { touch-action: manipulation; }     /* kills 300ms tap delay */
-  * { -webkit-tap-highlight-color: transparent; }
-  html { overscroll-behavior: none; }   /* kills pull-to-refresh */
-  body { position: fixed; width: 100%; height: 100%; overflow: hidden; }
-}
-```
+Flutter handles most touch behavior natively (no 300ms tap delay, no browser rubber-banding, no accidental text selection). Key configurations:
 
-Why each rule: `user-select: none` prevents accidental text selection during frantic tapping. `touch-action: manipulation` eliminates the 300ms tap delay on all mobile browsers. `overscroll-behavior: none` prevents pull-to-refresh killing the WebSocket connection. `position: fixed` on body prevents iOS Safari rubber-banding.
+- **Portrait lock:** `SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])`
+- **Status bar styling:** `SystemChrome.setSystemUIOverlayStyle()` to match DJ state backgrounds
+- **Disable overscroll glow:** Custom `ScrollBehavior` that removes Android overscroll indicator on full-screen states
+- **Text input restriction:** Only `TextField` widgets in lobby name entry and TV pairing code — everywhere else is tap-only
 
-### Bundle Strategy
+### App Size Strategy
 
-**Two-Tier Loading — Core < 80KB, Deferred < 20KB**
+**Target: < 50MB installed (including audio assets and Flutter runtime)**
 
-| Tier | Contents | Budget | Loads |
-|---|---|---|---|
-| **Core** | Svelte runtime, `stores/party.js`, lobby + song UI, CSS reset + tokens, Web Audio engine (context creation only) | < 80KB gzipped | On page load |
-| **Deferred** | Ceremony reveal component, reaction sprite sheets, finale confetti, soundboard extended sounds | < 20KB gzipped | Lazy after first ceremony |
+| Component | Estimated Size | Notes |
+|---|---|---|
+| Flutter runtime | ~5-8MB | Compressed in release build |
+| Dart compiled code | ~3-5MB | All widgets + state + socket logic |
+| Audio assets | ~500KB | 10 core sounds, opus format |
+| App shell + metadata | ~1-2MB | Icons, manifest, deep-link config |
+| **Total** | **~10-16MB** | Well under 50MB budget |
 
-The ceremony reveal component is preloaded during the first song state (while users are watching karaoke, the app quietly fetches ceremony assets). By the time the first ceremony fires, everything is already in memory.
+All ceremony animations, confetti effects, and visual transitions are code-driven (Flutter's animation framework) — no sprite sheets, no image assets beyond icons. Audio assets are bundled with the app, not fetched over network.
 
 ### Project Scaffold — Sprint 0 Day 1
 
 ```
 karamania/
-├── src/
-│   ├── lib/
-│   │   ├── stores/party.js         ← WebSocket + all reactive stores including song integration
-│   │   ├── stores/capture.js       ← Media capture state + upload queue
-│   │   ├── audio/engine.js         ← Web Audio context + sound buffer preloading
-│   │   └── constants/copy.js       ← All DJ prompts, award names, party card text, system messages
-│   ├── components/
-│   │   ├── Lobby.svelte            ← Join flow + icebreaker + playlist import card
-│   │   ├── TVPairingOverlay.svelte ← Host: YouTube TV code entry (Sprint 1/3)
-│   │   ├── PlaylistImportCard.svelte ← URL paste + import status (Sprint 3)
-│   │   ├── QuickPickScreen.svelte  ← 5 song cards, group vote (Sprint 3)
-│   │   ├── SpinWheelScreen.svelte  ← 8-song wheel, spin animation (Sprint 3)
-│   │   ├── Song.svelte             ← Song state (reactions + soundboard + lightstick toggle + hype)
-│   │   ├── PartyCardDeal.svelte    ← Card deal/accept/dismiss/redraw flow
-│   │   ├── Ceremony.svelte         ← Award reveal choreography
-│   │   ├── Interlude*.svelte       ← Kings Cup, Dare Pull, Quick Vote screens
-│   │   ├── CaptureBubble.svelte    ← Floating capture prompt + capture overlay
-│   │   └── Finale.svelte           ← End-of-night sequence (deferred bundle)
-│   ├── App.svelte                  ← data-dj-state binding + route switching
-│   └── main.js                     ← Entry point
-├── public/
-│   └── sounds/                     ← 10 core audio assets (<500KB total, +card-flip, +hype-signal, +song-pick-chime, +wheel-spin)
-├── index.html                      ← Design tokens inlined in <head>
-├── tailwind.config.js
-├── vite.config.js
-├── postcss.config.js
-└── package.json                    ← browserslist: "Chrome >= 90, iOS >= 15.4"
+├── apps/
+│   └── flutter_app/
+│       ├── lib/
+│       │   ├── main.dart                    ← Entry point + app setup
+│       │   ├── app.dart                     ← MaterialApp, theme, routing
+│       │   ├── theme/
+│       │   │   ├── dj_tokens.dart           ← Color/spacing/timing constants
+│       │   │   └── dj_theme.dart            ← ThemeData + DJ state color mapping
+│       │   ├── state/
+│       │   │   ├── party_provider.dart       ← DJ state + participants + session data
+│       │   │   ├── capture_provider.dart     ← Media capture state + upload queue
+│       │   │   ├── auth_provider.dart        ← Firebase Auth state + guest/account management
+│       │   │   └── timeline_provider.dart    ← Session history + timeline data
+│       │   ├── socket/
+│       │   │   └── client.dart              ← Socket.io connection + event dispatching
+│       │   ├── audio/
+│       │   │   └── engine.dart              ← Audio player setup + sound preloading
+│       │   ├── constants/
+│       │   │   └── copy.dart                ← All DJ prompts, award names, party card text, system messages
+│       │   ├── screens/
+│       │   │   ├── home_screen.dart          ← Session Timeline (auth) or Start/Join (guest)
+│       │   │   ├── session_detail_screen.dart ← Past session detail + media gallery
+│       │   │   ├── lobby_screen.dart         ← Join flow + icebreaker + playlist import
+│       │   │   ├── song_screen.dart          ← Song state (reactions + soundboard + lightstick + hype)
+│       │   │   ├── ceremony_screen.dart      ← Award reveal choreography (Full + Quick)
+│       │   │   ├── interlude_screen.dart     ← Kings Cup, Dare Pull, Quick Vote
+│       │   │   ├── quick_pick_screen.dart    ← 5 song cards, group vote
+│       │   │   ├── spin_wheel_screen.dart    ← 8-song wheel, spin animation
+│       │   │   └── finale_screen.dart        ← End-of-night sequence
+│       │   └── widgets/
+│       │       ├── top_bar.dart              ← Consistent header, DJ state colors
+│       │       ├── participant_dot.dart      ← Avatar circle with status
+│       │       ├── countdown_timer.dart      ← Circular countdown animation
+│       │       ├── song_over_button.dart     ← Host-only 500ms long-press
+│       │       ├── confetti_layer.dart       ← Animated confetti overlay
+│       │       ├── glow_effect.dart          ← Radial glow for ceremonies
+│       │       ├── party_card_deal.dart      ← Card deal/accept/dismiss/redraw
+│       │       ├── lightstick_mode.dart      ← Full-screen glow with color picker
+│       │       ├── hype_signal_button.dart   ← Flash/screen pulse trigger
+│       │       ├── capture_bubble.dart       ← Floating capture prompt
+│       │       ├── capture_overlay.dart      ← Active capture UI (photo/video/audio)
+│       │       ├── song_card.dart            ← Reusable song card (title, artist, overlap)
+│       │       ├── tv_pairing_overlay.dart   ← Host: YouTube TV code entry
+│       │       ├── playlist_import_card.dart ← URL paste + import status
+│       │       ├── session_card.dart         ← Timeline entry card
+│       │       └── loading_skeleton.dart     ← Pulsing logo placeholder
+│       ├── assets/
+│       │   └── sounds/                      ← 10 core audio assets (<500KB total)
+│       ├── pubspec.yaml                     ← Dependencies: socket_io_client, firebase_auth, etc.
+│       ├── ios/                             ← iOS config (Universal Links, permissions)
+│       └── android/                         ← Android config (App Links, permissions)
+├── apps/
+│   └── server/                              ← Node.js server (unchanged)
+└── apps/
+    └── web_landing/                         ← Lightweight web landing page for join flow
 ```
 
 **Three Foundational Files (build these first):**
-1. `stores/party.js` — WebSocket connection + reactive stores. Everything else subscribes to this
-2. `audio/engine.js` — AudioContext creation, buffer preloading, the unlock-on-first-tap pattern
-3. `constants/copy.js` — Every string the DJ engine can display. Centralizing copy means localization is a file swap, not a codebase hunt
+1. `state/party_provider.dart` — WebSocket state + reactive providers. Everything else subscribes to this
+2. `audio/engine.dart` — Audio player setup, sound preloading. No AudioContext unlock needed — native audio plays immediately
+3. `constants/copy.dart` — Every string the DJ engine can display. Centralizing copy enables Vietnamese localization as a fast-follow (NFR38)
 
-**Browserslist: `Chrome >= 90, iOS >= 15.4`**
-- Chrome 90+: Covers 95%+ of Vietnamese Android users. Enables all required Web APIs
-- iOS 15.4+: Minimum for Web Audio API reliability in Safari. Below this, AudioContext behavior is unpredictable
+**Platform Targets:**
+- Android 8.0+ (API 26): Covers dominant Vietnamese Android market
+- iOS 15.0+: Covers 95%+ of active iPhones
 
 ## Defining Core Experience
 
@@ -687,7 +738,7 @@ karamania/
 
 **"Your phone becomes part of the party."**
 
-From the moment you scan the QR code and tap the icebreaker, your phone stops being an escape hatch and starts being a participation device. Reactions during songs, votes during ceremonies, soundboard taps that the whole room hears — the phone is no longer where you go when you're bored. It's how you're *in* the party.
+From the moment you scan the QR code and tap the icebreaker, your phone stops being an escape hatch and starts being a participation device. Reactions during songs, celebrations during ceremonies, soundboard taps that the whole room hears — the phone is no longer where you go when you're bored. It's how you're *in* the party.
 
 **The proof point: "The song ends and every phone in the room explodes with who won."**
 
@@ -704,22 +755,22 @@ Current Vietnamese KTV experience after a song ends:
 | Time | What Happens Now | What Karamania Replaces It With |
 |---|---|---|
 | 0-5s | Polite clapping, energy drops | **Song Over! long-press** → host confirmation flash (1s) + simultaneous `song_ending` to all participants |
-| 5-15s | The "ai hát tiếp?" negotiation — a face-saving politeness dance where nobody wants to seem too eager | **Anticipation phase** — drumroll, phones dim, 4s voting with visual countdown. DJ decides what's next so nobody loses face |
-| 15-30s | Introverts check phones (not boredom — social anxiety). Extroverts fill gap or start drinking games | **Ceremony reveal** — phones erupt, winner announced. Introverts participate by voting; extroverts react out loud. Both are "in" the moment |
-| 30-60s | Drinking game ("loser drinks!") creates brief energy spike, then fades | **Interlude** — mini-game or next-song voting. Same friendly-accusation energy as drinking games, without requiring alcohol |
+| 5-15s | The "ai hát tiếp?" negotiation — a face-saving politeness dance where nobody wants to seem too eager | **Anticipation phase** — drumroll, phones dim, tension builds. DJ auto-generates award so nobody loses face |
+| 15-30s | Introverts check phones (not boredom — social anxiety). Extroverts fill gap or start drinking games | **Ceremony reveal** — phones erupt, award announced. Everyone reacts — introverts through emoji taps, extroverts out loud. Both are "in" the moment |
+| 30-60s | Drinking game ("loser drinks!") creates brief energy spike, then fades | **Interlude** — mini-game or next-song selection. Same friendly-accusation energy as drinking games, without requiring alcohol |
 | 60-90s | Next song finally starts, energy slowly rebuilds | **Song state** — phones quiet down, become ambient participation devices. Real karaoke resumes |
 
 **Three Vietnamese KTV Mental Models Karamania Replaces:**
 
 1. **"Ai hát tiếp?" (Who sings next?) face-saving ritual** — Currently a politeness negotiation where nobody wants to seem too eager. Karamania removes this social friction entirely: the DJ engine decides what happens between songs, so nobody volunteers, nobody hesitates, nobody loses face.
 
-2. **Phone-checking as social anxiety shield** — In a group of 10, 3-4 extroverts fill silence naturally. The other 6-7 reach for phones because they don't know what to do when music stops. Karamania gives introverts a defined role: voting, reacting, participating *through* the phone they're already holding. Trang doesn't need to be loud to be part of the party.
+2. **Phone-checking as social anxiety shield** — In a group of 10, 3-4 extroverts fill silence naturally. The other 6-7 reach for phones because they don't know what to do when music stops. Karamania gives introverts a defined role: reacting, picking songs, participating *through* the phone they're already holding. Trang doesn't need to be loud to be part of the party.
 
 3. **Drinking games as ceremony substitute** — The closest existing analog to Karamania's ceremonies is "loser drinks!" between songs. Same friendly-accusation energy, same room-wide engagement spike. Karamania's ceremonies must create this same social electricity — without requiring alcohol. If the ceremony doesn't generate at least the energy of "loser drinks!", it hasn't hit the bar.
 
 **Key mental model expectations users bring:**
 - **Instant gratification** — Ceremony results should feel immediate. The anticipation phase creates perceived speed (tension makes 3 seconds feel like 10, so the reveal feels instantaneous)
-- **Fairness through opacity** — Users accept vote results they can't fully audit as long as the reveal feels dramatic and legitimate. The real-time bar chart provides just enough transparency
+- **Fun through randomness** — Users accept auto-generated awards because the titles are fun, unexpected, and clearly not performance judgments. "The Velvet Voice" and "Crowd Whisperer" feel like inside jokes, not scores
 - **Effortless participation** — Any interaction more complex than a single tap will be ignored. One thumb, one tap
 - **Social permission through device** — Introverts don't need to be loud to participate. The phone provides a socially acceptable way to be part of the moment without drawing attention
 
@@ -730,13 +781,13 @@ Current Vietnamese KTV experience after a song ends:
 | Criteria | Exact Metric | Target | Failure Threshold |
 |---|---|---|---|
 | **Room attention snaps** | % of connected devices on ceremony screen within 2s of `ceremony_reveal` | >80% | <60% |
-| **Introvert participation** | % of connected devices casting a vote within 4s window (Full ceremonies only) | >90% | <70% |
 | **Post-ceremony engagement** | Time between ceremony celebration end and next user action (reaction tap, soundboard, etc.) | <5 seconds | >15 seconds |
 | **Share impulse** | Share button taps within 60s of ceremony reveal | >1 per ceremony | 0 for 3+ consecutive ceremonies |
 | **Ceremony health** | % of ceremonies completing full beat-by-beat without error (no WebSocket drops, no timeout fallbacks) | >95% | <85% |
-| **Engagement decay** | Vote participation rate trend across ceremonies 1→2→3→...N in a session | <15% drop per ceremony | >25% drop (novelty wearing off) |
+| **Reaction engagement** | % of connected devices sending at least 1 reaction during celebration window | >70% | <40% |
+| **Ceremony energy decay** | Post-ceremony reaction rate trend across ceremonies 1→2→3→...N in a session | <15% drop per ceremony | >25% drop (novelty wearing off) |
 
-Engagement decay is the defining health metric. If ceremony 1 gets 95% participation and ceremony 5 gets 40%, the experience isn't sustainable — variety, pacing, or category selection needs adjustment.
+Ceremony energy decay is the defining health metric. If ceremony 1 triggers enthusiastic reactions and ceremony 5 gets silence, the experience isn't sustainable — award variety, pacing, or DJ type selection needs adjustment.
 
 **Observational Design Intent (post-session survey / in-room observation):**
 - Physical reaction: laughter, cheering, friendly arguing within 3 seconds of reveal
@@ -763,88 +814,86 @@ These are design intent, not dev acceptance criteria. They validate the experien
 
 ### Ceremony Types
 
-**Three ceremony weights — how they feel different to users:**
+**Two ceremony types — celebrations, not competitions. No voting, no scoring.**
 
 | Type | When DJ Picks It | Duration | User Experience |
 |---|---|---|---|
-| **Full Ceremony** | After high-energy songs, first ceremony of night, every 3rd+ ceremony | ~15s | Complete beat-by-beat: voting (4s with visual countdown) → silence (1.5s) → dramatic reveal with spatial audio fanfare → celebration (5-8s) with confetti + reactions. The game show |
-| **Quick Ceremony** | After mellow songs, as second in a back-to-back pair, mid-session pacing | ~6s | No voting. DJ auto-selects winner from participation data (reaction counts, soundboard taps). Brief anticipation (2s) → quick reveal with single chime + winner name. No bar chart. The shoutout |
-| **Skip** | Low energy detected, too many recent ceremonies, very short song | 0s | No ceremony. Straight to interlude or next song. Users never know a ceremony was considered and skipped. Invisible |
+| **Full Ceremony** | First 2-3 songs, post-challenge completion, song after interlude | 8-10s | Anticipation build (2-3s drumroll + dim) → dramatic reveal with spatial audio fanfare → award title + moment card → celebration (5-8s) with confetti + reactions + share prompt. The game show |
+| **Quick Ceremony** | Mid-session songs, back-to-back performances, after song 5 | 3-5s | One-liner award flash → brief animation + single chime. The shoutout |
 
-**Back-to-back limit: maximum 2 ceremonies per song, then mandatory interlude.** If the DJ engine queues multiple ceremonies, the rule is: first = Full, second = Quick, any additional redistributed to later in the session. Never two Full ceremonies in a row — 30 seconds of ceremony creates fatigue faster than dead air.
+**DJ type selection rules:** Never two Full ceremonies in a row. Default to Quick after song 5. Full triggered by: first song, song after interlude, party card challenge completion. Host can skip any ceremony to keep momentum.
 
-### Voting Mechanics
+### Award Generation Logic
 
-**Everyone votes for anyone except themselves.**
+**Awards are context-driven, not audience-voted. Pure celebration, zero performance judgment.**
 
-The DJ engine selects a category from its rotation. All connected participants are nominees. Each person sees the participant list (minus their own name) and taps one. Winner = most votes. Ties broken invisibly by the DJ engine (random selection).
+The DJ engine auto-generates a fun/random award title from a pool of 20+ templates. Award selection inputs:
 
-**Why everyone-as-nominee, not singer-only:** In a group of 10, only 1-2 sing each song. Singer-only nominees means 8 people choose between 2 options — boring. When everyone is a nominee, "Best Air Guitar" might go to someone who wasn't even singing but was shredding in the back. That's funnier. That's the drinking-game energy.
+| Input | How It Drives Awards | Example |
+|---|---|---|
+| **Party card accepted/completed** | Challenge-specific awards | "The Method Actor" (accepted Method Actor card) |
+| **Reaction volume during song** | High-reaction awards | "Crowd Whisperer" (highest reaction count) |
+| **Song position in session** | Milestone awards | "The Icebreaker" (first song), "The Closer" (last song) |
+| **Performer's cumulative stats** | Session-arc awards | "The Marathon Runner" (3rd song tonight) |
 
-**Category rotation (DJ engine selects):**
+**Award tone range:** comedic, hype, absurd, wholesome — selected contextually, not mapped to performance scores. "The Velvet Voice" and "Drunk Uncle Energy" coexist in the same pool. Variety is the key to ceremony freshness across 10+ songs per night.
 
-| Category Type | Examples |
-|---|---|
-| **Performance** | Best Vocalist, Most Dramatic, Best Duet Chemistry |
-| **Vibe** | Best Hype Person, Room MVP, Best Air Guitar |
-| **Social** | Most Likely To Encore, Best Backup Dancer, Biggest Fan |
-
-Categories rotate — the DJ engine avoids repeating the same category type consecutively.
+**Why no voting:** Voting adds 4 seconds of decision fatigue per ceremony, requires attention from participants who may be watching the karaoke screen, and creates implicit performance judgment that clashes with Vietnamese face-saving culture. Auto-generated awards are funnier, faster, and eliminate the risk of "nobody voted for me" disappointment.
 
 ### Experience Mechanics — Beat by Beat
 
-**Full Ceremony Sequence:**
+**Full Ceremony Sequence (8-10s total):**
 
 **1. Initiation: Song Over! (Host Action)**
 
 - Host long-presses (500ms) the "Song Over!" button with fill animation + haptic
 - **Simultaneously:** "Song Over!" confirmation flash on host phone (1s visual feedback) AND `song_ending` event dispatched to all participants
-- Participant phones immediately transition from song state to soft anticipation overlay
+- Participant phones immediately transition from song state to anticipation overlay
 - Audio: subtle "attention" chime on all devices
 
-**2. Anticipation Phase (T+0 to T+4s)**
+**2. Anticipation Phase (T+0 to T+3s)**
 
-- At T+0: server sends `ceremony_silence` event with `revealAt = now + 6000ms` (4s voting + 2s silence on one clock)
-- All phones show voting category + nominee list (all participants minus self)
-- **Visual countdown:** circular timer or filling bar shows 4 seconds draining. Creates game-show urgency — "vote NOW"
-- Background: drumroll audio builds across all devices
-- Visual: screen dims progressively, nominee cards glow on tap
-- Users tap their pick (single tap, one choice). Tapping is the only action
-- **Server closes voting at T+4s.** No extensions, no waiting for stragglers. Rhythm over completeness
+- At T+0: server sends `ceremony_anticipation` event with `revealAt = now + 3000ms`
+- Server simultaneously generates award from session context (party card, reactions, song position, performer stats)
+- All phones show: screen dims, drumroll audio builds across all devices
+- Visual: pulsing "Who will be crowned?" text, anticipation energy builds
+- No user action required — pure tension building
+- **This phase absorbs technical timing differences between devices** — if one phone's clock drifts 200ms, the anticipation masks the gap
 
-**3. The Silence (T+4s to T+6s)**
-
-- ALL audio cuts simultaneously — drumroll stops, chime stops
-- Screens show only category name on dark background
-- **Sync tolerance: ±200ms** (imperceptible within Svelte's 800ms elastic animation)
-- **Fallback: if clock skew >500ms** (detected via WebSocket ping), server-push-triggered reveal replaces timestamp-based
-- Room physically quiets — humans mirror device behavior
-
-**4. The Reveal (T+6s, synchronized)**
+**3. The Reveal (T+3s, synchronized)**
 
 - `ceremony_reveal` event fires at `revealAt` timestamp
 - Host phone: full-volume fanfare (the "stage")
 - Participant phones: 60%-volume crowd roar (the "audience")
-- Winner's phone: unique winner sound + extra haptic (Chrome only)
-- Visual: winner name + award title scales in with `elasticOut` (800ms)
-- Vote bar chart appears below (shows margin of victory)
-- Confetti sprite sheet scatter animation
+- Award recipient's phone: unique winner sound + extra haptic
+- Visual: performer name + award title scales in with elasticOut animation (800ms)
+- Confetti animation
+- **Sync tolerance: ±200ms** across all devices
+- **Fallback: if clock skew >500ms** (detected via WebSocket ping), server-push-triggered reveal replaces timestamp-based
 
-**5. Celebration Window (T+6s to T+14s)**
+**4. Moment Card + Celebration Window (T+3s to T+10s)**
 
 - Room reacts (laughter, pointing, friendly arguing)
-- Phones show winner card + reaction buttons
+- All phones show: award recipient name + award title + moment card
 - Reactions appear on all screens as scattered emoji bursts
-- Winner's phone shows share-ready 9:16 card
+- Award recipient's phone shows share-ready 9:16 moment card with share prompt
 - Introverts participate through reaction taps — visible without being loud
 - **Auto-advance** at 5-8 seconds → DJ engine transitions
 
-**6. Transition Out**
+**5. Transition Out**
 
-- If second ceremony queued: brief 2s transition → Quick ceremony (no voting, ~6s)
-- If no more ceremonies: interlude mini-game or next-song voting
+- If interlude queued: transition to interlude mini-game
+- If next song selection: transition to Quick Pick / Spin the Wheel
 - If finale: extended celebration → finale sequence
 - **Never drops to zero** — always a next thing on screen
+
+**Quick Ceremony Sequence (3-5s total):**
+
+- `ceremony_quick` event fires → brief anticipation (1s)
+- One-liner award title flashes with single chime + short animation
+- Performer name + award on screen for 2-3 seconds
+- Auto-advance to next DJ state
+- No moment card, no share prompt, no confetti — just a quick shoutout
 
 ## Song State Modes — Audience Participation During Songs
 
@@ -872,7 +921,7 @@ Song state is where users spend 60-70% of their time. The PRD defines three audi
 
 **3. Hype Signal (FR65)**
 - Available as a button in BOTH lean-in and lightstick modes
-- Tap the flash/hype button → phone screen pulses bright white (3 rapid flashes) + optional device flashlight activation (Chrome Android `torch` via ImageCapture API; not available on iOS Safari)
+- Tap the flash/hype button → phone screen pulses bright white (3 rapid flashes) + optional device flashlight activation via native torch API (both iOS and Android)
 - Creates a camera-flash strobe effect visible to the singer across the room
 - Cooldown: 5-second minimum between hype signals per user (prevents seizure risk from continuous strobing)
 - Visual feedback: button dims during cooldown with circular refill indicator
@@ -965,7 +1014,7 @@ Peak detection is **server-side** (FR73): server monitors reaction rate across a
 3. Tap to select → capture starts immediately (one tap to pop, one tap to capture = 2 taps total)
 
 **Photo capture:**
-- Inline camera viewfinder via `getUserMedia` (front-facing default)
+- Native camera viewfinder via `image_picker` (front-facing default)
 - Single tap to snap
 - Auto-closes after capture
 
@@ -979,15 +1028,15 @@ Peak detection is **server-side** (FR73): server monitors reaction rate across a
 - Tap to start, auto-stops at 10s or tap to stop
 - Perfect for capturing the room singing
 
-### iOS Graceful Degradation (FR69)
+### Uniform Media Capture (FR69)
 
-| Capture Type | Chrome Android | iOS Safari |
+| Capture Type | Android | iOS |
 |---|---|---|
-| Photo | Inline via `getUserMedia` | Inline via `getUserMedia` |
-| Video | Inline via `MediaRecorder` API | Falls back to `<input type="file" accept="video/*" capture>` (native picker). Returns to app after capture |
-| Audio | Inline via `MediaRecorder` API | Falls back to `<input type="file" accept="audio/*" capture>` (native picker). Returns to app after capture |
+| Photo | Native camera via `image_picker` | Native camera via `image_picker` |
+| Video | Native camera via `image_picker` | Native camera via `image_picker` |
+| Audio | Native recorder via `record` package | Native recorder via `record` package |
 
-The native picker fallback on iOS navigates briefly to the camera/voice recorder app, then returns. The capture still completes without the user losing their place in the party — WebSocket stays connected, DJ state syncs on return.
+Flutter native provides uniform media capture on both platforms. The camera/recorder opens as a native overlay and returns to the app seamlessly — WebSocket stays connected, DJ state syncs on return.
 
 ### Background Upload (FR71)
 
@@ -1002,7 +1051,7 @@ Separate from the prompted bubble: a small camera icon lives in the Song State t
 
 ### Design Rules
 
-- Bubble never appears during voting (4s window is sacred — no distractions)
+- Bubble never appears during ceremony anticipation (tension moment — no distractions)
 - Bubble never appears during silence phase (tension moment — don't break it)
 - Maximum 1 bubble per 60 seconds (prevent bubble fatigue)
 - Capture UI is always an overlay — never navigates away from current screen (except iOS native picker fallback)
@@ -1228,126 +1277,281 @@ Interludes fill the gaps between songs with mini-games that keep energy high and
 | Dare Pull | Dare completed (social observation, not app-enforced) | 5 | Engaged |
 | Quick Vote | Vote cast within window | 3 | Active |
 
+## Session Timeline & Memories UX
+
+### Overview
+
+The Session Timeline is the app's home screen for authenticated users when no party is active (FR108). It gives users a reason to open Karamania between sessions and serves as the re-engagement surface. Guest users see a simpler Start/Join screen instead (FR113).
+
+### Home Screen — Two States
+
+**Authenticated User (has account):**
+```
++---------------------+
+|  TopBar: KARAMANIA   |
+|                      |
+|  [+ CREATE PARTY]   |  <- Primary CTA
+|  [JOIN PARTY]        |  <- Secondary CTA
+|                      |
+|  --- Your Sessions --|
+|                      |
+|  +------------------+|
+|  | Mar 3 - Room 5   ||
+|  | 6 friends         ||  <- Session card
+|  | "Crowd Whisperer" ||  <- User's top award
+|  | [photo thumbnail] ||
+|  +------------------+|
+|                      |
+|  +------------------+|
+|  | Feb 28 - KTV 88  ||
+|  | 8 friends         ||
+|  | "The Closer"      ||
+|  +------------------+|
+|                      |
+|  (infinite scroll)   |
++---------------------+
+```
+
+**Guest User (no account):**
+```
++---------------------+
+|  TopBar: KARAMANIA   |
+|                      |
+|                      |
+|  [+ CREATE PARTY]   |  <- Primary CTA
+|                      |
+|  [JOIN PARTY]        |  <- Secondary CTA
+|                      |
+|                      |
+|  Create an account   |
+|  to save your        |
+|  session history     |
+|  [Sign in]           |
+|                      |
++---------------------+
+```
+
+### Session Detail Screen (FR109-FR112)
+
+Tapping a session entry opens a single continuous scrollable view — no tabs or sub-navigation.
+
+```
++---------------------+
+|  TopBar: SESSION     |
+|                      |
+|  Mar 3, 2026         |
+|  Room 5 - 2hrs       |
+|  6 participants      |
+|                      |
+|  --- Participants ---|
+|  Linh - "Party       |
+|   Starter" (host)    |
+|  Duc - "Crowd        |
+|   Whisperer"         |
+|  Minh - "Hype Lord"  |
+|  ...                 |
+|                      |
+|  --- Setlist --------|
+|  1. Bohemian Rhaps.  |
+|     Duc - "Method    |
+|     Actor"           |
+|  2. Con Mua Ngang    |
+|     Linh - "Velvet   |
+|     Voice"           |
+|  ...                 |
+|                      |
+|  --- Media ----------|
+|  [photo] [photo]     |
+|  [video] [photo]     |  <- Inline grid
+|  [photo] [audio]     |
+|                      |
+|  --- Setlist Poster -|
+|  [full poster image] |
+|                      |
+|  [SHARE SESSION]     |  <- Native share sheet
+|  [LET'S GO AGAIN!]  |  <- Generate invite msg
+|                      |
++---------------------+
+```
+
+**Share flow (FR111):** Generates a shareable link that opens a read-only web view of the session detail. No app required to view the shared link. Setlist, awards, stats, and media are visible.
+
+**"Let's go again!" flow (FR112):** Generates a pre-composed message: "{venue name} karaoke was amazing! Let's do it again {date suggestion}. Download Karamania: {link}". Opens native share sheet for user to send via WhatsApp, Zalo, iMessage, etc. No in-app messaging.
+
+**Empty state (FR115):** Zero past sessions shows: "Start your first party" call-to-action with the CREATE PARTY button.
+
+### Design Rules
+
+| Rule | Rationale |
+|------|-----------|
+| Timeline loads 20 sessions initially, infinite scroll for older | Fast initial load, progressive disclosure |
+| Session cards show user's personal top award | Personalized, not generic summary |
+| Media gallery is inline grid, not a separate tab | Single scrollable view, no navigation |
+| Share link opens read-only web view | Viral loop — recipients don't need the app to see highlights |
+| "Let's go again!" uses native share sheet | Leverages existing group chats (WhatsApp, Zalo) |
+| Auth-gated — guests see Start/Join only | Clean incentive to create account without blocking in-session features |
+| Session Timeline is NOT visible during active party | During party, the DJ engine controls the screen |
+
+## Authentication & Identity UX
+
+### Overview
+
+Authentication is optional and never gates in-session features (FR96, FR105). Guest join (name-only) remains the default frictionless path. Sign-in unlocks persistence: session history, media gallery, and cross-session features.
+
+### Join Screen — Auth Integration
+
+```
++---------------------+
+|  TopBar: JOIN PARTY  |
+|                      |
+|  Enter your name:    |
+|  [_______________]   |
+|                      |
+|  --- or sign in -----|
+|                      |
+|  [G] Sign in with    |
+|      Google          |
+|  [f] Sign in with    |
+|      Facebook        |
+|                      |
+|  [JOIN AS GUEST]     |  <- Primary CTA (default path)
+|                      |
+|  Signing in saves    |
+|  your party history  |
+|                      |
++---------------------+
+```
+
+**Design rules:**
+- Guest join is the PRIMARY path — biggest button, no friction
+- OAuth buttons are present but not pushy — "or sign in" separator
+- Sign-in auto-fills display name from OAuth provider
+- No email/password — OAuth only (Google + Facebook via Firebase Auth)
+- Sign-in never blocks joining the party
+
+### Guest-to-Account Upgrade (FR97)
+
+Available at any point during or after a session. Non-blocking — WebSocket stays connected during native OAuth flow.
+
+**Trigger points:**
+1. Post-session: "Save your session history — sign in" prompt during finale
+2. Session Timeline attempt: "Create an account to see your past sessions"
+3. Settings/profile area: Persistent "Sign in" option
+
+**Flow:**
+1. User taps "Sign in" → native OAuth flow opens (Firebase Auth Flutter SDK)
+2. OAuth completes → server links existing session token to new Firebase UID
+3. All accumulated session data, participation scores, and captured media transfer to the new account
+4. WebSocket stays connected — no interruption to current party
+5. Complete in under 5 seconds including OAuth flow (NFR35)
+
+### Design Rules
+
+| Rule | Rationale |
+|------|-----------|
+| Guest join is always the default path | Frictionless onboarding — auth is earned, not demanded |
+| Auth status affects persistence only, never in-party capabilities | No pay-to-play perception. Every feature works as guest |
+| No "sign in to continue" modals | Never gate in-session features behind auth |
+| OAuth only (no email/password) | Minimizes friction, leverages existing accounts |
+| Upgrade preserves all session data | No data loss on upgrade — captures, scores, everything transfers |
+| Auth prompt is positioned as "save your stats" | Positive framing — gain something, don't unlock something |
+
+## Web Landing Page UX
+
+### Overview
+
+The web landing page is a lightweight static page (HTML/JS, <50KB) that handles QR code / party code join routing (FR106-FR107). It's the bridge between QR scan and the native app.
+
+### Flow
+
+```
++---------------------+
+|                      |
+|  KARAMANIA           |
+|  Join the party!     |
+|                      |
+|  [OPEN APP]          |  <- Deep link (if app installed)
+|                      |
+|  --- or -------------|
+|                      |
+|  Don't have the app? |
+|  [Download for iOS]  |
+|  [Download Android]  |
+|                      |
+|  --- or -------------|
+|                      |
+|  Enter party code:   |
+|  [_ _ _ _]           |  <- Manual code entry
+|  [JOIN]              |
+|                      |
++---------------------+
+```
+
+**Behavior:**
+1. Page detects platform (iOS/Android) from user agent
+2. Attempts deep link via Universal Links (iOS) / App Links (Android) with party code
+3. If app is installed: opens directly with party code pre-filled
+4. If app is not installed: shows app store button for the detected platform
+5. Manual code entry for users who type the URL directly (FR107)
+6. Loads in <2s on 4G, under 50KB total (NFR39)
+
 ## Visual Design Foundation
 
 ### Color System — Vibe-Adaptive
 
 **Architecture: Dark constants + shifting accents per party vibe.**
 
-The host picks a vibe with one emoji tap at party creation. That sets `data-dj-vibe` on `<body>` for the entire session. Dark surfaces stay constant (readability in KTV rooms is non-negotiable). Only 4 accent tokens shift per vibe. General is the `:root` default — if `data-dj-vibe` is never set (WebSocket drops, late join), the app still looks correct.
+The host picks a vibe with one emoji tap at party creation. That vibe sets the accent palette for the entire session. Dark surfaces stay constant (readability in KTV rooms is non-negotiable). Only 4 accent tokens shift per vibe. General is the default — if vibe is never set (WebSocket drops, late join), the app still looks correct.
 
-```svelte
-<body data-dj-state={$djState} data-dj-vibe={$partyVibe}>
+```dart
+// Theme applies vibe via provider
+final vibeAccent = switch (partyVibe) {
+  PartyVibe.general => DJTokens.actionPrimary,
+  PartyVibe.kpop => const Color(0xFFFF6B9D),
+  // ...
+};
 ```
 
-**Complete Token File — Inlined in `<head>`:**
+**Complete Token File — Dart Constants:**
 
-```css
-/* tokens.css — inlined in <head> as <style> block */
-:root {
-  /* === CONSTANTS (never change per vibe) === */
+```dart
+// lib/theme/dj_tokens.dart
+class DJTokens {
+  // === CONSTANTS (never change per vibe) ===
+  static const bgColor = Color(0xFF0A0A0F);
+  static const surfaceColor = Color(0xFF1A1A2E);
+  static const surfaceElevated = Color(0xFF252542);
+  static const textPrimary = Color(0xFFF0F0F0);
+  static const textSecondary = Color(0xFF8888AA);
+  static const actionConfirm = Color(0xFF4ADE80);
+  static const actionDanger = Color(0xFFEF4444);
+  static const transitionFast = Duration(milliseconds: 150);
 
-  /* Surfaces */
-  --dj-bg: #0a0a0f;
-  --dj-surface: #1a1a2e;
-  --dj-surface-elevated: #252542;
-
-  /* Text */
-  --dj-text-primary: #f0f0f0;
-  --dj-text-secondary: #8888aa;
-
-  /* Universal Actions */
-  --dj-action-confirm: #4ade80;
-  --dj-action-danger: #ef4444;
-
-  /* Timing */
-  --dj-transition-fast: 150ms;
-
-  /* Spacing (8px base unit) */
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
-
-  /* === VIBE DEFAULTS (General — overridden per vibe) === */
-  --dj-accent: #ffd700;
-  --dj-ceremony-glow: #ffd700;
-  --dj-ceremony-bg: #1a0a2e;
-  --dj-action-primary: #6c63ff;
+  // Spacing (8px base unit)
+  static const spaceXs = 4.0;
+  static const spaceSm = 8.0;
+  static const spaceMd = 16.0;
+  static const spaceLg = 24.0;
+  static const spaceXl = 32.0;
 }
 
-/* === VIBE OVERRIDES === */
-[data-dj-vibe="kpop"] {
-  --dj-accent: #ff0080;
-  --dj-ceremony-glow: #ff69b4;
-  --dj-ceremony-bg: #1a0a20;
-  --dj-action-primary: #cc00ff;
-}
-[data-dj-vibe="rock"] {
-  --dj-accent: #ff4444;
-  --dj-ceremony-glow: #ff6600;
-  --dj-ceremony-bg: #1a0a0a;
-  --dj-action-primary: #cc4422;
-}
-[data-dj-vibe="ballad"] {
-  --dj-accent: #ff9966;
-  --dj-ceremony-glow: #ffcc88;
-  --dj-ceremony-bg: #1a1210;
-  --dj-action-primary: #cc8866;
-}
-[data-dj-vibe="edm"] {
-  --dj-accent: #00ffc8;
-  --dj-ceremony-glow: #00c8ff;
-  --dj-ceremony-bg: #0a1a1a;
-  --dj-action-primary: #00c8ff;
+// lib/theme/dj_vibes.dart
+enum PartyVibe {
+  general(accent: Color(0xFFFFD700), glow: Color(0xFFFFD700), bg: Color(0xFF1A0A2E), primary: Color(0xFF6C63FF)),
+  kpop(accent: Color(0xFFFF0080), glow: Color(0xFFFF69B4), bg: Color(0xFF1A0A20), primary: Color(0xFFCC00FF)),
+  rock(accent: Color(0xFFFF4444), glow: Color(0xFFFF6600), bg: Color(0xFF1A0A0A), primary: Color(0xFFCC4422)),
+  ballad(accent: Color(0xFFFF9966), glow: Color(0xFFFFCC88), bg: Color(0xFF1A1210), primary: Color(0xFFCC8866)),
+  edm(accent: Color(0xFF00FFC8), glow: Color(0xFF00C8FF), bg: Color(0xFF0A1A1A), primary: Color(0xFF00C8FF));
+
+  final Color accent;
+  final Color glow;
+  final Color bg;
+  final Color primary;
+  const PartyVibe({required this.accent, required this.glow, required this.bg, required this.primary});
 }
 ```
 
-General vibe needs no `[data-dj-vibe="general"]` rule — it's the `:root` default. Defensive CSS: the app works even if `data-dj-vibe` is never set.
-
-**Tailwind Config Bridge:**
-
-```js
-// tailwind.config.js — connects Tailwind classes to CSS custom properties
-module.exports = {
-  theme: {
-    extend: {
-      colors: {
-        dj: {
-          bg: 'var(--dj-bg)',
-          surface: 'var(--dj-surface)',
-          'surface-elevated': 'var(--dj-surface-elevated)',
-          accent: 'var(--dj-accent)',
-          'ceremony-glow': 'var(--dj-ceremony-glow)',
-          'ceremony-bg': 'var(--dj-ceremony-bg)',
-        },
-        text: {
-          primary: 'var(--dj-text-primary)',
-          secondary: 'var(--dj-text-secondary)',
-        },
-        action: {
-          primary: 'var(--dj-action-primary)',
-          confirm: 'var(--dj-action-confirm)',
-          danger: 'var(--dj-action-danger)',
-        },
-      },
-      fontFamily: {
-        display: ['Space Grotesk', 'system-ui', 'sans-serif'],
-      },
-      spacing: {
-        xs: 'var(--space-xs)',
-        sm: 'var(--space-sm)',
-        md: 'var(--space-md)',
-        lg: 'var(--space-lg)',
-        xl: 'var(--space-xl)',
-      },
-    },
-  },
-}
-```
-
-Svelte templates use `bg-dj-surface text-text-primary border-action-primary` and vibe changes cascade automatically through CSS custom properties. No conditional class logic needed.
+General vibe is the default — if vibe is never set (WebSocket drops, late join), the app still looks correct. The provider falls back to `PartyVibe.general`.
 
 **Vibe-Specific Flavor Layer:**
 
@@ -1357,13 +1561,13 @@ Svelte templates use `bg-dj-surface text-text-primary border-action-primary` and
 | Reaction button set | General: 🔥👏😂💀 / K-pop: 🔥👏😍💀 / Rock: 🔥🤘😂💀 / Ballad: ❤️😭👏🥹 / EDM: 🔥👏🎧💀 | All states |
 | Award copy flavor | General: "Absolute showstopper" / K-pop: "Main vocal energy" / Rock: "Shredded the vocals" / Ballad: "Hit us right in the feels" / EDM: "Dropped the vocals hard" | **Full ceremonies only.** Quick ceremonies use generic copy across all vibes — they're 6-second shoutouts, nobody reads the subtitle |
 
-All stored in `constants/copy.js` as vibe-keyed objects. One file, five flavor sets.
+All stored in `constants/copy.dart` as vibe-keyed maps. One file, five flavor sets.
 
 **Vibe Selection UX:**
 
 Single screen during party creation. Five emoji buttons: 🎤 💖 🎸 🎵 🎧. General (🎤) pre-selected as default.
 
-**Micro-preview on tap:** Host taps 🎸 → the picker screen background shifts to Rock accent colors for 2 seconds, then resets to current selection. Same `data-dj-vibe` CSS switching applied to the picker screen temporarily via a Svelte `on:click` that sets a preview state. Zero new components. Solves the "what does EDM even mean?" problem — hosts don't need to know genre names, they tap and SEE the color.
+**Micro-preview on tap:** Host taps 🎸 → the picker screen background shifts to Rock accent colors for 2 seconds, then resets to current selection. The provider temporarily applies the preview vibe's colors via AnimatedContainer. Zero new widgets. Solves the "what does EDM even mean?" problem — hosts don't need to know genre names, they tap and SEE the color.
 
 **Post-MVP: Vibe Monetization Surface**
 
@@ -1371,7 +1575,7 @@ Base 5 vibes are free forever. Two expansion paths:
 - **Achievement vibes:** "Host 3 parties → unlock Retro 80s." Drives repeat hosting behavior
 - **Premium seasonal vibes:** Tết (red + gold), Birthday, Halloween. Paid, time-limited. Vietnamese micro-transaction culture supports this
 
-The CSS architecture supports unlimited vibes — each is just another `[data-dj-vibe]` rule block.
+The Dart enum architecture supports unlimited vibes — each is just another enum case with four color values.
 
 ### Typography System
 
@@ -1381,28 +1585,27 @@ The CSS architecture supports unlimited vibes — each is just another `[data-dj
 |---|---|---|---|
 | **Display** | 32px / 2rem | 700 | Winner name on ceremony reveal. THE biggest text |
 | **Title** | 24px / 1.5rem | 700 | Award category names, screen headers |
-| **Subtitle** | 16px / 1rem | 600 | Award descriptions, participant names in voting |
-| **Body** | 14px / 0.875rem | 400 | Secondary information, vote percentages |
+| **Subtitle** | 16px / 1rem | 600 | Award descriptions, participant names |
+| **Body** | 14px / 0.875rem | 400 | Secondary information, award details |
 | **Caption** | 12px / 0.75rem | 400 | Status labels, timestamps, "CEREMONY" badge |
 | **Button** | 14px / 0.875rem | 700 | All interactive buttons, uppercase for primary actions |
 
 **Why Space Grotesk:**
 - Geometric sans-serif with distinctly wide characters — readable at arm's length in dim lighting
-- Variable font (one file, all weights) — plays well with two-tier bundle strategy
-- Free (Google Fonts) — no licensing for MVP
+- Variable font (one file, all weights) — efficient asset bundling
+- Free (Google Fonts) — no licensing for MVP, bundled as asset in Flutter
 - Distinct enough to feel branded, neutral enough to work across all 5 vibes
 
 **Font Loading Strategy:**
-- **Self-hosted subsetted woff2 file.** Use `glyphhanger` or `fonttools` to subset to Latin + Vietnamese characters. Vietnamese diacritics (ă, ơ, ư, đ, etc.) are required for participant names. Without explicit Vietnamese subsetting, diacritics render in fallback system font while Latin renders in Space Grotesk — looks broken
-- Target: **<25KB** for the subsetted variable font file (within core bundle budget)
-- `@font-face` declaration inlined in `<head>` alongside design tokens
-- `font-display: swap` — show system font immediately, swap when loaded
-- Fallback stack: `'Space Grotesk', system-ui, sans-serif`
+- **Bundled asset font file.** Use `fonttools` to subset to Latin + Vietnamese characters. Vietnamese diacritics (ă, ơ, ư, đ, etc.) are required for participant names. Without explicit Vietnamese subsetting, diacritics render in fallback system font while Latin renders in Space Grotesk — looks broken
+- Target: **<25KB** for the subsetted variable font file (within app bundle budget)
+- Declared in `pubspec.yaml` fonts section, applied via `TextTheme` in app theme
+- Fallback: system sans-serif via Flutter's default font resolution
 
 **Type Rules:**
 - Award titles and winner names: UPPERCASE. Ceremonies are announcements, not sentences
 - Body text and descriptions: Sentence case. Conversational, not formal
-- Buttons: UPPERCASE for primary actions (VOTE NOW), Sentence case for secondary
+- Buttons: UPPERCASE for primary actions (PICK SONG), Sentence case for secondary
 - No italics anywhere — italics are hard to read on small screens in poor lighting
 - Minimum tap-target text: 14px. Nothing interactive below this size
 
@@ -1426,14 +1629,14 @@ All spacing tokens inlined in `<head>` alongside color tokens (one `<style>` blo
 2. **Tap targets: minimum 44x44px.** Apple HIG minimum. Everything tappable meets this
 3. **Safe area awareness.** Respect iPhone notch and home indicator. Bottom action buttons have 16px minimum padding from bottom edge
 4. **Content hugs bottom.** Primary actions live at thumb reach (bottom third). Information at top. Ceremony reveals center vertically for maximum drama
-5. **No scroll during ceremonies.** Ceremony reveal, voting, and celebration all fit in viewport. If content exceeds viewport, reduce animation area — never add scroll
+5. **No scroll during ceremonies.** Ceremony anticipation, reveal, and celebration all fit in viewport. If content exceeds viewport, reduce animation area — never add scroll
 
 **Grid System:**
 
-- Soundboard: 3-column CSS Grid (medium density), equal-width cells, 8px gap
-- Reaction bar: Flexbox, center-justified, 10px gap
+- Soundboard: 3-column grid (medium density), equal-width cells, 8px gap
+- Reaction bar: Row, center-justified, 10px gap
 - Participant list: Single column, full width, 44px minimum row height
-- Vote bars: Flexbox row (name | bar | percentage), 6px gap
+- Song pick bars: Row layout (name | bar | count), 6px gap
 - No 12-column grid system. Overkill for a single-column phone app
 
 ### Accessibility Considerations
@@ -1461,7 +1664,7 @@ All spacing tokens inlined in `<head>` alongside color tokens (one `<style>` blo
 - **Spatial audio volume split suppressed:** all devices play at equal volume (no host-loud/participant-quiet differentiation). Users who set reduced-motion often have vestibular sensitivities — sudden volume changes from multiple devices can trigger discomfort. The ceremony still works; it loses the directional audio effect only
 
 **Color Accessibility:**
-- Vote bar charts use position + percentage text in addition to color fill — color-blind users can read results
+- Song pick bar charts use position + count text in addition to color fill — color-blind users can read results
 - Winner indication uses size (2x) + position (top) + text label in addition to accent color
 - No information conveyed by color alone
 
@@ -1473,20 +1676,22 @@ We explored a **full DJ state walkthrough** — 9 sequential screens showing eve
 
 ### Complete Screen Inventory
 
-| # | Screen | DJ State | Attention Mode | Sprint |
+| # | Screen | DJ State / Context | Attention Mode | Sprint |
 |---|--------|----------|----------------|--------|
-| 1 | Join & Name Entry | `lobby` | Active | 1 |
-| 2 | Icebreaker Tap | `icebreaker` | Active | 1 |
-| 3 | Party Card Deal | `party_card_deal` | Active | 2 |
-| 4 | Song State (with Lightstick + Hype modes) | `song` | Lean-in | 1 (base), 2 (modes) |
-| 5 | Voting Phase | `ceremony.voting` | Active | 1 |
-| 6 | The Silence | `ceremony.silence` | Active | 1 |
-| 7 | The Reveal | `ceremony.reveal` | Active | 1 |
-| 8 | Quick Ceremony | `ceremony.quick_reveal` | Active | 1 |
-| 9 | Interlude Games (Kings Cup / Dare Pull / Quick Vote) | `interlude` | Active | 3 |
-| 10 | Next Singer Vote | `interlude.vote` | Active | 1 |
-| 11 | Capture Bubble (overlay) | any active state | Lean-in | 2 |
-| 12 | Finale Recap | `finale` | Active | 1 |
+| 1 | Home / Session Timeline | app home (auth users) | Active | 4 |
+| 2 | Session Detail | past session view | Active | 4 |
+| 3 | Join & Name Entry (with optional sign-in) | `lobby` | Active | 1 |
+| 4 | Icebreaker Tap | `icebreaker` | Active | 1 |
+| 5 | Party Card Deal | `party_card_deal` | Active | 2 |
+| 6 | Song State (with Lightstick + Hype modes) | `song` | Lean-in | 1 (base), 2 (modes) |
+| 7 | Anticipation Phase | `ceremony.anticipation` | Active | 1 |
+| 8 | The Reveal | `ceremony.reveal` | Active | 1 |
+| 9 | Quick Ceremony | `ceremony.quick_reveal` | Active | 1 |
+| 10 | Interlude Games (Kings Cup / Dare Pull / Quick Vote) | `interlude` | Active | 4 |
+| 11 | Democratic Vote | `interlude.vote` | Active | 4 |
+| 12 | Capture Bubble (overlay) | any active state | Lean-in | 2 |
+| 13 | Finale Recap | `finale` | Active | 4 |
+| 14 | Web Landing Page (external) | join routing | Active | 1 |
 
 ### Song Integration & Discovery System
 
@@ -1788,31 +1993,33 @@ Quick Pick is the default mode. A small toggle at the bottom of either mode allo
 **Full DJ state walkthrough with song intelligence** — a single visual direction showing every screen in sequence, with the vibe-adaptive color system applied throughout, the Song Integration Engine powering suggestions and auto-queuing, and genre/song data driving contextual ceremonies and challenges.
 
 Key design decisions locked in:
-- **Vote for singer, not song**: Vietnamese cultural respect (giữ thể diện — face-saving). Voting for a person is encouragement; voting against a song is personal
+- **No ceremony voting — awards are context-driven**: Vietnamese cultural respect (giữ thể diện — face-saving). Auto-generated awards from session context (party card, reactions, song position) eliminate performance judgment and decision fatigue
 - **Song data flows passively**: Lounge API detects what's playing — no user input required for song-level intelligence
 - **Quick Pick is the default**: Fast, democratic, data-driven. Spin the Wheel is the party-energy alternative
 - **Auto-queue eliminates friction**: Selected songs go directly to the TV — nobody types into the karaoke machine
 - **Playlist import is cold-start onboarding**: Lounge API passive detection is the core. Playlists seed the suggestion engine with "songs the group knows"
 - **Suggestion-only mode as graceful fallback**: App works at any venue, with or without YouTube TV
+- **Flutter native over PWA**: Reliable background connectivity, uniform media capture, native wake lock, push notifications. App download friction accepted for native benefits
 
 ### Screen-by-Screen Design Decisions
 
 | Screen | Host View Difference | Key Interaction |
 |--------|---------------------|----------------|
-| Lobby + TV Pairing | "Start Party" button + TV pairing input | Name entry → JOIN (AudioContext unlock). Host: enter TV code |
+| Home / Session Timeline | Same (auth-gated) | Tap session → detail. "Start Party" / "Join Party" CTAs |
+| Session Detail | Same | Scroll through session data. Share via native sheet. "Let's go again!" |
+| Lobby + TV Pairing | "Start Party" button + TV pairing input | Name entry → JOIN. Optional sign-in (Google/Facebook). Host: enter TV code |
 | Playlist Import | Same | Paste playlist URL → auto-import |
 | Icebreaker | Same | Tap answer → synchronized reveal |
 | Quick Pick | Same | Tap 👍 or ➡️ on song cards, 15s auto-advance |
 | Spin the Wheel | Same | Tap SPIN, watch animation, optional veto |
 | Party Card Deal | Same | Singer: accept/dismiss/redraw. Others: "challenge incoming" |
-| Song State | "Song Over!" long-press (500ms fill) | Soundboard taps (6 sounds), emoji reactions (5 emoji) |
-| Voting | Same | Single tap on one nominee, 4s hard window, circular countdown |
-| Silence | Same | None — 1.5-2s tension moment, all audio cuts, near-black |
-| Reveal | Same | Post-reveal reaction taps, vote bar chart visible |
-| Quick Ceremony | Same | None — DJ auto-selects from participation data, ~6s |
+| Song State | "Song Over!" long-press (500ms fill) | Soundboard taps (6 sounds), emoji reactions, lightstick toggle, hype signal |
+| Anticipation | Same | None — 2-3s tension moment, drumroll builds |
+| Reveal | Same | Post-reveal reaction taps, moment card visible |
+| Quick Ceremony | Same | None — DJ auto-generates award, ~3-5s |
 | Interlude | Same | Mini-game (Kings Cup, Dare Pull, Quick Vote) |
 | Suggestion-Only Display | "Now Playing" button | Song title displayed for manual karaoke machine entry |
-| Finale | Same | Share button → native share sheet (screenshot-prompt MVP) |
+| Finale | Same | Share button → native share sheet |
 
 **Host vs. Participant divergence (5 differences):**
 1. Host sees "Song Over!" button during song state (500ms long-press with fill animation)
@@ -1823,49 +2030,54 @@ Key design decisions locked in:
 
 ### Ceremony Component Architecture
 
-Single `Ceremony.svelte` with `$ceremonyPhase` derived store:
-- `voting` → 4s hard window, circular countdown, drumroll building
-- `silence` → 1.5-2s, all audio cuts, near-black, category name pulsing (opacity 0.3→1.0)
-- `reveal` → scale + elasticOut (800ms), spatial audio fanfare, confetti scatter, vote bar chart
-- `celebration` → post-reveal reaction window
-- `quick_reveal` → no voting, DJ auto-selects, single chime, simpler visual
+Single `CeremonyScreen` widget with `ceremonyPhase` from provider:
+- `anticipation` → 2-3s, drumroll builds, screen dims, "Who will be crowned?" pulsing text
+- `reveal` → scale + elasticOut (800ms), spatial audio fanfare, confetti, performer name + award title + moment card
+- `celebration` → post-reveal reaction window + share prompt (award recipient only)
+- `quick_reveal` → no anticipation, DJ auto-generates, single chime, one-liner flash
 
-Phase transitions driven by WebSocket events (`ceremony_silence`, `ceremony_reveal`), not client timers. Server sends `revealAt` timestamp at vote close (T+0), clients schedule synchronized display.
+Phase transitions driven by WebSocket events (`ceremony_anticipation`, `ceremony_reveal`), not client timers. Server sends `revealAt` timestamp at anticipation start, clients schedule synchronized display.
 
 **Ceremony type rules:**
-- Full ceremony (~15s): voting → silence → reveal → celebration (the "game show")
-- Quick ceremony (~6s): anticipation → quick reveal (the "shoutout")
-- Max 2 back-to-back: 1 Full + 1 Quick, then mandatory interlude
-- Skip: DJ silently records data, no visible ceremony (invisible to users)
+- Full ceremony (8-10s): anticipation → reveal → celebration (the "game show")
+- Quick ceremony (3-5s): brief flash → quick reveal (the "shoutout")
+- Never two Full ceremonies in a row. Default to Quick after song 5
+- Host can skip any ceremony to keep momentum
 
 ### Design Rationale
 
 1. **Passive song detection eliminates double-entry**: The Lounge API knows what's playing — no user input required for song-level intelligence. Genre tags remain as a lightweight fallback in suggestion-only mode
 2. **Face-saving song selection**: Quick Pick and Spin the Wheel let the GROUP decide what to sing — no individual puts themselves on the line by suggesting a song that gets rejected. The algorithm suggests, the group approves
-3. **The app doesn't replace the karaoke machine — it enhances the pipeline**: From "what should we sing?" through "who's singing?" to "how did they do?" — Karamania owns the before and after, the TV owns the during
-4. **Playlist import is cold-start onboarding, not core**: The Lounge API passive detection is the always-on core. Playlists seed the suggestion engine with "songs the group knows" — valuable but not required
-5. **Full state walkthrough over generic mockups**: Seeing every screen in sequence reveals flow problems that isolated mockups hide — transition energy curves, information density shifts, attention mode switches
+3. **Context-driven awards eliminate judgment**: No performance voting, no scoring. Awards auto-generated from session context (party card, reactions, song position) are funnier and culturally safer than audience ratings
+4. **The app doesn't replace the karaoke machine — it enhances the pipeline**: From "what should we sing?" through "who's singing?" to "how did they do?" — Karamania owns the before and after, the TV owns the during
+5. **Playlist import is cold-start onboarding, not core**: The Lounge API passive detection is the always-on core. Playlists seed the suggestion engine with "songs the group knows" — valuable but not required
+6. **Full state walkthrough over generic mockups**: Seeing every screen in sequence reveals flow problems that isolated mockups hide — transition energy curves, information density shifts, attention mode switches
 
 ### Implementation Approach
 
 **Sprint 1 — Core loop skeleton:**
-- Lobby → Icebreaker → Song → Ceremony → Interlude → Finale
-- Hardcoded party creation (no Create Party screen)
+- Flutter project setup with deep-link configuration (Universal Links + App Links)
+- Web landing page scaffold for join routing
+- Lobby → Icebreaker → Song → Ceremony → Finale
+- Party create/join via QR/code with optional Firebase Auth or guest
 - YouTube TV pairing via Lounge API (host enters TV code)
 - `nowPlaying` event listener + video_id → metadata pipeline
 - Suggestion-only mode fallback (app works without TV)
-- Single-column nominees (scroll OK for 10+)
-- One confetti emoji set (no vibe-specific)
+- Host controls (next, skip, pause)
+- One confetti set (no vibe-specific)
 - No spatial audio volume split (all devices same volume)
-- No reconnection screen (refresh = rejoin)
-- Screenshot-prompting for share (no Canvas rendering)
+- No reconnection screen (app restart = rejoin)
 
-**Sprint 2 additions:**
-- Party Cards, Lightstick Mode, Hype Signal, Media Capture
-- Two-column nominee grid for 10+ participants
-- Vibe-specific confetti sets
+**Sprint 2 — The Experience:**
+- Party Cards (19 cards, deal/accept/dismiss/redraw)
+- Lightstick Mode, Camera Flash Hype Signal
+- Post-song ceremony with two types (Full/Quick) — auto-generated awards, no voting
+- Live emoji reactions + streaks, Soundboard (4-6 sounds)
+- Prompted media capture (bubble UX, background upload)
+- Icebreaker (first-60-seconds)
+- Moment card with share intent
 - Spatial audio (host 100%, participants 60%)
-- Share card Canvas rendering
+- Screen wake lock (native API via wakelock_plus)
 
 **Sprint 3 — Song Discovery + Polish:**
 - Playlist URL import (YouTube Music + Spotify public)
@@ -1877,11 +2089,26 @@ Phase transitions driven by WebSocket events (`ceremony_silence`, `ceremony_reve
 - Genre momentum ranking
 - Karaoke Classics fallback (cold start, no playlists)
 
+**Sprint 4 — Pre-Real-Session Polish:**
+- Three-tier reconnection model
+- Democratic voting, 3 interlude games (Kings Cup, Dare Pull, Quick Vote)
+- End-of-night ceremony + setlist poster
+- Session Timeline home screen + Session Detail view
+- Shareable session link (read-only web view)
+- "Let's go again!" invite action
+- Guest-to-account upgrade flow
+
+**Sprint 5 — App Distribution:**
+- TestFlight (iOS) and internal testing track (Android) distribution
+- Deep-link end-to-end testing
+- App store listing prep
+
 **Post-MVP:**
 - Snowball Effect (cross-session learning)
 - Genre-based game triggers (song genre drives which challenges appear)
 - Audio fingerprinting as "magic" secondary detection method
 - Apple Music playlist import
+- Vietnamese language localization (i18n)
 
 ## User Journey Flows
 
@@ -1889,14 +2116,15 @@ Phase transitions driven by WebSocket events (`ceremony_silence`, `ceremony_reve
 
 Linh's complete night. The only flow with unique screens and interactions.
 
-**Sprint 1 vs Sprint 2 split:**
-- **Sprint 1:** Linh opens a party URL that auto-assigns her as host. No Create Party screen — party is hardcoded.
-- **Sprint 2:** Full Create Party screen (name party, pick vibe, generate QR code).
-
 ```mermaid
 flowchart TD
-    A["Open party URL (Sprint 1: hardcoded)"] --> B[Lobby Screen — auto-assigned as host]
-    B --> C[Enter name + tap CREATE PARTY]
+    A["Open app → Home Screen"] --> AA{Authenticated?}
+    AA -->|Yes| AB["Session Timeline — tap CREATE PARTY"]
+    AA -->|No/Guest| AC["Start/Join screen — tap CREATE PARTY"]
+    AB --> B[Lobby Screen — assigned as host]
+    AC --> B
+
+    B --> C["Enter name (if guest) + optional sign-in"]
     C --> D["QR code + 4-digit code displayed"]
     D --> E{Participants joining?}
     E -->|Watch dots fill| E
@@ -1914,27 +2142,27 @@ flowchart TD
 
     O --> P["Linh sees floating SONG OVER! button"]
     P --> Q{Song finished?}
-    Q -->|Not yet| R[Optional: tap reactions/soundboard]
+    Q -->|Not yet| R[Optional: tap reactions/soundboard/lightstick]
     R --> Q
     Q -->|Yes| S["Long-press SONG OVER! — 500ms fill"]
-    S --> T["ceremony_silence event fires"]
+    S --> T["ceremony_anticipation event fires"]
 
-    T --> U[Ceremony plays on all phones]
+    T --> U["Award auto-generated → reveal on all phones"]
     U --> V["Interlude → Song Selection (Quick Pick / Spin)"]
     V --> W{More songs tonight?}
     W -->|Yes| M
     W -->|"Host taps End Party"| X[Finale ceremony triggers]
-    X --> Y[Stats recap + share card]
-    Y --> Z[Share → group chat]
+    X --> Y["Stats recap + setlist poster + share"]
+    Y --> Z["Session saved to timeline (if authenticated)"]
 ```
 
 **Host-Unique Interactions (beat by beat):**
 
 | Moment | What Linh Does | What Everyone Else Sees |
 |--------|---------------|----------------------|
-| Party creation | Sprint 1: opens URL (auto-host). Sprint 2: CREATE PARTY screen | N/A — they haven't joined |
+| Party creation | Opens app → CREATE PARTY (from timeline or start screen) | N/A — they haven't joined |
 | TV pairing | Enters YouTube TV code → app connects via Lounge API | N/A — host-only during setup |
-| QR display | Holds phone up, says "scan this" | Scan → lobby |
+| QR display | Holds phone up, says "scan this" | Scan QR → web landing page → deep link into app → lobby |
 | Start party | Taps START PARTY (appears at 3+ joined) | Waiting... → icebreaker fires |
 | Song selection | Same Quick Pick / Spin the Wheel as everyone | Same — group votes together |
 | During song | Watches karaoke TV + friends. Phone at side. | Same lean-in mode |
@@ -1955,8 +2183,8 @@ The repeating engine. Every participant experiences this 5-15 times per night.
 
 ```mermaid
 flowchart TD
-    A[Scan QR / enter code] --> B[Lobby: enter name + paste playlist URL]
-    B --> C["Tap JOIN PARTY → AudioContext unlocks"]
+    A["Scan QR → web landing page → deep link into app"] --> B["Lobby: enter name + optional sign-in + paste playlist URL"]
+    B --> C["Tap JOIN PARTY"]
     C --> D[Wait for host to start]
     D --> E[Icebreaker: tap answer]
     E --> F[Synchronized reveal]
@@ -1993,45 +2221,40 @@ flowchart TD
     CB --> Q
 
     Q -->|Yes| R["TRANSITION — fanfare on all phones"]
-    R --> S["VOTING (4s hard window)"]
-    S --> T[Tap one nominee]
-    T --> U["SILENCE (1.5-2s — all audio cuts)"]
-    U --> V["REVEAL — winner on all phones"]
-    V --> W["Post-reveal reactions + share overlay (winner only)"]
+    R --> S["ANTICIPATION (2-3s drumroll + dim)"]
+    S --> V["REVEAL — auto-generated award on all phones"]
+    V --> W["Celebration + reactions + share overlay (award recipient only)"]
 
-    W --> X{Second ceremony queued?}
-    X -->|Yes| Y["QUICK CEREMONY (~6s shoutout)"]
-    Y --> Z[INTERLUDE]
-    X -->|No| Z
-
-    Z --> ZG{Interlude type?}
-    ZG -->|Game| ZGM["Kings Cup / Dare Pull / Quick Vote"]
-    ZG -->|Song Selection| SS
+    W --> Z{What's next?}
+    Z -->|Interlude| ZGM["Kings Cup / Dare Pull / Quick Vote"]
+    Z -->|Song Selection| SS
     ZGM --> SS
 ```
 
-**Updated Screen Inventory (includes Song Integration & Discovery):**
+**Updated Screen Inventory (Flutter native + Session Timeline + Auth):**
 
-| # | Screen | DJ State | Who Sees It | Sprint |
+| # | Screen | DJ State / Context | Who Sees It | Sprint |
 |---|--------|----------|------------|--------|
-| 1 | Lobby + Join | `lobby` | Everyone | 1 |
-| 2 | TV Pairing (overlay) | `lobby.pairing` | **Host only** | 1 |
-| 3 | Playlist Import (card in lobby) | `lobby` | Everyone | 3 |
-| 4 | Icebreaker | `icebreaker` | Everyone | 1 |
-| 5 | Quick Pick | `song_selection.quick_pick` | Everyone | 3 |
-| 6 | Spin the Wheel | `song_selection.spin` | Everyone | 3 |
-| 7 | Suggestion-Only Display | `song_selection.display` | Everyone (host has "Now Playing") | 3 |
-| 8 | Party Card Deal | `party_card_deal` | **Singer sees card** / Everyone sees "challenge incoming" | 2 |
-| 9 | Song State (Lean-in / Lightstick / Hype modes) | `song` | Everyone | 1 (base), 2 (modes) |
-| 10 | Voting | `ceremony.voting` | Everyone | 1 |
-| 11 | Silence | `ceremony.silence` | Everyone | 1 |
-| 12 | Reveal | `ceremony.reveal` | Everyone | 1 |
-| 13 | Quick Ceremony | `ceremony.quick_reveal` | Everyone | 1 |
-| 14 | Interlude Game (Kings Cup / Dare Pull / Quick Vote) | `interlude.game` | Everyone | 4 |
-| 15 | Capture Bubble | overlay on any state | Everyone (dismissable) | 2 |
-| 16 | Finale | `finale` | Everyone | 4 |
-
-**Pre-Sprint 3 song selection:** Before Song Integration is built, the DJ engine uses the genre-tag fallback — singer taps a genre before walking to the mic. Sprint 3 replaces this with the full Quick Pick / Spin the Wheel flow.
+| 1 | Home / Session Timeline | app home (no active party) | **Auth users** | 4 |
+| 2 | Session Detail | past session view | **Auth users** | 4 |
+| 3 | Start/Join (guest home) | app home (no active party) | **Guests** | 1 |
+| 4 | Lobby + Join + Optional Sign-In | `lobby` | Everyone | 1 |
+| 5 | TV Pairing (overlay) | `lobby.pairing` | **Host only** | 1 |
+| 6 | Playlist Import (card in lobby) | `lobby` | Everyone | 3 |
+| 7 | Icebreaker | `icebreaker` | Everyone | 2 |
+| 8 | Quick Pick | `song_selection.quick_pick` | Everyone | 3 |
+| 9 | Spin the Wheel | `song_selection.spin` | Everyone | 3 |
+| 10 | Suggestion-Only Display | `song_selection.display` | Everyone (host has "Now Playing") | 3 |
+| 11 | Party Card Deal | `party_card_deal` | **Singer sees card** / Everyone sees "challenge incoming" | 2 |
+| 12 | Song State (Lean-in / Lightstick / Hype modes) | `song` | Everyone | 1 (base), 2 (modes) |
+| 13 | Anticipation | `ceremony.anticipation` | Everyone | 2 |
+| 14 | Reveal | `ceremony.reveal` | Everyone | 2 |
+| 15 | Quick Ceremony | `ceremony.quick_reveal` | Everyone | 2 |
+| 16 | Interlude Game (Kings Cup / Dare Pull / Quick Vote) | `interlude.game` | Everyone | 4 |
+| 17 | Democratic Vote | `interlude.vote` | Everyone | 4 |
+| 18 | Capture Bubble | overlay on any state | Everyone (dismissable) | 2 |
+| 19 | Finale | `finale` | Everyone | 4 |
+| 20 | Web Landing Page (external) | join routing | First-time joiners | 1 |
 
 **Song selection states are the new divergent entry point:** In TV-paired mode, `nowPlaying` events from the Lounge API feed song metadata to the game engine automatically. In suggestion-only mode, the host manually marks "Now Playing" (FR94).
 
@@ -2043,20 +2266,19 @@ flowchart TD
 | Party Card Deal | 3-8s | Active — singer decides |
 | Song | 3-5 min (real karaoke song) | Lean-in / Passive |
 | Transition fanfare | ~1s | Snap to Active |
-| Voting | 4s (hard) | Active |
-| Silence | 1.5-2s | Active (tension) |
+| Anticipation (drumroll) | 2-3s | Active (tension) |
 | Reveal + celebration | 5-8s | Active (peak) |
-| Quick ceremony (if queued) | ~6s | Active |
+| Quick ceremony (if used) | 3-5s | Active |
 | Interlude (mini-game) | 15-20s | Active → settling |
 | **Total between-song overhead** | **~50-70s per song** | |
 
-**Post-Reveal Share Overlay (winner's phone only):**
-After the reveal, the winner sees a share card overlay on top of the celebration screen — one tap to share, auto-dismiss after 10s if ignored. Sprint 1: screenshot-prompt fallback. Sprint 2: Canvas-rendered 9:16 card.
+**Post-Reveal Share Overlay (award recipient's phone only):**
+After the reveal, the award recipient sees a moment card overlay on top of the celebration screen — one tap to share via native share sheet, auto-dismiss after 10s if ignored. Moment card includes performer name, song title, and award title in a share-ready 9:16 format.
 
 **Critical Sync Points (all server-coordinated):**
 1. `song_over` → all phones transition simultaneously (±200ms)
-2. Vote window close → `ceremony_silence` at T+4s with `revealAt = now + 2000ms`
-3. `ceremony_reveal` → all phones display winner simultaneously (±200ms)
+2. `ceremony_anticipation` fires with `revealAt = now + 3000ms` — drumroll builds
+3. `ceremony_reveal` → all phones display award simultaneously (±200ms)
 
 ### Journey 3: Engagement Ladder — Trang's Passive → Active Progression
 
@@ -2073,9 +2295,9 @@ flowchart TD
     F --> G["20 seconds later: taps ❤️ once"]
     G --> H["Sees her reaction appear — no judgment"]
 
-    H --> I["LEVEL 2: Voter (15-20 min, first ceremony)"]
-    I --> J[Ceremony fires — voting screen appears]
-    J --> K["One tap to vote — same as reactions"]
+    H --> I["LEVEL 2: Celebrator (15-20 min, first ceremony)"]
+    I --> J["Ceremony fires — drumroll builds, award reveals"]
+    J --> K["Taps reaction emoji during celebration"]
     K --> L[Laughs at reveal with everyone]
 
     L --> M["LEVEL 3: Opinioned (20-30 min)"]
@@ -2100,7 +2322,7 @@ flowchart TD
 |------|-------------|-----------------|---------|
 | 0-5 min | Level 0 → 1 | Icebreaker only. Zero pressure. | "Tap your favorite decade" |
 | 5-15 min | Level 1 → 2 | Show reaction counts as social proof | "🔥 12 reactions this song" |
-| 15-20 min | Level 2 | First ceremony fires automatically. Same tap mechanic. | Voting = just another tap |
+| 15-20 min | Level 2 | First ceremony fires automatically. No action required — just watch and react. | Award reveal = shared laugh |
 | 20-30 min | Level 3 | Front-load Quick Votes — universal, no wrong answer | "Pineapple on pizza?" |
 | 30-45 min | Level 4 | Introduce group challenges with inclusive framing | "Everyone who..." not "Who can..." |
 | 45+ min | Level 5 | Group sing-along prompts for universally known songs | No individual names on screen |
@@ -2122,9 +2344,9 @@ Two edge cases that must feel invisible.
 ```mermaid
 flowchart TD
     subgraph "Late Join"
-        A["9:30 PM — walks into room"] --> B["Scan QR — Linh holds it up"]
+        A["9:30 PM — walks into room"] --> B["Scan QR → web landing page → deep link into app"]
         B --> C["Lobby with party in progress"]
-        C --> D["Enter name → tap JOIN"]
+        C --> D["Enter name (+ optional sign-in) → tap JOIN"]
         D --> E["Loading skeleton (200-500ms)"]
         E --> F["Catch-up card (3 seconds)"]
         F --> G["8 friends here · 5 songs · Leader: Minh"]
@@ -2134,9 +2356,9 @@ flowchart TD
     subgraph "Reconnection"
         I["Phone dies at 8%"] --> J[WebSocket disconnect detected]
         J --> K["Name grays out: Minh offline"]
-        K --> L["Pending votes not counted — no delay"]
-        L --> M["Phone boots → browser tab still there"]
-        M --> N["Socket.io auto-reconnects"]
+        K --> L["Pending picks not counted — no delay"]
+        L --> M["Phone boots → app restores from background"]
+        M --> N["App reopens — socket_io_client auto-reconnects"]
         N --> O["Server sends state_snapshot"]
         O --> P["Phone renders current screen"]
         P --> Q["History intact, streak reset"]
@@ -2152,7 +2374,6 @@ flowchart TD
 | No replay of missed ceremonies | You weren't there. That's fine. |
 | Name in nominee pool immediately | Next ceremony, they're a full participant |
 | No "late joiner" badge or marker | The app doesn't differentiate. They were there. |
-| AudioContext unlock on JOIN tap | Same as everyone else — first tap = audio |
 
 **Reconnection Acceptance Criteria:**
 
@@ -2161,20 +2382,22 @@ flowchart TD
 | Song selection (Quick Pick) | See current suggestions + vote counts. Can vote — timer shows remaining time |
 | Song selection (Spin) | If spinning → see result when lands. If veto window → can veto |
 | Song state | Phone renders song state, reactions work immediately |
-| Voting (still open) | Can vote — timer shows remaining time |
-| Voting (past window) | See current ceremony phase (silence/reveal) |
+| Ceremony anticipation | See anticipation phase, award reveals normally |
+| Ceremony reveal | See current reveal + celebration |
 | Interlude | Can participate in current game immediately |
 | Finale | See finale screen with full stats |
 
-Socket.io handles reconnection natively — `reconnection: true, reconnectionDelay: 1000, reconnectionDelayMax: 5000`. Server sends `state_snapshot` on reconnect with current DJ state, ceremony phase, participants, and user stats. Client renders whatever screen that state maps to.
+socket_io_client handles reconnection natively — configured with `reconnectionDelay: 500, reconnectionDelayMax: 3000, reconnectionAttempts: 20`. Server sends `state_snapshot` on reconnect with current DJ state, ceremony phase, participants, and user stats. Client renders whatever screen that state maps to.
 
 ### Duc's Content Journey (Sprint 2 Additions)
 
-**Pre-Song Hype Card:** When Duc wins "who sings next?", all phones briefly show "DUC IS UP NEXT" with countdown — bridging the physical moment of walking to the mic. Sprint 2 addition to `waiting` state.
+**Pre-Song Hype Card:** When Duc is up next, all phones briefly show "DUC IS UP NEXT" with countdown — bridging the physical moment of walking to the mic. Sprint 2 addition during party card deal.
 
-**Performance Rating Ceremony:** A different ceremony variant — star/score vote ("Rate Duc's performance: 1-5") instead of nominee selection. Generates score-based moment card ("4.7/5 — Vocal Assassin"). Sprint 2 ceremony type.
+**Context-Driven Awards:** Duc's ceremony awards are auto-generated from his session context — if he accepted a party card challenge, completed it, triggered high reaction volume, or is on his 3rd song. No performance scoring — awards like "Method Actor" (completed challenge) or "Crowd Magnet" (highest reactions) feel earned without being judgmental.
 
-**Auto-Share Overlay:** After a reveal where Duc wins, his phone shows floating share card overlay — one tap to share, auto-dismiss after 10s. Sprint 1: screenshot-prompt. Sprint 2: Canvas-rendered 9:16 card.
+**Auto-Share Overlay:** After a reveal where Duc receives an award, his phone shows a floating moment card overlay — one tap to share via native share sheet, auto-dismiss after 10s. 9:16 format, pre-styled with Karamania branding.
+
+**Media Capture Moments:** Duc can pop capture bubbles during reaction peaks or post-ceremony to capture photos/video clips. Authenticated captures are linked to his profile and appear in his Session Timeline gallery.
 
 ### Journey 6: Song Discovery — "How They Stopped Arguing About What to Sing" (Sprint 3)
 
@@ -2252,16 +2475,16 @@ Every user action is a single tap on a target ≥48px. No swipes, no long-press 
 Users never navigate between screens. The DJ engine pushes state → all phones render the same screen simultaneously. No "back" button, no navigation menu. The app is a window into a shared state.
 
 **3. Synchronized Reveal Pattern**
-Private input → collective output. Icebreaker answers, ceremony votes, quick vote opinions — all follow: tap privately → see result together. This is the core UX mechanic.
+Private input → collective output. Icebreaker answers, quick vote opinions, song picks — all follow: tap privately → see result together. Ceremonies follow a different pattern: auto-generated award → synchronized reveal on all phones.
 
 **4. Progressive Trust Pattern (Trang's Ladder)**
-The DJ engine has a 45-minute clock-based curriculum: icebreaker → reactions → voting → opinions → challenges → group performance. It earns the right to ask for more participation over time.
+The DJ engine has a 45-minute clock-based curriculum: icebreaker → reactions → song picks → opinions → challenges → group performance. It earns the right to ask for more participation over time.
 
 **5. Graceful Degradation Pattern**
-Missing data never blocks the flow. No genre tag? DJ uses default categories. No votes? DJ picks. Phone disconnected? Skip their vote. Late joiner? Drop into current state. Every "missing" scenario has a silent fallback.
+Missing data never blocks the flow. No genre tag? DJ uses default categories. No song picks? DJ picks. Phone disconnected? Skip their input. Late joiner? Drop into current state. Every "missing" scenario has a silent fallback.
 
 **6. Group Decision Pattern (Song Selection)**
-Quick Pick and Spin the Wheel are group decisions — everyone participates, the collective output drives what happens next. This is the song-selection analog to ceremony voting: private input (individual votes) → collective output (song auto-queued). The pattern kills "what should we sing?" negotiation.
+Quick Pick and Spin the Wheel are group decisions — everyone participates, the collective output drives what happens next. Private input (individual song picks) → collective output (song auto-queued). The pattern kills "what should we sing?" negotiation.
 
 **7. Divergent State Pattern**
 Two moments where phones show different screens: (a) party card deal shows card to singer vs. "challenge incoming" to everyone else, (b) share overlay on winner's phone vs. celebration on everyone else. In suggestion-only mode, host sees "Now Playing" button that others don't. Implemented via targeted Socket.io emits.
@@ -2272,13 +2495,13 @@ Two moments where phones show different screens: (a) party card deal shows card 
 No menus, no tabs, no hamburger icons. The DJ engine drives all screen changes. Users react to what appears — they never browse or search.
 
 **2. 3-Second Orientation Rule**
-Any screen must communicate its purpose within 3 seconds. Song State: "someone's singing, here are taps." Voting: "pick a person, clock is ticking." Reveal: "this person won."
+Any screen must communicate its purpose within 3 seconds. Song State: "someone's singing, here are taps." Quick Pick: "pick a song, clock is ticking." Reveal: "this person won this award."
 
 **3. Audio-First State Communication**
-Screen transitions are HEARD before they're SEEN (phones may be face-down). Fanfare = ceremony. Drumroll = voting. Silence = tension. Chime = quick reveal.
+Screen transitions are HEARD before they're SEEN (phones may be face-down). Fanfare = ceremony start. Drumroll = anticipation build. Silence = tension. Chime = award reveal.
 
 **4. No Punishment for Inaction**
-Miss a vote? Ceremony continues. Don't react? Nobody knows. Phone down for 3 songs? Pick it up and you're right where the group is. The app never scolds, nudges, or guilt-trips.
+Miss a ceremony? It auto-advances. Don't react? Nobody knows. Phone down for 3 songs? Pick it up and you're right where the group is. The app never scolds, nudges, or guilt-trips.
 
 **5. The Host's Attention Budget**
 Linh has ONE recurring interaction: Song Over. Everything else is automated or optional. The DJ engine's job is to make the host forget they're the host.
@@ -2288,239 +2511,232 @@ Between WebSocket connect and first state push (200-500ms), show a pulsing Karam
 
 ## Component Strategy
 
-### Design System Components (Tailwind + Token Foundation)
+### Design System Widgets (Flutter Theme + Token Foundation)
 
-No pre-built component library. All components are fully custom Svelte, styled with Tailwind utilities mapped to CSS custom property tokens via the Tailwind config bridge.
+No pre-built component library. All widgets are fully custom Flutter, styled with the centralized DJTokens constants and DJ state-driven ThemeData.
 
-**Token Layer (from Step 8):**
-- 12 constant tokens (`--dj-bg`, `--dj-surface`, `--dj-text-primary`, etc.)
-- 4 vibe-shifting tokens (`--dj-accent`, `--dj-ceremony-glow`, `--dj-ceremony-bg`, `--dj-action-primary`)
-- 5 spacing tokens (`--space-xs` through `--space-xl`)
+**Token Layer:**
+- 12 constant tokens (bgColor, surfaceColor, textPrimary, etc.) — see DJTokens class
+- 4 vibe-shifting tokens (accent, ceremonyGlow, ceremonyBg, actionPrimary)
+- 5 spacing constants (xs through xl)
 
-**State theming — centralized on body:**
-`data-dj-state` lives on `<body>`, not individual components. Screen backgrounds handled at app level:
+**State theming — centralized in app scaffold:**
+DJ state drives background color via AnimatedContainer at the app level. Individual widgets inherit theme colors from the provider.
 
-```svelte
-<!-- App.svelte -->
-$: document.body.setAttribute('data-dj-state', $djState);
+```dart
+// app.dart — DJ state drives background
+Consumer<PartyProvider>(
+  builder: (context, party, child) => AnimatedContainer(
+    duration: DJTokens.transitionFast,
+    color: party.backgroundColor,
+    child: child,
+  ),
+)
 ```
 
-```css
-body[data-dj-state="song_selection"] { background: #0f0a1e; }
-body[data-dj-state="party_card_deal"] { background: #1a0a1a; }
-body[data-dj-state="ceremony"] { background: var(--dj-ceremony-bg); }
-body[data-dj-state="song"] { background: var(--dj-bg); }
-body[data-dj-state="interlude"] { background: var(--dj-bg); }
-body[data-dj-state="finale"] { background: var(--dj-ceremony-bg); }
-```
+### Custom Widgets (36 Widgets)
 
-### Custom Components (34 Components + 1 Action)
-
-#### File Structure (flat, no nesting)
+#### File Structure
 
 ```
-src/
-├── components/
-│   ├── TopBar.svelte
-│   ├── ParticipantDot.svelte
-│   ├── CountdownTimer.svelte
-│   ├── SongOverButton.svelte
-│   ├── ConfettiLayer.svelte
-│   ├── GlowEffect.svelte
-│   ├── LoadingSkeleton.svelte
-│   ├── LobbyScreen.svelte
-│   ├── TVPairingOverlay.svelte          ← NEW: TV code input for host
-│   ├── PlaylistImportCard.svelte        ← NEW: URL paste + import status
-│   ├── SpotifyGuide.svelte              ← NEW: "Make Public" 3-step guide
-│   ├── IcebreakerScreen.svelte
-│   ├── QuickPickScreen.svelte           ← NEW: 5 song cards + group voting
-│   ├── SpinWheelScreen.svelte           ← NEW: animated wheel + spin
-│   ├── SuggestionOnlyDisplay.svelte     ← NEW: song title for manual entry
-│   ├── SongScreen.svelte
-│   ├── LightstickMode.svelte
-│   ├── HypeSignalButton.svelte
-│   ├── PartyCardDeal.svelte
-│   ├── CaptureBubble.svelte
-│   ├── CaptureOverlay.svelte
-│   ├── Ceremony.svelte
-│   ├── CeremonyVoting.svelte
-│   ├── CeremonySilence.svelte
-│   ├── CeremonyReveal.svelte
-│   ├── CeremonyQuick.svelte
-│   ├── InterludeScreen.svelte
-│   ├── InterludeKingsCup.svelte
-│   ├── InterludeDarePull.svelte
-│   ├── InterludeQuickVote.svelte
-│   ├── GenrePickerScreen.svelte         ← Retained as fallback before Sprint 3
-│   ├── WaitingScreen.svelte
-│   ├── SongModeToggle.svelte            ← NEW: Quick Pick ↔ Spin the Wheel toggle
-│   ├── SongCard.svelte                  ← NEW: reusable song card (title, artist, overlap badge)
-│   └── FinaleScreen.svelte
-├── lib/
-│   ├── actions/
-│   │   └── tap.js
-│   ├── stores/
-│   │   ├── party.js                     ← Updated with song integration stores
-│   │   ├── capture.js
-│   │   └── a11y.js
-│   ├── audio/
-│   │   └── engine.js
-│   └── constants/
-│       └── copy.js
-├── App.svelte
-└── main.js
+lib/
+├── screens/
+│   ├── home_screen.dart                 ← Session Timeline (auth) or Start/Join (guest)
+│   ├── session_detail_screen.dart       ← Past session detail + media gallery
+│   ├── lobby_screen.dart                ← Join flow + icebreaker + playlist import
+│   ├── icebreaker_screen.dart           ← First-60s group activity
+│   ├── quick_pick_screen.dart           ← 5 song cards + group voting
+│   ├── spin_wheel_screen.dart           ← Animated wheel + spin
+│   ├── suggestion_only_display.dart     ← Song title for manual entry
+│   ├── song_screen.dart                 ← Song state (reactions + soundboard + modes)
+│   ├── ceremony_screen.dart             ← Routes to anticipation/reveal/quick phases
+│   ├── interlude_screen.dart            ← Routes to Kings Cup / Dare Pull / Quick Vote
+│   └── finale_screen.dart               ← End-of-night sequence
+├── widgets/
+│   ├── top_bar.dart
+│   ├── participant_dot.dart
+│   ├── countdown_timer.dart
+│   ├── song_over_button.dart
+│   ├── confetti_layer.dart
+│   ├── glow_effect.dart
+│   ├── loading_skeleton.dart
+│   ├── tv_pairing_overlay.dart
+│   ├── playlist_import_card.dart
+│   ├── spotify_guide.dart
+│   ├── lightstick_mode.dart
+│   ├── hype_signal_button.dart
+│   ├── party_card_deal.dart
+│   ├── capture_bubble.dart
+│   ├── capture_overlay.dart
+│   ├── ceremony_anticipation.dart
+│   ├── ceremony_reveal.dart
+│   ├── ceremony_quick.dart
+│   ├── interlude_kings_cup.dart
+│   ├── interlude_dare_pull.dart
+│   ├── interlude_quick_vote.dart
+│   ├── song_card.dart
+│   ├── song_mode_toggle.dart
+│   ├── session_card.dart                ← Timeline entry card
+│   └── host_controls_overlay.dart
+├── state/
+│   ├── party_provider.dart              ← DJ state + participants + session data
+│   ├── capture_provider.dart            ← Media capture state + upload queue
+│   ├── auth_provider.dart               ← Firebase Auth state
+│   └── timeline_provider.dart           ← Session history
+├── socket/
+│   └── client.dart                      ← socket_io_client connection + event dispatch
+├── audio/
+│   └── engine.dart                      ← Audio player setup + sound preloading
+├── theme/
+│   ├── dj_tokens.dart                   ← Color/spacing/timing constants
+│   └── dj_theme.dart                    ← ThemeData + DJ state mapping
+├── constants/
+│   └── copy.dart                        ← All strings (centralized for i18n)
+├── app.dart                             ← MaterialApp, routing, theme
+└── main.dart                            ← Entry point
 ```
 
-#### The `tap` Action (replaces TapTarget component)
+#### The `DJTapButton` Widget (replaces raw GestureDetector)
 
-Svelte action giving every tappable element consistent press feedback + haptic:
+Custom widget giving every tappable element consistent press feedback + haptic:
 
-```javascript
-// src/lib/actions/tap.js
-export function tap(node, { onTap, haptic = true, disabled = false }) {
-  // Touch start → scale(0.95) visual feedback
-  // Touch held → haptic feedback (if supported)
-  // Touch end → fire onTap callback
-  // Debounce: ignore taps within 200ms of previous
-  // Disabled check: no-op if disabled=true
+```dart
+// widgets/dj_tap_button.dart
+class DJTapButton extends StatelessWidget {
+  final VoidCallback onTap;
+  final TapTier tier;
+  final Widget child;
+
+  // tier determines: debounce duration, haptic intensity, scale feedback
+  // Consequential (500ms hold): Song Over, Start Party
+  // Social (200ms debounce): reactions, votes, soundboard
+  // Private (200ms, no haptic): icebreaker, share dismiss
 }
 ```
 
-Usage — any element becomes tappable:
-```svelte
-<button use:tap={{ onTap: handleVote }} class="nominee-card">
-  <ParticipantDot name="Duc" />
-  <span>Duc</span>
-</button>
+Usage — any widget becomes tappable with consistent behavior:
+```dart
+DJTapButton(
+  tier: TapTier.social,
+  onTap: handleReaction,
+  child: ParticipantDot(name: 'Duc'),
+)
 ```
 
-The action handles everything — `onTap` replaces `on:click`. Haptic fires BEFORE the handler. Debounce in one place.
+The widget handles everything — onTap fires after debounce, haptic fires BEFORE the handler, scale feedback is automatic.
 
 #### Tier 1: Primitives (used across multiple screens)
 
-**TopBar.svelte** — Consistent header on every screen. Props: `state`, `partyName`, `count`. Colors shift per DJ state. `role="banner"`, `aria-live="polite"`.
+**TopBar** — Consistent header on every screen. Props: `state`, `partyName`, `count`. Colors shift per DJ state via provider. Semantics label for accessibility.
 
-**ParticipantDot.svelte** — Avatar circle with initial + status. Props: `name`, `status`. States: `empty`, `filled`, `active`, `offline`, `singing`. Reduced motion: no glow pulse.
+**ParticipantDot** — Avatar circle with initial + status. Props: `name`, `status`. States: `empty`, `filled`, `active`, `offline`, `singing`. Reduced motion: no glow pulse.
 
-**CountdownTimer.svelte** — Circular conic-gradient countdown. Props: `duration`, `onExpire`. `role="timer"`, `aria-live="assertive"` at 1s. Reduced motion: instant fill steps, number only.
+**CountdownTimer** — Circular countdown using CustomPainter. Props: `duration`, `onExpire`. Semantics for timer announcement. Reduced motion: instant fill steps, number only.
 
-**SongOverButton.svelte** — Host-only 500ms long-press. Props: `onSongOver`, `disabled`. Touch start → fill animation (CSS transition 500ms). Touch held 500ms → callback + haptic burst. Released early → reset. Reduced motion: no fill animation, instant at 500ms.
+**SongOverButton** — Host-only 500ms long-press using GestureDetector.onLongPress. Props: `onSongOver`, `disabled`. Long press → fill animation (AnimationController 500ms). Released early → reset. Haptic burst on trigger. Reduced motion: no fill animation, instant at 500ms.
 
-**LoadingSkeleton.svelte** — Pulsing Karamania logo for 200-500ms connect gap. Rendered when `$djState === null`. Reduced motion: static logo.
+**LoadingSkeleton** — Pulsing Karamania logo for 200-500ms connect gap. Rendered when DJ state is null. Reduced motion: static logo.
 
 #### Tier 2: Screen Compositions
 
-**Data flow rule:** Screen components read from Svelte stores directly. Sub-components receive props only. Clean test boundary — mock store at screen level, test sub-components with pure props.
+**Data flow rule:** Screen widgets read from providers via `context.watch<T>()`. Sub-widgets receive props only. Clean test boundary — mock provider at screen level, test sub-widgets with pure props.
 
-**LobbyScreen.svelte** — Join entry. Reads: `$partyName`, `$participants`, `$isHost`. States: `pre-join`, `joined`, `host-ready`. Only screen with text `<input>`. Host sees "START PARTY".
+**HomeScreen** — App entry point. Authenticated users: Session Timeline (reverse-chronological list of past sessions via `TimelineProvider`). Guest users: Start/Join party with "Create an account to save your sessions" prompt.
 
-**IcebreakerScreen.svelte** — Synchronized tap-and-reveal. Reads: `$icebreaker`. States: `choosing`, `chosen`, `revealing`.
+**SessionDetailScreen** — Past session view. Scrollable single view: session header (date, venue, duration, participants), participant list with top awards, full setlist with awards per song, media gallery grid, setlist poster. Share via native sheet. "Let's go again!" invite action.
 
-**SongScreen.svelte** — Manages all three song modes. Reads: `$currentSinger`, `$currentGenre`, `$participants`, `$isHost`, `$songMode`, `$partyCard`. Default: lean-in mode with 6 soundboard buttons (3×2), 5 reaction buttons, challenge badge (if party card accepted). Toggle buttons for lightstick mode and hype signal. SongOverButton visible only when `$isHost`. Capture icon persistent in toolbar (FR39).
+**LobbyScreen** — Join entry. Reads: `PartyProvider`. States: `pre-join`, `joined`, `host-ready`. TextField for name entry (and optional sign-in buttons). Host sees "START PARTY". Playlist import card visible.
 
-**LightstickMode.svelte** — Full-screen glow sub-component within SongScreen. Props: `color`, `active`. Renders full-viewport animated gradient glow using `--dj-accent` or user-selected color. Color picker (5 dots) along bottom. Hype button remains accessible. Tap anywhere to exit. `prefers-reduced-motion`: static color fill, no animation.
+**IcebreakerScreen** — Synchronized tap-and-reveal. Reads: `PartyProvider.icebreaker`. States: `choosing`, `chosen`, `revealing`.
 
-**HypeSignalButton.svelte** — Momentary flash trigger. Props: `onHype`, `cooldown`. On tap: screen flashes white (3 pulses via CSS animation) + attempts `torch` activation via ImageCapture API (Chrome only, silent no-op on iOS). 5-second cooldown with circular refill indicator. Available in both lean-in and lightstick modes.
+**SongScreen** — Manages all song modes. Reads: `PartyProvider` for currentSinger, currentGenre, participants, isHost, songMode, partyCard. Default: lean-in mode with 6 soundboard buttons (3×2), 5 reaction buttons, challenge badge (if party card accepted). Toggle buttons for lightstick mode and hype signal. SongOverButton visible only when isHost. Capture icon persistent in toolbar (FR39).
 
-**PartyCardDeal.svelte** — Card deal screen. Reads: `$partyCard`, `$isCurrentSinger`. Singer view: card with title, emoji, description, type badge + Accept/Dismiss/Redraw buttons. Audience view: "🃏 CHALLENGE INCOMING..." with singer name. Soft 8s auto-dismiss timer. Card slides in from bottom with flip animation + card-flip sound.
+**LightstickMode** — Full-screen glow sub-widget within SongScreen. Props: `color`, `active`. Renders full-viewport animated gradient glow. Color picker (5 dots) along bottom. Hype button remains accessible. Tap anywhere to exit. Reduced motion: static color fill, no animation.
 
-**Ceremony.svelte** — Thin router (~10 lines). Reads: `$ceremonyPhase`, `$ceremonyData`, `$isWinner`. Routes to phase sub-components:
+**HypeSignalButton** — Momentary flash trigger. Props: `onHype`, `cooldown`. On tap: screen flashes white (3 pulses via AnimationController) + activates device flashlight via native torch API (works on both iOS and Android). 5-second cooldown with circular refill indicator. Available in both lean-in and lightstick modes.
 
-```svelte
-{#if $ceremonyPhase === 'voting'}
-  <CeremonyVoting {ceremonyData} />
-{:else if $ceremonyPhase === 'silence'}
-  <CeremonySilence category={ceremonyData.category} />
-{:else if $ceremonyPhase === 'reveal'}
-  <CeremonyReveal {ceremonyData} {isWinner} />
-{:else if $ceremonyPhase === 'quick_reveal'}
-  <CeremonyQuick {ceremonyData} />
-{/if}
+**PartyCardDeal** — Card deal screen. Reads: `PartyProvider.partyCard`, `isCurrentSinger`. Singer view: card with title, emoji, description, type badge + Accept/Dismiss/Redraw buttons. Audience view: "CHALLENGE INCOMING..." with singer name. Soft 8s auto-dismiss timer. Card slides in from bottom with flip animation + card-flip sound.
+
+**CeremonyScreen** — Thin router. Reads: `PartyProvider.ceremonyPhase`, `ceremonyData`, `isAwardRecipient`. Routes to phase sub-widgets:
+
+```dart
+switch (ceremonyPhase) {
+  case CeremonyPhase.anticipation:
+    return CeremonyAnticipation(data: ceremonyData);
+  case CeremonyPhase.reveal:
+    return CeremonyReveal(data: ceremonyData, isRecipient: isAwardRecipient);
+  case CeremonyPhase.quickReveal:
+    return CeremonyQuick(data: ceremonyData);
+}
 ```
 
-**CeremonyVoting.svelte** — Props: `ceremonyData`. Category title, CountdownTimer (4s), nominee list with `use:tap`.
+**CeremonyAnticipation** — Props: `data`. Screen dims, drumroll audio builds, "Who will be crowned?" pulsing text. 2-3s duration. Reduced motion: static text.
 
-**CeremonySilence.svelte** — Props: `category`. Near-black, pulsing text (0.3→1.0). Reduced motion: static at 1.0.
+**CeremonyReveal** — Props: `data`, `isRecipient`. GlowEffect, ConfettiLayer, performer name + award title (scale+elasticOut 800ms), reactions. Recipient's phone: moment card share overlay (1-tap, auto-dismiss 10s). Reduced motion: instant appear, no confetti, static glow.
 
-**CeremonyReveal.svelte** — Props: `ceremonyData`, `isWinner`. GlowEffect, ConfettiLayer, winner name (scale+elasticOut 800ms), vote bars, reactions. Winner's phone: share overlay (1-tap, auto-dismiss 10s). Reduced motion: instant appear, no confetti, static glow.
+**CeremonyQuick** — Props: `data`. "SHOUTOUT" label, performer name, award title. Reduced motion: instant appear.
 
-**CeremonyQuick.svelte** — Props: `ceremonyData`. "SHOUTOUT" label, category, winner, reason. Reduced motion: instant appear.
+**CaptureBubble** — Floating capture prompt overlay. Reads: `CaptureProvider`. Renders a 48×48px floating circle (bottom-left) with camera icon and pulse animation. Auto-dismisses after 15s. On tap: expands to capture mode selector (photo/video/audio). Native camera/microphone access — uniform on both iOS and Android.
 
-**CaptureBubble.svelte** — Floating capture prompt overlay. Reads: `$captureBubble`. Renders a 48×48px floating circle (bottom-left) with camera icon and pulse animation. Auto-dismisses after 15s. On tap: expands to capture mode selector (📷📹🎤). Capture flow inline on supported browsers, native picker fallback on iOS for video/audio.
+**CaptureOverlay** — Active capture UI. Props: `mode` (photo/video/audio), `onComplete`. Photo: viewfinder + tap-to-snap. Video: viewfinder + recording indicator + 5s countdown. Audio: waveform visualization + recording indicator. Auto-uploads on complete via CaptureProvider.
 
-**CaptureOverlay.svelte** — Active capture UI. Props: `mode` ('photo'|'video'|'audio'), `onComplete`. Photo: viewfinder + tap-to-snap. Video: viewfinder + recording indicator + 5s countdown. Audio: waveform visualization + recording indicator. Auto-uploads on complete via `capture.js` store.
+**InterludeScreen** — Router for interlude types. Reads: `PartyProvider.interludeData`. Routes to sub-widgets based on type.
 
-**InterludeScreen.svelte** — Router for interlude types. Reads: `$interludeData`. Routes to sub-components based on `interludeData.type`:
+**InterludeKingsCup** — Group rule card display. Props: `data`. Card with crown icon, group-based rule text, action. 10s auto-advance. No individual targeting.
 
-```svelte
-{#if $interludeData.type === 'kings_cup'}
-  <InterludeKingsCup data={$interludeData} />
-{:else if $interludeData.type === 'dare_pull'}
-  <InterludeDarePull data={$interludeData} />
-{:else if $interludeData.type === 'quick_vote'}
-  <InterludeQuickVote data={$interludeData} />
-{:else}
-  <!-- Fallback: vote for next singer -->
-{/if}
+**InterludeDarePull** — Random dare assignment. Props: `data`. Slot-machine name animation → reveal + dare text. 15s countdown timer. Auto-advance after timer.
+
+**InterludeQuickVote** — Binary opinion poll. Props: `data`. Question text + two large buttons. 6s hard voting window with countdown. Results reveal as bar chart with vote split. 5s reveal display then auto-advance.
+
+#### Song Integration Widgets (Sprint 3)
+
+**TVPairingOverlay** — Host-only overlay during party creation. Reads: `PartyProvider.tvPairing`. Number input for 12-digit TV code. States: `pairing`, `connecting`, `paired`, `failed`, `skipped`. "Skip" option enters suggestion-only mode (FR92). Connection status indicator. Can be re-opened from host controls at any time (FR95). Semantics label: "Pair with YouTube TV".
+
+**PlaylistImportCard** — Inline card in lobby. Reads: `PartyProvider.playlists`. TextField for playlist URL paste (the only URL input in the app — distinct from the name entry). Auto-detects platform from URL domain (FR80). Shows import status per participant (checkmark + song count). "Skip for now" dismisses the card.
+
+**SpotifyGuide** — Inline 3-step guide for private Spotify playlists (FR83). Props: `onRetry`. Three numbered visual steps. No dialog, no navigation away. Retry button re-attempts import.
+
+**QuickPickScreen** — Default song selection mode. Reads: `PartyProvider.songSelection`, `suggestions`. Displays 5 SongCard widgets in a vertically scrollable ListView. Each card shows vote buttons with real-time vote counts. CountdownTimer (15s). Mode toggle to Spin the Wheel at bottom. Server closes voting at 15s (FR88). Semantics: "Pick a song".
+
+**SpinWheelScreen** — Party-energy song selection mode. Reads: `PartyProvider.songSelection`, `suggestions`. 8 song segments on animated wheel using CustomPainter + AnimationController with deceleration curve. SPIN button (64×64px, Consequential tier). Post-spin: reveal with pause → song title scales in. 5s veto window. Reduced motion: wheel appears landed instantly.
+
+**SuggestionOnlyDisplay** — Shown in suggestion-only mode. Large song title + artist display. "Enter this song on your karaoke machine!" instruction text. Host sees "Now Playing" button (FR94).
+
+**SongCard** — Reusable song card primitive. Props: `song`, `artist`, `thumbnail`, `overlapCount`, `totalParticipants`, `votes`, `onVote`. Displays: YouTube thumbnail (cached via CachedNetworkImage), song title (truncated), artist, overlap badge. Vote buttons with real-time count. Social tier tap.
+
+**SongModeToggle** — Simple text link toggle. Props: `currentMode`, `onToggle`. Private tier tap (no haptic). Mode is per-session, not persisted.
+
+**HostControlsOverlay** — Floating action button (bottom-right) that expands to control overlay. Skip, pause, queue management, kick player, end party. One-thumb operation. Available on all screens during active party.
+
+**FinaleScreen** — End-of-night recap. Reads: `PartyProvider.finaleData`. ConfettiLayer, party name, performance list with awards, stats row, setlist poster, share button, feedback prompt.
+
+#### Tier 3: Effect Widgets
+
+**ConfettiLayer** — Props: `active`, `emoji`. CustomPainter with particle system animation. `ExcludeSemantics`. Reduced motion: not rendered.
+
+**GlowEffect** — Props: `active`, `intensity`. Radial gradient using ceremonyGlow token. `ExcludeSemantics`. Reduced motion: static.
+
+### Reduced Motion Support
+
+```dart
+// lib/state/accessibility_provider.dart
+class AccessibilityProvider extends ChangeNotifier {
+  bool get reducedMotion =>
+    MediaQuery.of(context).disableAnimations;
+}
 ```
 
-**InterludeKingsCup.svelte** — Group rule card display. Props: `data`. Card with crown icon, group-based rule text, action. 10s auto-advance. No individual targeting.
+Flutter respects the system's "Reduce motion" / "Remove animations" setting via `MediaQuery.disableAnimations`. All animated widgets check this before running animations.
 
-**InterludeDarePull.svelte** — Random dare assignment. Props: `data`. Slot-machine name animation → reveal + dare text. 15s countdown timer. Auto-advance after timer.
-
-**InterludeQuickVote.svelte** — Binary opinion poll. Props: `data`. Question text + two large buttons. 6s hard voting window with countdown. Results reveal as bar chart with vote split. 5s reveal display then auto-advance.
-
-#### Song Integration Components (Sprint 3)
-
-**TVPairingOverlay.svelte** — Host-only overlay during party creation. Reads: `$tvPairing`. Number input for 12-digit TV code. States: `pairing`, `connecting`, `paired`, `failed`, `skipped`. "Skip" option enters suggestion-only mode (FR92). Connection status indicator. Can be re-opened from host controls at any time (FR95). `role="dialog"`, `aria-label="Pair with YouTube TV"`.
-
-**PlaylistImportCard.svelte** — Inline card in lobby. Reads: `$playlists`. Text input for playlist URL paste (the only URL input in the app — distinct from the name entry input in Lobby). Auto-detects platform from URL domain (FR80). Shows import status per participant (checkmark + song count). "Skip for now" dismisses the card. Reduced motion: no status animations.
-
-**SpotifyGuide.svelte** — Inline 3-step guide for private Spotify playlists (FR83). Props: `onRetry`. Three numbered visual steps. No modal, no navigation away. Retry button re-attempts import. Appears only when Spotify private playlist is detected.
-
-**QuickPickScreen.svelte** — Default song selection mode. Reads: `$songSelection`, `$suggestions`. Displays 5 song cards (SongCard components) in a vertically scrollable list. Each card shows 👍/➡️ buttons with real-time vote counts. CountdownTimer (15s). Mode toggle link to Spin the Wheel at bottom. Server closes voting at 15s — majority wins, or highest-voted on timeout (FR88). `role="group"`, `aria-label="Pick a song"`.
-
-**SpinWheelScreen.svelte** — Party-energy song selection mode. Reads: `$songSelection`, `$suggestions`. 8 song segments on animated wheel. SPIN button (64×64px, Consequential tier — single-tap, selects for group). Post-spin: reveal with silence-before-reveal pattern (1s pause → song title scales in). 5s veto window ("Not that one!" button). If vetoed → auto re-spin with vetoed song removed (FR89). Wheel animation: CSS `transform: rotate()` with custom deceleration easing. Reduced motion: wheel appears landed instantly, no spin animation. `aria-label="Spin the wheel to pick a song"`.
-
-**SuggestionOnlyDisplay.svelte** — Shown in suggestion-only mode when a song is selected. Reads: `$songSelection`, `$isHost`. Large song title + artist display. "Enter this song on your karaoke machine!" instruction text. Host sees "Now Playing" button (FR94) to feed song data to game engine. Clean, prominent, designed for reading across a room.
-
-**SongCard.svelte** — Reusable song card primitive. Props: `song`, `artist`, `thumbnail`, `overlapCount`, `totalParticipants`, `votes`, `onVote`. Displays: YouTube thumbnail (lazy-loaded), song title (truncated at ~30 chars), artist, overlap badge ("4/5 know this" in accent color for high overlap, secondary for low). Vote buttons (👍/➡️) with real-time count. Social tier tap for voting. `data-testid="song-card-{index}"`.
-
-**SongModeToggle.svelte** — Simple text link toggle. Props: `currentMode`, `onToggle`. From Quick Pick: "[🎡 Spin Instead]". From Spin: "[🗳️ Quick Pick]". Private tier tap (no haptic). Mode is per-session, not persisted.
-
-**GenrePickerScreen.svelte** — Retained as pre-Sprint-3 fallback. Winner-only. 5 genre buttons: 🎤 Pop · 🎸 Rock · 🎵 Ballad · 💃 Dance · 🎧 K-pop. Fires event on tap, no store reads. After Sprint 3, genre data comes from Lounge API metadata instead.
-
-**WaitingScreen.svelte** — Everyone else during song selection (pre-Sprint 3 only). Reads: `$waitingSinger`. "[Name] is picking a song..." Sprint 2: evolves into pre-song hype card. Post-Sprint 3: replaced by QuickPickScreen/SpinWheelScreen where everyone participates.
-
-**FinaleScreen.svelte** — End-of-night recap. Reads: `$finaleData`. ConfettiLayer, party name, performance list, stats row, share button.
-
-#### Tier 3: Effect Components
-
-**ConfettiLayer.svelte** — Props: `active`, `emoji`. CSS `@keyframes` scatter, no JS runtime. `aria-hidden="true"`. Reduced motion: not rendered.
-
-**GlowEffect.svelte** — Props: `active`, `intensity`. Radial gradient using `--dj-ceremony-glow`. `aria-hidden="true"`. Reduced motion: static.
-
-### Reduced Motion Store
-
-```javascript
-// src/lib/stores/a11y.js
-export const reducedMotion = readable(false, (set) => {
-  const mql = matchMedia('(prefers-reduced-motion: reduce)');
-  set(mql.matches);
-  mql.addEventListener('change', (e) => set(e.matches));
-});
-```
-
-| Component | Reduced Motion Behavior |
+| Widget | Reduced Motion Behavior |
 |-----------|------------------------|
 | ConfettiLayer | Not rendered |
 | GlowEffect | Static, no pulse |
 | CountdownTimer | Instant fill steps, number only |
 | CeremonyReveal | Instant appear, no scale+elasticOut |
-| CeremonySilence | Static text, opacity 1.0 |
+| CeremonyAnticipation | Static text |
 | SongOverButton | No fill animation, instant at 500ms |
 | LoadingSkeleton | Static logo, no pulse |
-| WaitingScreen | Static text |
 | LightstickMode | Static color fill, no glow pulse animation |
 | HypeSignalButton | Single screen flash (no strobe), no flashlight activation |
 | PartyCardDeal | Card appears instantly, no flip/slide animation |
@@ -2530,85 +2746,80 @@ export const reducedMotion = readable(false, (set) => {
 | QuickPickScreen | Cards appear instantly, no slide-in. Vote counts update without animation |
 | PlaylistImportCard | Status updates instant, no progress animations |
 
-### Bundle Analysis
+### App Performance Profile
 
-| Layer | Estimated Size |
-|-------|---------------|
-| 34 Svelte components (compiled) | ~45-60KB |
-| Tailwind CSS (purged) | ~8-12KB |
-| Socket.io client | ~15KB |
-| Web Audio setup | ~5KB |
-| `tap` action + stores (party + capture + a11y) | ~4KB |
-| **Total** | **~77-96KB** |
+Flutter compiles to native ARM code — no bundle splitting needed. All widgets are included in the app binary. Performance focus shifts from bundle size to runtime metrics.
 
-Slightly over 80KB core budget with all components eager-loaded. **Three-tier loading strategy:**
+| Metric | Target | Notes |
+|--------|--------|-------|
+| App install size | <50MB | Including Flutter runtime + audio assets |
+| Cold start (app launch → lobby) | <3s on 4G | AOT compilation, no JS parsing |
+| Warm start (app in memory) | <1.5s | Already compiled and cached |
+| Memory usage (2hr session) | <80MB | No memory leaks in animations/WebSocket |
+| Battery impact | <12%/hr | Adaptive heartbeat + wake lock release during song |
+| Frame rate (ceremony animations) | 60fps | Flutter's Skia rendering engine |
 
-| Tier | Contents | Budget | Loads |
-|---|---|---|---|
-| **Core (Sprint 1)** | Svelte runtime, stores/party.js, lobby + song + ceremony UI, CSS reset + tokens, Web Audio engine | <80KB gzipped | On page load |
-| **Deferred-Sprint 2** | PartyCardDeal, LightstickMode, CaptureBubble, CaptureOverlay, Interlude games | <15KB gzipped | Lazy after first ceremony |
-| **Deferred-Sprint 3** | QuickPickScreen, SpinWheelScreen, PlaylistImportCard, TVPairingOverlay, SongCard, SpotifyGuide, SuggestionOnlyDisplay | <12KB gzipped | Lazy on first `song_selection` state |
+### Widget Implementation Roadmap
 
-Sprint 3 song integration components are deferred-loaded on first `song_selection` DJ state. Before Sprint 3, the genre picker fallback (already in core bundle) handles song transitions. CaptureOverlay is always deferred (lazy on first bubble tap).
+**Sprint 1 — Core skeleton (build order follows Core Party Loop):**
 
-### Component Implementation Roadmap
-
-**Sprint 1 — Core 18 components + action (build order follows Core Party Loop):**
-
-| Order | Component | Why |
-|-------|-----------|-----|
-| 1 | `tap` action | Every interaction needs this first |
+| Order | Widget | Why |
+|-------|--------|-----|
+| 1 | DJTapButton + theme setup | Every interaction needs this first |
 | 2 | TopBar | Every screen needs this |
 | 3 | ParticipantDot | Lobby + Song State |
 | 4 | LoadingSkeleton | First thing user sees |
-| 5 | LobbyScreen | Party entry |
-| 6 | IcebreakerScreen | First interaction |
+| 5 | LobbyScreen (with optional sign-in) | Party entry |
+| 6 | SongScreen + SongOverButton | Core loop |
 | 7 | CountdownTimer | Needed by ceremony + interlude + party cards |
-| 8 | SongScreen + SongOverButton | Core loop |
-| 9 | Ceremony + 4 phases | Defining experience |
-| 10 | ConfettiLayer + GlowEffect | Reveal polish |
-| 11 | InterludeScreen (vote only) | Singer voting |
-| 12 | GenrePickerScreen + WaitingScreen | Pre-Sprint 3 song tagging fallback |
-| 13 | FinaleScreen | End of night |
+| 8 | HostControlsOverlay | Host must control flow |
+| 9 | TVPairingOverlay | YouTube TV pairing (Sprint 1 per PRD) |
 
-**Sprint 2 additions (Party Cards + Song Modes + Media Capture):**
-- PartyCardDeal.svelte (card deal/accept/dismiss/redraw)
-- LightstickMode.svelte (full-screen glow with color picker)
-- HypeSignalButton.svelte (flash/strobe trigger)
-- CaptureBubble.svelte + CaptureOverlay.svelte (prompted media capture)
-- ShareOverlay.svelte (Canvas-rendered 9:16 card)
-- HypeCard.svelte (pre-song "DUC IS UP NEXT")
-- PerformanceRating.svelte (star/score ceremony variant)
+**Sprint 2 additions (The Experience):**
+- CeremonyScreen + CeremonyAnticipation + CeremonyReveal + CeremonyQuick (award reveal, no voting)
+- ConfettiLayer + GlowEffect (reveal polish)
+- PartyCardDeal (card deal/accept/dismiss/redraw)
+- LightstickMode (full-screen glow with color picker)
+- HypeSignalButton (flash/strobe trigger)
+- CaptureBubble + CaptureOverlay (prompted media capture)
+- IcebreakerScreen (first-60-seconds)
+- Moment card share overlay
 
-**Sprint 3 additions (Song Discovery + Interlude Games):**
-- TVPairingOverlay.svelte (host enters TV code, Lounge API pairing)
-- PlaylistImportCard.svelte (URL paste, auto-detect platform, import status)
-- SpotifyGuide.svelte ("Make Public" 3-step guide)
-- QuickPickScreen.svelte (5 songs, group voting, 15s auto-advance)
-- SpinWheelScreen.svelte (8 songs, animated wheel, veto)
-- SuggestionOnlyDisplay.svelte (manual entry fallback)
-- SongCard.svelte (reusable song card primitive)
-- SongModeToggle.svelte (Quick Pick ↔ Spin the Wheel)
+**Sprint 3 additions (Song Discovery):**
+- QuickPickScreen (5 songs, group voting, 15s auto-advance)
+- SpinWheelScreen (8 songs, animated wheel, veto)
+- PlaylistImportCard (URL paste, auto-detect platform, import status)
+- SpotifyGuide ("Make Public" 3-step guide)
+- SuggestionOnlyDisplay (manual entry fallback)
+- SongCard (reusable song card primitive)
+- SongModeToggle (Quick Pick ↔ Spin the Wheel)
 
-**Sprint 4 additions (Interlude Games + Polish):**
-- InterludeKingsCup.svelte
-- InterludeDarePull.svelte
-- InterludeQuickVote.svelte
-- Two-column NomineeGrid variant for 10+ participants
+**Sprint 4 additions (Polish + Timeline):**
+- InterludeKingsCup, InterludeDarePull, InterludeQuickVote
+- FinaleScreen (end-of-night ceremony + setlist poster)
+- HomeScreen / Session Timeline
+- SessionDetailScreen + SessionCard
+- Guest-to-account upgrade flow
 
 ## UX Consistency Patterns
 
 ### Tap Interaction Hierarchy
 
-Three tiers govern every tappable element. Behavior is centralized in a single config — no scattered magic numbers across components:
+Three tiers govern every tappable element. Behavior is centralized in a single config — no scattered magic numbers across widgets:
 
-```javascript
-// src/lib/constants/tap-tiers.js
-export const TAP_TIERS = {
-  consequential: { debounce: 500, haptic: 'heavy', scale: 0.92, confirm: true },
-  social:        { debounce: 200, haptic: 'light', scale: 0.95, confirm: false },
-  private:       { debounce: 200, haptic: false,   scale: 0.97, confirm: false },
-};
+```dart
+// lib/constants/tap_tiers.dart
+enum TapTier {
+  consequential(debounce: 500, hapticIntensity: HapticFeedback.heavyImpact, scale: 0.92, confirm: true),
+  social(debounce: 200, hapticIntensity: HapticFeedback.lightImpact, scale: 0.95, confirm: false),
+  private(debounce: 200, hapticIntensity: null, scale: 0.97, confirm: false);
+
+  final int debounce;
+  final Function? hapticIntensity;
+  final double scale;
+  final bool confirm;
+  const TapTier({required this.debounce, this.hapticIntensity, required this.scale, required this.confirm});
+}
 ```
 
 **Tier 1 — Consequential (irreversible actions):**
@@ -2618,7 +2829,7 @@ export const TAP_TIERS = {
 - **AC:** Given a consequential tap, WHEN user holds for 500ms, THEN action fires with heavy haptic. WHEN released early, THEN no action fires and visual resets.
 
 **Tier 2 — Social (visible to others):**
-- Ceremony votes, reactions, soundboard, singer nomination
+- Reactions, soundboard, song picks, singer nomination
 - Immediate fire on tap with 200ms debounce
 - Light haptic on touch-start. Visual: scale(0.95) press feedback
 - **AC:** Given a social tap, WHEN user taps, THEN action fires immediately with 200ms debounce preventing double-fire, AND haptic fires on touch-start before handler.
@@ -2629,7 +2840,7 @@ export const TAP_TIERS = {
 - Visual: subtle scale(0.97)
 - **AC:** Given a private tap, WHEN user taps, THEN action fires immediately with no haptic feedback.
 
-**Usage:** `use:tap={{ tier: 'social', onTap: handleVote }}` — tier param maps to config. One source of truth.
+**Usage:** `DJTapButton(tier: TapTier.social, onTap: handleVote, child: ...)` — tier enum maps to config. One source of truth.
 
 ### State Transition Patterns
 
@@ -2658,26 +2869,25 @@ State transitions play an audio cue before visual change. Race condition protect
 | → song | Fade to ambient | Bg dims to `--dj-song-bg` | 400ms |
 | → finale | Dramatic swell | Max glow + confetti | 800ms |
 
-**`data-dj-state` drives all transitions.** CSS handles visual shifts via attribute selectors. Audio engine listens to the same store. No component-level transition logic.
+**DJ state provider drives all transitions.** AnimatedContainer handles visual shifts via the provider's backgroundColor getter. Audio engine listens to the same provider. No widget-level transition logic.
 
 ### Feedback & Confirmation Patterns
 
 **Immediate Feedback (< 100ms):**
-- Tap visual (scale transform) — CSS only, no JS delay
-- Haptic (where supported) — fires on touch-start, before handler
-- Reaction emoji scatter — CSS keyframe, fire-and-forget
+- Tap visual (scale transform) — AnimatedScale widget, no computation delay
+- Haptic — fires on touch-down, before handler (HapticFeedback API)
+- Reaction emoji scatter — CustomPainter animation, fire-and-forget
 
 **Deferred Feedback (server-confirmed):**
-- Vote count updates — optimistic UI, reconcile on server ack
+- Song pick count updates — optimistic UI, reconcile on server ack
 - Participant join — dot appears immediately, server confirms via broadcast
-- Song Over — fill animation is local, actual state change waits for server
+- Song Over — fill animation is local (AnimationController), actual state change waits for server
 
 **No-Feedback Principle (inaction is invisible):**
-- Didn't vote in 4s? Ceremony advances. No "you missed it" message. No shame
+- Didn't react during ceremony? Ceremony advances. No "you missed it" message. No shame
 - Didn't react during song? No engagement metric shown. No guilt
-- Didn't pick a singer? Random selection, presented as "DJ's choice"
-- **Code pattern:** `CountdownTimer.onExpire` fires the same handler as a tap — `{ voted: false }`. Server treats missing votes as abstentions. Store update path is identical for voted and didn't-vote. No branching logic.
-- **AC:** Given a user who does not vote within the deadline, WHEN the timer expires, THEN the ceremony advances with no error message, no visual indicator of missed vote, and the abstention is counted server-side.
+- Didn't vote in Quick Pick? Auto-advance picks highest-voted. No penalty
+- **AC:** Given a user who does not interact within any deadline, WHEN the timer expires, THEN the app advances with no error message and no visual indicator of inaction.
 
 ### Timing Patterns
 
@@ -2687,7 +2897,6 @@ Three timing categories with clear authority rules:
 
 | Action | Duration | What Happens at Expiry |
 |---|---|---|
-| Ceremony vote | 4s | Abstention counted, advance to silence |
 | Icebreaker choice | 6s | Random assigned, advance to reveal |
 | Quick Pick vote | 15s | Highest-voted song wins, advance to queue |
 | Spin the Wheel veto | 5s | Song accepted, advance to queue |
@@ -2726,12 +2935,14 @@ No error toasts. No "something went wrong." No retry buttons. The app either han
 
 | Error Category | Example | Expected Behavior | Test Method |
 |---|---|---|---|
-| WebSocket disconnect | Network drop mid-ceremony | Silent reconnect via Socket.io, restore latest state from server | Disconnect mock socket, assert reconnect + state restore |
-| Audio context blocked | iOS autoplay policy | Skip audio, visual-only transitions | Stub `AudioContext` to throw, assert transitions still fire |
-| Vote timeout | User distracted | Abstention counted, no UI indicator | Fake timer + assert no error element rendered |
+| WebSocket disconnect | Network drop mid-ceremony | Silent reconnect via socket_io_client, restore latest state from server | Disconnect mock socket, assert reconnect + state restore |
+| Audio playback failure | Audio file corrupt or device muted | Skip audio, visual-only transitions | Mock audio player to throw, assert transitions still fire |
 | Late state arrival | Server push delayed 2s | Show LoadingSkeleton, not blank screen | Delay mock socket emit, assert skeleton visible |
 | Stale state | Reconnect to wrong ceremony phase | Accept server state, discard local | Emit conflicting state sequence, assert final state matches server |
-| Haptic unavailable | Device doesn't support vibration | Skip silently, no fallback UI | Stub `navigator.vibrate` as undefined |
+| Haptic unavailable | Device doesn't support vibration | Skip silently, no fallback UI | Mock HapticFeedback to no-op |
+| Deep link failure | App not installed or link malformed | Web landing page shows manual code entry + app store button | Test with app uninstalled, assert fallback |
+| Firebase Auth failure | Network error during OAuth | Continue as guest, retry sign-in later | Mock auth error, assert guest flow continues |
+| App backgrounded | User switches to another app | WebSocket maintains connection, reconnect on foreground | Background app, assert state sync on return |
 | TV pairing fails | Wrong code or Lounge API unavailable | "Couldn't connect" + retry option. Falls back to suggestion-only mode | Mock Lounge API to return error, assert fallback mode |
 | Lounge API drops mid-session | Unofficial API breaks or network issue | Non-blocking toast to host, switch to suggestion-only mode (NFR31) | Disconnect mock Lounge socket, assert party continues |
 | Playlist import fails | Invalid URL, private Spotify, API timeout | Platform-specific guidance (SpotifyGuide for private) or "Try again?" | Mock API errors per platform, assert guidance shown |
@@ -2740,7 +2951,6 @@ No error toasts. No "something went wrong." No retry buttons. The app either han
 
 **Empty States:**
 - 0 reactions during song → No "be the first to react!" prompt. Just empty. Fine.
-- 0 votes in ceremony → DJ picks randomly, labeled "DJ's choice"
 - 0 votes in Quick Pick (15s timeout) → Highest-voted wins. If 0 total votes → DJ picks randomly from suggestions
 - 0 playlists imported → Karaoke Classics fallback. App works out of the box
 - TV not paired → Suggestion-only mode. Full song selection UX, just no auto-queue
@@ -2758,7 +2968,7 @@ No error toasts. No "something went wrong." No retry buttons. The app either han
 | Transitional | 70% | State transitions, countdown warnings | Attention shift |
 | Ceremonial | 100% | Reveal burst, finale swell | Maximum drama, earned by contrast |
 
-**Concurrent Audio Budget: Maximum 2 simultaneous sources.** New source preempts oldest. Budget Android devices choke above 3 concurrent `AudioBufferSourceNode`s.
+**Concurrent Audio Budget: Maximum 2 simultaneous sources.** New source preempts oldest. Budget Android devices struggle with 3+ concurrent audio players.
 
 **AC:** Given 2 audio sources playing, WHEN a 3rd source is triggered, THEN the oldest source is stopped before the new source plays. At no point do more than 2 sources play simultaneously.
 
@@ -2777,9 +2987,9 @@ No error toasts. No "something went wrong." No retry buttons. The app either han
 | Interlude entry | Interlude loop (~10KB) | Lazy load on first `interlude` state |
 | Finale | Finale swell + extended confetti (~20KB) | Lazy load on `finale` state |
 
-**Sprint 0 task:** Record/source all audio files, compress to opus/webm format. Runtime loading is Sprint 1.
+**Sprint 0 task:** Record/source all audio files, compress to opus format. Bundle with app assets.
 
-**Audio Error Handling:** If `decodeAudioData` fails or `AudioContext` is blocked, all audio silently disabled for the session. Visual transitions continue unaffected. No "enable sound" banner.
+**Audio Error Handling:** If audio playback fails (file corrupt, device in silent mode), all audio silently disabled for the session. Visual transitions continue unaffected. No "enable sound" banner. Native audio has no browser-style AudioContext restrictions — audio plays immediately on any user interaction.
 
 ## Responsive Design & Accessibility
 
@@ -2799,51 +3009,43 @@ Karamania has one layout: a phone held in one hand in a dark karaoke room. No de
 | iPhone 14/15 | 390px | Common reference |
 | Galaxy S series | 412px | Largest common width |
 
-**Layout Strategy: Fluid, Not Adaptive**
+**Layout Strategy: Fluid Flutter Layout**
 
-No media queries. No breakpoints. All layouts use:
-- `width: 100%` with `max-width: 420px` + `margin: 0 auto` (centers on large phones)
-- `padding` in `rem` units (scales with user font size preference)
-- `gap` in `rem` for consistent spacing
-- `dvh` with `vh` fallback (Safari 15.3 and earlier doesn't support `dvh`)
+No breakpoints. All layouts use:
+- `ConstrainedBox` with `maxWidth: 420` + center alignment (handles large phones)
+- `EdgeInsets` with `MediaQuery.textScaleFactorOf` awareness
+- `Column` with `MainAxisAlignment` for vertical distribution
+- Flutter's built-in safe area handling via `SafeArea` widget
 
-```css
-/* Base layout — every screen */
-.screen {
-  width: 100%;
-  max-width: 420px;
-  margin: 0 auto;
-  min-height: 100vh; /* fallback */
-  min-height: 100dvh; /* modern */
-  padding: 0 1rem;
-  display: flex;
-  flex-direction: column;
-}
+```dart
+// Base layout — every screen
+SafeArea(
+  child: Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 420),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(children: [...]),
+      ),
+    ),
+  ),
+)
 ```
 
 **Safe Area Handling (notch, gesture bar, dynamic island):**
 
-```css
-:root {
-  --dj-safe-top: env(safe-area-inset-top, 0px);
-  --dj-safe-bottom: env(safe-area-inset-bottom, 0px);
-}
+Flutter's `SafeArea` widget automatically handles all safe area insets on both iOS and Android. No manual `env()` calculations needed.
 
-.screen {
-  padding-top: calc(var(--dj-safe-top) + 0.5rem);
-  padding-bottom: calc(var(--dj-safe-bottom) + 1rem);
-}
+TopBar wrapped in SafeArea with `bottom: false`. Bottom actions wrapped in SafeArea with `top: false`. No content hidden behind notch, dynamic island, or gesture bar on any device.
+
+**Orientation: Portrait-Only, Enforced**
+
+```dart
+// main.dart
+SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 ```
 
-TopBar uses `--dj-safe-top`. SongOverButton and bottom actions use `--dj-safe-bottom`. No content hidden behind notch, dynamic island, or gesture bar on any device.
-
-**Orientation: Portrait-Only, No Overlay**
-
-Karamania is portrait-only. Landscape doesn't break the layout (column flex with horizontal whitespace) but isn't designed for it. No landscape overlay — blocking taps during a 4s ceremony vote when someone accidentally rotates is worse than extra whitespace.
-
-```json
-{ "orientation": "portrait" }
-```
+Flutter enforces portrait lock at the system level — no accidental rotation during ceremonies.
 
 ### Touch Target Strategy
 
@@ -2902,17 +3104,17 @@ Full AAA is unnecessary for a party app. Level AA covers the meaningful accessib
 | Color contrast (text) | 1.4.3 — 4.5:1 minimum | All text tokens validated below | Designed |
 | Color contrast (large text) | 1.4.3 — 3:1 minimum | Headings and ceremony text | Designed |
 | Touch target size | 2.5.8 — 24×24px minimum | 48-64px per tier (exceeds AA) | Exceeds |
-| Focus visible | 2.4.7 | `outline: 2px solid var(--dj-action-primary)` on `:focus-visible` | Designed |
+| Focus visible | 2.4.7 | Flutter `FocusNode` with custom highlight using `DJTokens.actionPrimary` | Designed |
 | Reflow | 1.4.10 — 320px minimum | Fluid layout, no horizontal scroll | Designed |
-| Text spacing | 1.4.12 | All text in `rem`, respects user font settings | Designed |
-| Motion | 2.3.3 — No auto-play animation >5s | `reducedMotion` store disables all animation | Designed |
-| Status messages | 4.1.3 | `aria-live` on TopBar, CountdownTimer | Designed |
-| Name/role/value | 4.1.2 | Semantic HTML + ARIA labels per component spec | Designed |
+| Text spacing | 1.4.12 | All text uses `TextTheme` scale, respects system accessibility settings | Designed |
+| Motion | 2.3.3 — No auto-play animation >5s | `reducedMotion` provider disables all animation | Designed |
+| Status messages | 4.1.3 | `Semantics` with `liveRegion: true` on TopBar, CountdownTimer | Designed |
+| Name/role/value | 4.1.2 | `Semantics` widgets with labels per component spec | Designed |
 
 **Non-Applicable Criteria (and why):**
-- **1.1.1 Non-text content:** No images. Emoji are text. Confetti is `aria-hidden`
+- **1.1.1 Non-text content:** No images beyond thumbnails. Emoji are text. Confetti is `ExcludeSemantics`
 - **1.2.x Time-based media:** No audio/video content — app is UI only
-- **2.1.1 Keyboard:** PWA on phones — no physical keyboard. Focus management still implemented for assistive tech
+- **2.1.1 Keyboard:** Native mobile app — no physical keyboard. Focus management still implemented for assistive tech
 - **2.4.1 Skip links:** Single-screen app with no scrollable navigation to skip
 
 ### Contrast Ratio Validation
@@ -2934,26 +3136,31 @@ Full AAA is unnecessary for a party app. Level AA covers the meaningful accessib
 
 **Automated Contrast Enforcement:**
 
-```javascript
-// contrast.test.js
-import { tokens } from './lib/constants/tokens.js';
-import { getContrastRatio } from './lib/utils/color.js';
+```dart
+// test/contrast_test.dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:karamania/theme/dj_tokens.dart';
 
-test.each([
-  ['text-primary', 'bg', 4.5],
-  ['text-secondary', 'bg', 4.5],
-  ['text-accent', 'bg', 4.5],
-  ['text-primary', 'surface', 4.5],
-  ['text-secondary', 'surface', 4.5],
-])('%s on %s meets %s:1', (fg, bg, min) => {
-  expect(getContrastRatio(tokens[fg], tokens[bg])).toBeGreaterThanOrEqual(min);
-});
+void main() {
+  final pairs = [
+    (DJTokens.textPrimary, DJTokens.bgColor, 4.5),
+    (DJTokens.textSecondary, DJTokens.bgColor, 4.5),
+    (DJTokens.textAccent, DJTokens.bgColor, 4.5),
+    (DJTokens.textPrimary, DJTokens.surfaceColor, 4.5),
+    (DJTokens.textSecondary, DJTokens.surfaceColor, 4.5),
+  ];
+  for (final (fg, bg, min) in pairs) {
+    test('contrast ratio meets ${min}:1', () {
+      expect(getContrastRatio(fg, bg), greaterThanOrEqualTo(min));
+    });
+  }
+}
 ```
 
 Runs in CI. Catches regressions when tokens change.
 
 **Vibe-Adaptive Palette Constraint:**
-All 5 `data-dj-vibe` palettes only modify `--dj-ceremony-glow` and `--dj-ceremony-bg` — text tokens stay fixed. Ceremony text always renders in `--dj-text-primary` (#f0f0f0), which passes 4.5:1 against any ceremony background darker than #3a3a3a.
+All 5 PartyVibe palettes only modify accent, glow, bg, and primary colors — text tokens stay fixed. Ceremony text always renders in DJTokens.textPrimary (#f0f0f0), which passes 4.5:1 against any ceremony background darker than #3a3a3a.
 
 ### Screen Reader Strategy
 
@@ -2963,46 +3170,44 @@ Yes — social gatherings are for everyone. Karamania must not *break* for scree
 
 **Screen Reader Approach: Announce Actions, Skip Spectacle**
 
-| Screen | Screen Reader Experience | ARIA Strategy |
+| Screen | Screen Reader Experience | Flutter Semantics Strategy |
 |---|---|---|
-| Lobby | "Karamania party. 6 of 8 joined. You are participant." | `aria-live="polite"` on participant count |
-| Icebreaker | "Choose one: Option A, Option B. 6 seconds remaining." | `role="radiogroup"`, `aria-live="assertive"` on timer |
-| Quick Pick | "Pick a song. 5 options. Bohemian Rhapsody by Queen, 5 of 5 know this. 12 seconds." | `role="group"`, `aria-live="polite"` on vote counts |
-| Spin the Wheel | "Spin the wheel. 8 songs loaded. Tap spin." → "Selected: Bohemian Rhapsody. Veto in 5 seconds." | `aria-live="assertive"` on result |
-| Song State | "Linh is singing. Ballad. Tap for reactions." | `aria-live="polite"`, soundboard buttons labeled |
-| Ceremony Vote | "Vote: Best Hype. 4 seconds. Duc. Minh. Trang." | `role="radiogroup"`, `aria-live="assertive"` on timer |
-| Ceremony Silence | "Revealing winner..." | `aria-live="polite"`, skip visual drama |
-| Ceremony Reveal | "Winner: Duc! Best Hype." | `aria-live="assertive"`, announce immediately |
-| Interlude | "Who sings next? Vote: Linh, Duc, Minh." | `role="radiogroup"` on singer cards |
-| Genre Picker | "Pick genre: Pop, Rock, Ballad, Dance, K-pop." | `role="radiogroup"` |
+| Home / Timeline | "Karamania. 5 past sessions. Create party button." | `Semantics(label:)` on timeline entries |
+| Lobby | "Karamania party. 6 of 8 joined. You are participant." | `Semantics(liveRegion: true)` on participant count |
+| Icebreaker | "Choose one: Option A, Option B. 6 seconds remaining." | `Semantics(label:)` on options, live region on timer |
+| Quick Pick | "Pick a song. 5 options. Bohemian Rhapsody by Queen, 5 of 5 know this. 12 seconds." | `Semantics(label:)` on cards, live region on vote counts |
+| Spin the Wheel | "Spin the wheel. 8 songs loaded. Tap spin." → "Selected: Bohemian Rhapsody. Veto in 5 seconds." | Live region on result |
+| Song State | "Linh is singing. Ballad. Tap for reactions." | Semantics labels on soundboard buttons |
+| Ceremony Anticipation | "Award coming..." | Live region, skip visual drama |
+| Ceremony Reveal | "Award: Duc — Crowd Whisperer!" | Live region, announce immediately |
+| Interlude | "Kings Cup: Everyone drinks who..." | Semantics labels on game actions |
 | Finale | "Party over. 12 songs. Most awarded: Duc." | Static content, full readout |
 
-**What Gets `aria-hidden="true"`:**
+**What Gets `ExcludeSemantics`:**
 - ConfettiLayer (decorative)
 - GlowEffect (decorative)
 - Emoji scatter reactions (visual flair only)
-- Countdown circular visual (number announced via `aria-live` instead)
+- Countdown circular visual (number announced via Semantics instead)
 
 **Reduced Motion + Screen Reader Overlap:**
-Users with `prefers-reduced-motion: reduce` AND screen readers get the leanest experience: no animation, no decorative layers, pure announcements. Graceful degradation to a functional social tool.
+Users with system "Reduce motion" AND screen readers get the leanest experience: no animation, no decorative layers, pure announcements. Graceful degradation to a functional social tool.
 
-**Automated ARIA Testing:**
+**Accessibility Testing:**
 
 | Method | What It Catches | When |
 |---|---|---|
-| `axe-core` in Vitest | Missing ARIA roles, label mismatches, contrast | Every PR (automated) |
-| Manual VoiceOver walkthrough | Flow coherence, announcement timing, focus order | Once per sprint (manual) |
-| `aria-live` region assertion | Correct announcements fire on state change | Unit test per screen component |
+| Flutter Semantics debugger | Missing labels, tap target sizes | During development |
+| Manual VoiceOver/TalkBack walkthrough | Flow coherence, announcement timing, focus order | Once per sprint (manual) |
+| Semantics assertion in widget tests | Correct announcements fire on state change | Unit test per screen widget |
 
-**`aria-live` assertion example:**
+**Semantics assertion example:**
 
-```javascript
-// SongScreen.test.js
-test('announces current singer', async () => {
-  currentSinger.set('Linh');
-  currentGenre.set('Ballad');
-  const live = screen.getByRole('status');
-  expect(live).toHaveTextContent('Linh is singing');
+```dart
+// test/song_screen_test.dart
+testWidgets('announces current singer', (tester) async {
+  final provider = MockPartyProvider(currentSinger: 'Linh', currentGenre: 'Ballad');
+  await tester.pumpWidget(testApp(provider));
+  expect(find.bySemanticsLabel('Linh is singing'), findsOneWidget);
 });
 ```
 
@@ -3016,46 +3221,48 @@ A Samsung Galaxy A13 with 3GB RAM on congested karaoke-venue WiFi is a real user
 
 | Metric | Target | Enforcement |
 |---|---|---|
-| First Contentful Paint | < 2s on 3G | Lighthouse CI ≥ 80 |
-| Time to Interactive | < 3s on 3G | Lighthouse CI ≥ 80 |
-| JS bundle (gzipped) | < 30KB | CI assertion on `vite build` output |
-| Total transfer | < 80KB initial | Lighthouse CI |
-| Accessibility score | ≥ 90 | Lighthouse CI gate |
-| Frame rate during ceremony | 30fps minimum | Manual check during ceremony dev |
-| WebSocket reconnect | < 2s | Socket.io tuned config |
+| App cold start | < 3s on 4G | Manual test on budget device |
+| App warm start | < 1.5s | Manual test |
+| App install size | < 50MB | CI assertion on build output |
+| Memory usage (2hr session) | < 80MB | Flutter DevTools profiling |
+| Frame rate during ceremony | 60fps | Flutter profile mode on budget device |
+| WebSocket reconnect | < 2s | socket_io_client tuned config |
+| Battery impact | < 12%/hr | Manual test on 3-year-old Android |
 
 **CI Enforcement Gates:**
-- **Lighthouse CI** in GitHub Actions: Performance ≥ 80, Accessibility ≥ 90
-- **Bundle size check**: assert gzipped JS < 30KB in CI pipeline
+- **App size check**: assert release APK/IPA under 50MB in CI pipeline
 - **Contrast ratio tests**: automated token pair validation (see Contrast section)
-- Frame rate is manual-only — too flaky for CI
+- **Widget tests**: Semantics labels present on all interactive widgets
+- Frame rate is manual-only — tested on real budget devices in Flutter profile mode
 
 **Budget Device Safeguards:**
 
 | Concern | Safeguard |
 |---|---|
-| CSS animations on underpowered GPU | All animations use `transform` and `opacity` only — composited, GPU-friendly. No `height`, `width`, `margin` animations |
+| Animations on underpowered GPU | All animations use Flutter's composited layer (Opacity, Transform) — GPU-friendly. No layout-triggering animations |
 | Confetti particle count | Cap at 30 particles always. Visual difference between 30 and 50 is negligible in a dark room. One code path, no device detection |
-| Web Audio decode time | Lazy-load audio buffers. If decode takes > 500ms, skip audio for session |
-| Memory leaks from WebSocket | Single socket instance, explicit cleanup on `beforeunload` |
-| Font rendering | System font stack: `-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif`. Roboto pre-installed on all Android since 4.0, full Vietnamese diacritics (ă, ơ, ư, đ) support. Zero font downloads |
+| Audio playback | Audio assets bundled with app. If playback fails, skip audio for session |
+| Memory leaks from WebSocket | Single socket instance, explicit cleanup on app dispose. Monitor via Flutter DevTools |
+| Font rendering | System fonts on both platforms. Roboto (Android) and SF Pro (iOS) both support full Vietnamese diacritics (ă, ơ, ư, đ). Zero font downloads |
 
 **Network Resilience:**
 
-Karaoke venue WiFi is unreliable. Tuned Socket.io config for fast reconnection:
+Karaoke venue WiFi is unreliable. Tuned socket_io_client config for fast reconnection:
 
-```javascript
-const socket = io(SERVER_URL, {
-  reconnectionDelay: 500,      // Start retry at 500ms (default 1000)
-  reconnectionDelayMax: 3000,  // Cap at 3s (default 5000)
-  reconnectionAttempts: 20,    // Cap at 20 (default Infinity — battery drain)
-  timeout: 5000,               // Connection timeout 5s (default 20000 — too long)
-});
+```dart
+final socket = IO.io(serverUrl, IO.OptionBuilder()
+  .setTransports(['websocket'])
+  .setReconnectionDelay(500)       // Start retry at 500ms (default 1000)
+  .setReconnectionDelayMax(3000)   // Cap at 3s (default 5000)
+  .setReconnectionAttempts(20)     // Cap at 20 (default Infinity — battery drain)
+  .setTimeout(5000)                // Connection timeout 5s (default 20000 — too long)
+  .build());
 ```
 
 **Resilience behavior:**
 - **Offline song state:** If WebSocket drops during a song, the UI stays on Song Screen (no-limit state). Reconnect restores latest state. No blank screen.
+- **App backgrounded:** Flutter maintains WebSocket connection when backgrounded. On foreground resume, state sync happens automatically.
 - **Slow reconnect:** LoadingSkeleton shows after 200ms disconnect. No spinner — the logo pulses.
-- **Missing audio buffers:** If lazy-load fails, that audio category is silently disabled. Visual transitions continue.
+- **Missing audio:** If audio file is corrupt, that sound is silently disabled. Visual transitions continue.
 
 **AC:** Given a network drop during any state, WHEN the socket reconnects, THEN the client receives and renders the current server state with no user action required. Given any device, WHEN confetti is triggered, THEN particle count is capped at 30.
