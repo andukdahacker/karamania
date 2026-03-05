@@ -23,6 +23,10 @@ editHistory:
     changes: 'Validation fixes: Reconciled FR38-39 with FR67-73 bubble capture system. Added media capture moments to Minh and Duc journeys. Fixed 9 SMART FRs with measurable thresholds (FR23, FR28a, FR29, FR33, FR47, FR49, FR52, FR53). Removed implementation leakage from FR69. Quantified 6 vague NFRs (NFR6, NFR9, NFR12, NFR16, NFR18, NFR23). Fixed subjective adjectives in FR8, FR12, FR18b, FR19, FR20, FR22, FR26.'
   - date: '2026-03-05'
     changes: 'Added Song Integration & Discovery system to MVP: YouTube Lounge API TV pairing (passive song detection + queue control), YouTube Music + Spotify playlist import, Karaoke Catalog Index, Intersection-Based Suggestion Engine, Quick Pick + Spin the Wheel song selection UX. Added new FR section (FR74-FR90), new NFRs (NFR29-NFR32), new user journey (Song Discovery), updated Executive Summary, Product Scope, Innovation, Risk Mitigation, and Sprint Plan. Based on brainstorming session 2026-03-05 findings.'
+  - date: '2026-03-05'
+    changes: 'Added Authentication & Persistence to MVP scope. Firebase Auth (Google/Facebook OAuth, optional — guest join preserved), Railway PostgreSQL for session summaries and user profiles, Firebase Storage for media captures linked to user accounts. Added FR96-FR105 (auth, identity, persistence, media ownership). Added NFR34-NFR37 (JWT validation, guest upgrade, DB writes, media access control). Updated Executive Summary, Product Scope, Sprint Plan, Journey Requirements Summary, and Risk Mitigation. Motivation: cross-session features and media ownership.'
+  - date: '2026-03-05'
+    changes: 'Added Vietnamese localization as fast-follow item. Added NFR38 requiring centralized string constants (not hardcoded in components) to enable i18n extraction, plus Vietnamese diacritics font support.'
 inputDocuments:
   - '_bmad-output/planning-artifacts/product-brief-karaoke-party-app-2026-03-04.md'
   - '_bmad-output/planning-artifacts/research/market-karaoke-party-companion-research-2026-03-03.md'
@@ -51,7 +55,7 @@ date: '2026-03-04'
 
 ## Executive Summary
 
-Karamania is a second-screen PWA companion that transforms group karaoke nights from interactive party experiences into full entertainment sessions. Users join via QR code scan — zero downloads, zero accounts — and their phones become participation devices: reactions, soundboards, voting, party card challenges, lightstick mode, song discovery, and mini-games that keep the entire room engaged before, during, and between songs.
+Karamania is a second-screen PWA companion that transforms group karaoke nights from interactive party experiences into full entertainment sessions. Users join via QR code scan — zero downloads, optional accounts (Google/Facebook OAuth or guest with name-only) — and their phones become participation devices: reactions, soundboards, voting, party card challenges, lightstick mode, song discovery, and mini-games that keep the entire room engaged before, during, and between songs.
 
 **Core Differentiator:** The only product that runs alongside existing karaoke systems rather than replacing them — AND connects directly to the YouTube TV karaoke session via the existing TV pairing code. Eliminates music licensing, works at any venue, and creates genuine white space in a $7.5B market. Party Cards, audience participation modes, and a song discovery engine that eliminates "what should we sing?" decision fatigue turn every karaoke night into a complete entertainment experience.
 
@@ -131,7 +135,7 @@ Karamania is a second-screen PWA companion that transforms group karaoke nights 
 
 "The Party Companion" — prove the core loop works with one real friend group.
 
-- **Zero-friction party launch:** QR code / 4-digit code, PWA, no accounts, no downloads. Branded loading state with party lobby pre-rendered ("3 friends are waiting for you")
+- **Zero-friction party launch:** QR code / 4-digit code, PWA, optional social login (Google/Facebook) or guest join (name-only, upgradeable). Branded loading state with party lobby pre-rendered ("3 friends are waiting for you")
 - **Live audience reactions:** Emoji reactions during performances, basic soundboard (air horn, applause, sad trombone, "OHHHH!"), real-time feed on all phones. Host phone as primary audio source for big ceremony moments
 - **Party Cards system:** 19 curated singer challenges across 3 types — vocal modifiers (Chipmunk Mode, Barry White, The Whisperer, Robot Mode, Opera Singer, Accent Roulette, Beatboxer), performance modifiers (Blind Karaoke, Method Actor, The Statue, Slow Motion, The Drunk Uncle, News Anchor, Interpretive Dance), and group involvement (Name That Tune, Backup Dancers, Crowd Conductor, Tag Team, Hype Squad). App auto-deals one card per singer during pre-song state. Singer can accept, dismiss, or use one free redraw. Host can override. Group involvement cards pick random participants — no consent flow, social dynamics handle opt-outs
 - **Audience participation modes during songs:** Participants toggle between lean-in mode (lyrics/reactions) and lightstick mode (phone becomes a glowing visual prop). Camera flash/screen hype signal available as real-time performer encouragement
@@ -145,7 +149,7 @@ Karamania is a second-screen PWA companion that transforms group karaoke nights 
 - **Prompted media capture:** Floating capture bubble at key moments (session start, reaction peaks, post-ceremony, session end). Any participant pops the bubble to capture photo/video (5s max)/audio. Inline on Android, graceful degradation on iOS (photo inline, video via native picker). Background upload, tagged for future highlight reel assembly
 - **End-of-night ceremony + setlist poster**
 - **Song Integration & Discovery:** YouTube TV pairing via Lounge API (passive song detection + queue control), YouTube Music + Spotify playlist import (paste share URL), Karaoke Catalog Index (pre-scraped from popular karaoke YouTube channels), Intersection-Based Suggestion Engine (songs group knows ∩ karaoke catalog, ranked by overlap count + genre momentum), Quick Pick (5 AI suggestions, group tap-to-vote) + Spin the Wheel (8 picks, animated random selection) dual-mode song selection UX. Host pairs app with TV code → friends join room and paste playlist URLs → app builds shared song pool → suggestions flow automatically
-- **Fast-follow (1-2 weeks after core):** Group sing-along mode, additional interlude games, moment capture enhancements
+- **Fast-follow (1-2 weeks after core):** Vietnamese language localization (i18n), group sing-along mode, additional interlude games, moment capture enhancements
 
 ### Growth Features (Post-MVP)
 
@@ -158,6 +162,25 @@ v2 — "The Smart Party" (target: 6 months post-MVP)
 - Smart interlude engine: 10+ games, contextual selection
 - Engagement ladder + fair play balancer
 - Apple Music playlist import support
+
+### Persistence & Identity Architecture (MVP Scope)
+
+**MVP (v1): Firebase Auth + Railway PostgreSQL + Firebase Storage**
+- User authentication via Firebase Auth (social OAuth — Google, Facebook). Optional — guest join remains the default frictionless path (name-only, upgradeable to full account at any time without data loss)
+- PostgreSQL (Railway-managed) for user profiles, party history, session summaries, and highlight reel metadata. Co-located with Node.js server on Railway for low-latency writes
+- Firebase Storage for media captures (photos, 5s video clips, audio snippets) linked to authenticated user profiles and party sessions. Guest captures linked to session ID only. 5GB free tier, $0.026/GB beyond
+- Event stream (FR40-44) logs all actions in-memory during active party, then writes session summary to PostgreSQL at party end
+- All real-time game state (DJ engine, Socket.io, reconnection buffers) remains in-memory on the custom Node.js server — Firebase handles identity and storage, Railway PostgreSQL handles persistence
+- Authenticated users gain: party history, personal stats, media gallery, and future cross-session features. Guests get full in-session experience but no persistence beyond the active party
+- Estimated MVP cost: ~$5-10/month (Railway Hobby $5 + PG usage + Firebase free tiers)
+
+**Post-MVP (v2+): Persistence Expansion**
+- Personalized suggestions powered by cross-session user preference data
+- "Karaoke Wrapped" stats derived from party history
+- Morning-after highlight reel assembled from stored media + session moments
+- Crowdsource song intelligence from anonymized cross-session data
+
+**Architectural implication:** Three complementary services — custom Node.js server on Railway (real-time game engine via Socket.io), Railway PostgreSQL (persistence), and Firebase (auth + storage). The client communicates with: Socket.io for live party interaction, Firebase JS SDK for auth and media upload/browse, and indirectly with PostgreSQL via the server API. Socket.io handshake validates Firebase JWT for authenticated sessions.
 
 ### Vision (Future)
 
@@ -337,6 +360,12 @@ Taps "Start Party." QR and code appear. Lobby: "1 player — works best with 3+ 
 | Quick Pick (5 suggestions, group tap-to-vote) | Song Discovery | Core |
 | Spin the Wheel (8 picks, animated random selection) | Song Discovery | Core |
 | Genre momentum in suggestions (avoid repetition) | Song Discovery | Core |
+| Optional auth (Google/Facebook OAuth via Firebase) | All personas | Core |
+| Guest join preserved as default (name-only, upgradeable) | All personas | Core |
+| Session summary persistence (PostgreSQL at party end) | All personas | Core |
+| Party history for authenticated users | Linh (host return), Duc (content) | Core |
+| Media ownership (captures linked to user profile) | Duc, Minh | Core |
+| Guest media expiry (7-day access via session link) | All personas | Core |
 
 ## Innovation & Novel Patterns
 
@@ -504,7 +533,7 @@ The sprint plan below maps features from Product Scope into a build-order sequen
 | Day | Focus |
 |-----|-------|
 | 1 | DJ state diagram: every state, transition, guard, timeout. Three ceremony weights (Full/Quick/Skip). Pause/resume logic. Bridge moments. Song Integration state additions (Quick Pick, Spin the Wheel, song-queued states) |
-| 2 | Server scaffolding, WebSocket infra, session management |
+| 2 | Server scaffolding, WebSocket infra, session management. Firebase Auth setup (Google + Facebook OAuth providers), Railway PostgreSQL provisioning, DB schema design (users, sessions, session_participants, media_captures) |
 | 3 | Setlist poster design mockup, ceremony flow mockup (all three weights) |
 | 4 | Sound asset selection + testing (6 core sounds). Lounge API spike: pair with real YouTube TV, read nowPlaying, push a video to queue |
 | 5 | Award template pool (20+ titles, score-categorized). Karaoke Catalog: scrape top 3 karaoke YouTube channels, parse titles, build initial index |
@@ -516,7 +545,7 @@ Build order enforced — each depends on the previous:
 | Order | Feature | Depends On | Why Non-Negotiable |
 |-------|---------|------------|-------------------|
 | 1 | DJ state machine with ALL states (including bridge moments, ceremony sub-states, pause, song selection states) + unit tests | Sprint 0 state diagram | THE core bet. Everything downstream depends on this |
-| 2 | Party launch — create/join via QR/code (PWA, no accounts) | WebSocket infra | No join = no product |
+| 2 | Party launch — create/join via QR/code (PWA, optional Firebase Auth or guest) | WebSocket infra + Firebase Auth | No join = no product |
 | 3 | Host "Song Over!" trigger | DJ state machine | DJ can't know when physical songs end |
 | 4 | Host controls overlay (next, skip, pause) | DJ state machine | Host must be able to override DJ |
 | 5 | YouTube TV pairing via Lounge API (host enters TV code) + nowPlaying event listener + video_id → metadata pipeline | Server infra | Song Integration core — everything else in this feature depends on it |
@@ -570,6 +599,11 @@ Build order enforced — each depends on the previous:
 | Basic moment capture (prompted screenshots) | Nice-to-have for first test |
 | End-of-night ceremony + setlist poster | Critical for real session |
 | Awards algorithm (non-singing recognition, party card completion) | Needs real session data to tune |
+| Session summary write to PostgreSQL at party end | Persistence pipeline — needs real session to validate |
+| Guest-to-account upgrade flow | Must be seamless mid-session |
+| Party history view for authenticated users | Cross-session value proposition |
+| Media ownership linking (authenticated captures → user profile) | Media gallery depends on auth |
+| Guest media 7-day expiry + signed URLs | Non-authenticated media access |
 
 **Sprint 5 — Real World Test + Polish (5 days):**
 - Real karaoke night with friends. Screen record on 2-3 phones
@@ -608,6 +642,9 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 | Karaoke video title parsing varies by channel | Medium | Fuzzy-match against karaoke catalog index. Cross-reference with MusicBrainz for validation. Build parser test suite against top 3 karaoke channels |
 | Spotify Dev Mode 5-user OAuth limit | Low | Avoided entirely — use Client Credentials flow for public playlists only. "Make Public" guide for private playlists. No user OAuth needed |
 | Venue does not use YouTube for karaoke | Medium | Suggestion-only mode (FR92-FR95). App still provides full playlist import, suggestions, Quick Pick, Spin the Wheel — just no auto-queue or passive detection |
+| Firebase Auth adds friction to join flow | Medium | Auth is optional — guest join remains default and primary path. Auth prompt is non-blocking, positioned as "save your stats" after first session. Never gate in-session features behind auth |
+| PostgreSQL write failure at session end | Medium | 3 retries with exponential backoff. Fallback: log to server disk for manual recovery. Session data is never lost |
+| Guest-to-account upgrade disrupts session | Low | WebSocket stays connected during OAuth redirect. Server links existing session token to new Firebase UID atomically |
 
 **Market Risks:**
 
@@ -635,6 +672,8 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 6. Pause/resume logic decided (resume interrupted state vs advance to next)
 7. YouTube Lounge API spike: successful pairing with real YouTube TV, confirmed nowPlaying event reception, confirmed addVideo queue push. Document the exact API flow and library choice
 8. Karaoke Catalog Index: initial scrape of top 3 karaoke YouTube channels, title parsing validated against 100+ sample titles, stored and queryable
+9. Firebase project created with Google + Facebook OAuth providers configured and tested
+10. Railway PostgreSQL provisioned with initial schema: users, sessions, session_participants, media_captures tables
 
 ## Functional Requirements
 
@@ -751,6 +790,19 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 - **FR94:** In suggestion-only mode, the host can manually mark a song as "now playing" from the suggestion list, enabling the game engine to receive song metadata for challenges and genre-based mechanics
 - **FR95:** TV pairing is optional at party creation — the host can start a party without pairing and add the TV connection later if desired
 
+### 5f. Authentication & Identity
+
+- **FR96:** System offers optional sign-in via Google or Facebook OAuth (Firebase Auth) on the join screen. Users can also join as a guest with name-only entry — the default path
+- **FR97:** Guest users can upgrade to a full account at any point during or after a session without losing any session data, participation scores, or captured media
+- **FR98:** Authenticated users have a persistent profile storing display name, avatar (from OAuth provider), and account creation date
+- **FR99:** On party end, the system writes a session summary to PostgreSQL containing: session ID, date, venue (if entered), participant list, song list, awards, ceremony scores, participation scores, and party card stats
+- **FR100:** Authenticated users can view their party history — a chronological list of past sessions with date, venue, participant count, personal awards, and personal stats (songs sung, participation score, top award)
+- **FR101:** Media captures (photos, video clips, audio snippets) from authenticated users are linked to their user profile and accessible via a personal media gallery post-session. Guest captures are linked to session ID only and accessible to all session participants for 7 days
+- **FR102:** All media is stored in Firebase Storage, organized by session ID and tagged with capturing user ID (if authenticated). Authenticated users retain access to their captures indefinitely; guest session media expires after 7 days
+- **FR103:** System writes session summary to PostgreSQL within 30 seconds of party end. If the write fails, the system retries up to 3 times with exponential backoff. If all retries fail, session data is logged to server disk for manual recovery
+- **FR104:** Authenticated host creating a party is recorded as the session owner. Session ownership enables future features (re-share setlist poster, view full session stats, manage session media)
+- **FR105:** WebSocket handshake validates Firebase JWT for authenticated users. Guest users receive a server-issued session-scoped token. Both token types grant identical in-session permissions — auth status affects persistence only, never in-party capabilities
+
 ### 6. Host Controls
 
 - **FR29:** Host has a persistent floating action button (bottom-right corner) that expands to a control overlay within 1 tap, providing party control without leaving the participant experience
@@ -819,14 +871,22 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 - **NFR18:** State transitions must play a distinct audio cue (minimum 0.5s, unique per transition type: song start, ceremony start, interlude start, party card deal) audible at phone speaker volume — participants may be watching the karaoke screen, not their phone
 - **NFR19:** Host controls must be accessible within 1 second from any participant screen state (no navigation required)
 - **NFR20:** The app must not require any configuration, settings, or preferences from any participant — zero setup beyond name entry
+- **NFR38:** All user-facing strings must be defined in a centralized string constants module (not hardcoded in components) to enable Vietnamese localization extraction in the fast-follow phase. Fonts must support Vietnamese diacritics (UTF-8)
 
 ### Security
 
 - **NFR21:** Party codes must expire after session end and not be reusable
-- **NFR22:** No personally identifiable information stored beyond display name and session participation data
+- **NFR22:** For guest users, no personally identifiable information stored beyond display name and session participation data. For authenticated users, PII is limited to: display name, email, avatar URL (from OAuth provider), and session participation data. No additional PII collection beyond what the OAuth provider returns
 - **NFR23:** Rate limiting on reaction and soundboard events: after 10 events in 5 seconds, each subsequent event earns 50% fewer participation points and visual feedback dims proportionally. No hard block — user can always tap, but reward and feedback diminish to near-zero after 20 events in 5 seconds. Resets after 5 seconds of inactivity
 - **NFR24:** Session data must be isolated — no participant can access or affect another party's session
 - **NFR25:** WebSocket connections must be authenticated to their session — a connection cannot inject events into a different party
+
+### Authentication & Persistence
+
+- **NFR34:** Firebase Auth JWT must be validated on WebSocket handshake for authenticated users. Guest users receive a server-issued session-scoped token with a TTL matching the maximum session duration (6 hours). Both paths must complete handshake within 500ms
+- **NFR35:** Guest-to-account upgrade must complete without disconnecting the WebSocket, interrupting the current DJ state, or losing any accumulated session data. The upgrade flow must complete in under 5 seconds including OAuth redirect
+- **NFR36:** PostgreSQL session summary writes at party end must not block the real-time party experience — writes are asynchronous and must complete within 5 seconds for sessions with up to 12 participants and 20+ songs
+- **NFR37:** Media access control must enforce ownership: authenticated users can access only their own captures and captures from sessions they participated in. Guest session media is accessible to all session participants via a time-limited signed URL (7-day expiry)
 
 ### Song Integration
 
