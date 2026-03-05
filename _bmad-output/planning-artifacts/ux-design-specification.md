@@ -5,16 +5,19 @@ lastEdited: '2026-03-05'
 editHistory:
   - date: '2026-03-05'
     changes: 'PRD alignment update: Added Party Cards System UX (deal flow, card categories, screen layout, timing rules). Added Song State modes (Lightstick Mode full-screen glow with color picker, Camera Flash Hype Signal with cooldown). Added Prompted Media Capture UX (floating capture bubble, pop-to-capture flow, iOS graceful degradation, background upload). Added Interlude Games UX (Kings Cup, Dare Pull, Quick Vote with screen layouts and interaction patterns). Updated core loop to include party_card_deal phase. Updated DJ state machine with party_card_deal state. Updated screen inventory (9→13 screens). Updated component inventory (18→26 components + new stores). Updated project scaffold, bundle analysis, mermaid diagrams, state transitions, reduced motion table.'
+  - date: '2026-03-05'
+    changes: 'Song Integration & Discovery update: Added complete Song Integration & Discovery UX section (TV pairing flow, playlist import UX, Intersection-Based Suggestion Engine, Quick Pick mode, Spin the Wheel mode, suggestion-only fallback). Added Journey 6 (Song Discovery flow). Replaced genre-tag-only Song Awareness section with full song intelligence system. Updated screen inventory (13→18 screens). Updated component inventory (26→34 components + new stores). Updated DJ state machine with song_selection states. Updated core loop, bundle analysis, component roadmap, project scaffold, state transitions, and timing patterns.'
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/product-brief-karaoke-party-app-2026-03-04.md'
   - '_bmad-output/planning-artifacts/research/market-karaoke-party-companion-research-2026-03-03.md'
   - '_bmad-output/analysis/brainstorming-session-2026-03-03.md'
+  - '_bmad-output/analysis/brainstorming-session-2026-03-05.md'
 documentCounts:
   prd: 1
   briefs: 1
   research: 1
-  brainstorming: 1
+  brainstorming: 2
   projectDocs: 0
 project_name: 'karaoke-party-app'
 author: 'Ducdo'
@@ -34,11 +37,11 @@ date: '2026-03-04'
 
 ### Project Vision
 
-Karamania is a second-screen PWA companion that transforms group karaoke nights from passive singing sessions into interactive party experiences. Users join via QR code — zero downloads, zero accounts — and their phones become participation devices: reactions, soundboards, voting, ceremonies, and mini-games that keep the entire room engaged between songs.
+Karamania is a second-screen PWA companion that transforms group karaoke nights from passive singing sessions into interactive party experiences. Users join via QR code — zero downloads, zero accounts — and their phones become participation devices: reactions, soundboards, voting, ceremonies, song discovery, and mini-games that keep the entire room engaged between songs.
 
-The app occupies genuine white space: no competitor serves as a companion layer for in-room group karaoke. By not playing music, Karamania sidesteps music licensing entirely and works at any venue. A server-authoritative DJ engine automatically orchestrates party flow, eliminating dead air and freeing the host from MC duties.
+The app occupies genuine white space: no competitor serves as a companion layer for in-room group karaoke. By not playing music, Karamania sidesteps music licensing entirely and works at any venue. Two interconnected engines power the experience: (1) a server-authoritative DJ engine that automatically orchestrates party flow, eliminating dead air and freeing the host from MC duties, and (2) a Song Integration Engine that pairs with the YouTube TV via the Lounge API, passively detects every song played, imports friends' playlists, and surfaces personalized suggestions — eliminating "what should we sing?" decision fatigue.
 
-Target market: Vietnamese friend groups (ages 20-35) at commercial karaoke venues in HCMC and Hanoi. MVP built by solo developer in ~5.5 weeks. Success metric: >80% "Would use again" post-session score.
+Target market: Vietnamese friend groups (ages 20-35) at commercial karaoke venues in HCMC and Hanoi. MVP built by solo developer in ~7 weeks. Success metric: >80% "Would use again" post-session score.
 
 ### Target Users
 
@@ -94,7 +97,9 @@ Target market: Vietnamese friend groups (ages 20-35) at commercial karaoke venue
 The core experience of Karamania is **synchronized collective moments** — every phone in the room doing the same thing at the same time, creating a shared experience that transcends individual screens. The product's value is proven in the 15-second post-song ceremony: a fanfare erupts from 8 phones, a voting screen appears simultaneously, a countdown builds tension, and an award reveals in perfect sync. That collective gasp IS the product.
 
 **The Core Loop:**
-Party Card Deal → Song (passive/lean-in mode) → "Song Over!" trigger → Ceremony (active mode) → Interlude/Vote → Bridge moment → Party Card Deal → Song
+Song Selection (Quick Pick / Spin the Wheel) → Party Card Deal → Song (passive/lean-in mode) → "Song Over!" trigger → Ceremony (active mode) → Interlude/Vote → Song Selection → Party Card Deal → Song
+
+Song Selection replaces the "what should we sing?" negotiation. The Suggestion Engine surfaces songs the group collectively knows that have karaoke versions — Quick Pick (5 cards, group votes, 15s auto-advance) or Spin the Wheel (8 picks, animated selection, one veto). Selected songs auto-queue on the YouTube TV via the Lounge API. No one types anything into the karaoke machine.
 
 The Party Card Deal is a pre-song micro-moment: the DJ auto-deals a challenge card to the next singer. Accept, dismiss, or one free redraw — then walk to the mic. It adds unpredictability to every performance and gives the audience something to watch for ("Will they do the dare?").
 
@@ -498,6 +503,7 @@ The DJ engine's current state drives the entire visual system through one HTML a
 ```css
 /* State-driven visual modes */
 [data-dj-state="lobby"]           { --dj-bg: #0a0a1a; /* calm, inviting */ }
+[data-dj-state="song_selection"]  { --dj-bg: #0f0a1e; /* energetic, anticipation — picking what's next */ }
 [data-dj-state="party_card_deal"] { --dj-bg: #1a0a1a; /* anticipation, playful tension */ }
 [data-dj-state="song"]            { --dj-bg: #0a0a0f; /* subdued, ambient — real karaoke is the show */ }
 [data-dj-state="ceremony"]        { --dj-bg: var(--dj-ceremony-bg); /* dramatic, saturated */ }
@@ -567,6 +573,11 @@ export const partyCard = writable(null);        // Current party card deal {card
 export const songMode = writable('leanin');     // 'leanin' | 'lightstick'
 export const interludeData = writable(null);    // Current interlude game data
 export const captureBubble = writable(null);    // {trigger, timestamp} or null
+export const songSelection = writable(null);    // {mode, songs, votes, timer} for Quick Pick / Spin
+export const tvPairing = writable({status: 'unpaired'}); // 'unpaired' | 'pairing' | 'paired' | 'failed'
+export const nowPlaying = writable(null);       // {song, artist, genre, videoId} from Lounge API
+export const suggestions = writable([]);        // Current suggestion pool from engine
+export const playlists = writable([]);          // Imported playlists per participant [{userId, songCount, status}]
 
 // Single WebSocket connection
 const socket = io(SERVER_URL);
@@ -576,6 +587,11 @@ socket.on('ceremony_silence', (d) => ceremonyData.set(d));
 socket.on('party_card_deal', (c) => partyCard.set(c));
 socket.on('capture_bubble', (b) => captureBubble.set(b));
 socket.on('interlude', (i) => interludeData.set(i));
+socket.on('song_selection', (s) => songSelection.set(s));
+socket.on('tv_pairing', (t) => tvPairing.set(t));
+socket.on('now_playing', (n) => nowPlaying.set(n));
+socket.on('suggestions_update', (s) => suggestions.set(s));
+socket.on('playlist_imported', (p) => playlists.update(list => [...list, p]));
 
 export { socket };
 ```
@@ -631,12 +647,16 @@ The ceremony reveal component is preloaded during the first song state (while us
 karamania/
 ├── src/
 │   ├── lib/
-│   │   ├── stores/party.js         ← WebSocket + all reactive stores (THE state file)
+│   │   ├── stores/party.js         ← WebSocket + all reactive stores including song integration
 │   │   ├── stores/capture.js       ← Media capture state + upload queue
 │   │   ├── audio/engine.js         ← Web Audio context + sound buffer preloading
 │   │   └── constants/copy.js       ← All DJ prompts, award names, party card text, system messages
 │   ├── components/
-│   │   ├── Lobby.svelte            ← Join flow + icebreaker
+│   │   ├── Lobby.svelte            ← Join flow + icebreaker + playlist import card
+│   │   ├── TVPairingOverlay.svelte ← Host: YouTube TV code entry (Sprint 1/3)
+│   │   ├── PlaylistImportCard.svelte ← URL paste + import status (Sprint 3)
+│   │   ├── QuickPickScreen.svelte  ← 5 song cards, group vote (Sprint 3)
+│   │   ├── SpinWheelScreen.svelte  ← 8-song wheel, spin animation (Sprint 3)
 │   │   ├── Song.svelte             ← Song state (reactions + soundboard + lightstick toggle + hype)
 │   │   ├── PartyCardDeal.svelte    ← Card deal/accept/dismiss/redraw flow
 │   │   ├── Ceremony.svelte         ← Award reveal choreography
@@ -646,7 +666,7 @@ karamania/
 │   ├── App.svelte                  ← data-dj-state binding + route switching
 │   └── main.js                     ← Entry point
 ├── public/
-│   └── sounds/                     ← 8 core audio assets (<500KB total, +card-flip, +hype-signal)
+│   └── sounds/                     ← 10 core audio assets (<500KB total, +card-flip, +hype-signal, +song-pick-chime, +wheel-spin)
 ├── index.html                      ← Design tokens inlined in <head>
 ├── tailwind.config.js
 ├── vite.config.js
@@ -1470,52 +1490,338 @@ We explored a **full DJ state walkthrough** — 9 sequential screens showing eve
 | 11 | Capture Bubble (overlay) | any active state | Lean-in | 2 |
 | 12 | Finale Recap | `finale` | Active | 1 |
 
-### Song Awareness: Genre-Tag System
+### Song Integration & Discovery System
 
-The app doesn't need song titles for the core loop to work. Ceremonies, voting, reveals, and challenges all operate on WHO is singing, not WHAT they're singing. The room already knows the song — they can hear it.
+The brainstorming session (2026-03-05) resolved the "how to know what song is playing" challenge. The YouTube Lounge API — the same pairing mechanism users already use to control their YouTube TV from their phone — enables passive song detection AND queue control from Karamania. Combined with playlist import and an intersection-based suggestion engine, the app eliminates the core "what should we sing?" decision fatigue that plagues every karaoke night.
 
-**One-tap genre tag from the singer:**
-When the interlude picks "who sings next?" and the winner is chosen, they tap one genre before walking to the mic:
+**Two-Mode Architecture:**
+1. **Passive Lounge API (always-on core):** Pairs with YouTube TV via the TV code, passively detects every song via `nowPlaying` events, pushes selected songs to queue via `addVideo`. The app knows what's playing without anyone typing anything.
+2. **Playlist Import (cold-start assist):** Friends paste YouTube Music or Spotify playlist URLs when they join. The app reads all songs, cross-references against the Karaoke Catalog, and builds a shared song pool in real-time.
 
-🎤 Pop · 🎸 Rock · 🎵 Ballad · 💃 Dance · 🎧 K-pop
+**What Song Data Unlocks (beyond genre tags):**
+- **Song-aware ceremonies:** "Best Rendition of Bohemian Rhapsody" instead of generic "Best Vocalist"
+- **Song-level setlist poster:** Full track-by-track finale with song titles, artists, performers
+- **Genre momentum in suggestions:** After 3 ballads → suggestions shift to upbeat tracks
+- **Cross-session learning (v2):** Snowball Effect — each session makes suggestions smarter for the group
 
-**What genre tags unlock:**
-- **Contextual ceremonies:** After ballad → "Most Emotional Performance." After rock → "Wildest Stage Presence"
-- **Genre-aware challenges:** After 3 ballads in a row → "Enough crying! Challenge: pick a dance song"
-- **Night profile:** Accumulates genre distribution ("Tonight: 3 Ballad, 2 Rock, 1 Dance")
-- **Finale stats:** Genre mix visualization instead of song-level setlist
+#### TV Pairing Flow (FR74-FR79)
 
-**Song-level intelligence (parked for future brainstorm):**
-Music service integration (YouTube Data API v3 or similar) for personalized playlist sharing is a compelling post-MVP feature. Spotify's February 2026 API restrictions (5-user dev mode limit, 250k MAU for production) make it non-viable. YouTube Data API is more accessible (no user limits, 10k quota/day, free accounts work). Parked for a dedicated brainstorm session to solve the core UX challenge: how to know what song is playing without users inputting it twice.
+**The Aha Moment: TV code = room code.** The Jackbox Games pattern — host enters the code already on the TV screen, and the app connects instantly.
+
+**Beat-by-beat:**
+1. Host creates party → sees "Pair with YouTube TV" prompt with input field
+2. Host looks at YouTube TV → enters the 12-digit pairing code displayed on screen
+3. App pairs via Lounge API within 2-3 seconds → "Connected to TV!" confirmation
+4. From this point: every song played on YouTube TV is automatically detected by the app
+5. Songs selected via Quick Pick / Spin the Wheel are auto-queued on the TV
+
+**Screen layout — TV Pairing (host only, during party creation):**
+```
+┌─────────────────────┐
+│  TopBar: SETUP       │
+│                      │
+│   📺 Connect to TV   │
+│                      │
+│   Enter the code     │
+│   shown on your      │
+│   YouTube TV:        │
+│                      │
+│  ┌────────────────┐  │
+│  │  _ _ _ _ _ _ _ │  │  ← Number input (12 digits)
+│  └────────────────┘  │
+│                      │
+│  ┌────────────────┐  │
+│  │   CONNECT      │  │
+│  └────────────────┘  │
+│                      │
+│  [Skip — no TV]      │  ← Enters suggestion-only mode (FR92)
+│                      │
+└─────────────────────┘
+```
+
+**Pairing states:**
+- `pairing` → input visible, host entering code
+- `connecting` → spinner, "Connecting to TV..." (2-3s)
+- `paired` → "Connected! Songs will auto-queue on your TV" with checkmark
+- `failed` → "Couldn't connect. Check the code and try again" with retry
+- `skipped` → Suggestion-only mode, host can pair later (FR95)
+
+**Connection resilience (FR79):** If the Lounge API connection drops mid-session, the system attempts automatic reconnection for up to 60 seconds. If reconnection fails, a single non-blocking notification appears to the host: "TV connection lost. Songs won't auto-queue until reconnected." The party continues normally — DJ engine, ceremonies, interludes all work without TV connection. Host can re-enter code from host controls at any time.
+
+#### Playlist Import Flow (FR80-FR84)
+
+**When it happens:** After joining the party, every participant sees a prompt: "Share your playlist so we can find songs you all know!" This appears as a card in the lobby, persistent but dismissable.
+
+**Beat-by-beat:**
+1. Participant opens their music app (YouTube Music or Spotify)
+2. Copies a playlist share URL
+3. Pastes into the Karamania input field
+4. App auto-detects the platform from the URL domain (FR80)
+5. App reads the playlist via the appropriate API (1-5 seconds)
+6. "Found 47 songs!" confirmation with song count
+7. Songs are cross-referenced against Karaoke Catalog in real-time
+
+**Screen layout — Playlist Import (all participants, lobby + persistent):**
+```
+┌─────────────────────┐
+│  TopBar: PARTY LOBBY │
+│                      │
+│  🎵 Share Your Music │
+│                      │
+│  Paste a playlist    │
+│  link from YouTube   │
+│  Music or Spotify:   │
+│                      │
+│  ┌────────────────┐  │
+│  │ Paste URL here │  │  ← Text input (only playlist URL input in app)
+│  └────────────────┘  │
+│                      │
+│  ┌────────────────┐  │
+│  │   IMPORT       │  │
+│  └────────────────┘  │
+│                      │
+│  ✅ Minh: 47 songs   │  ← Already imported
+│  ✅ Duc: 83 songs    │  ← Already imported
+│  ⏳ Trang: importing │  ← In progress
+│                      │
+│  [Skip for now]      │
+└─────────────────────┘
+```
+
+**Spotify Private Playlist Guidance (FR83):**
+When a Spotify playlist is private and can't be read, the app shows a 3-step visual guide:
+1. "Open your Spotify app"
+2. "Tap ••• on your playlist → Make Public"
+3. "Come back and paste the link again"
+
+Clean, visual, no jargon. The guide is inline — no modal, no navigation away. Takes 10 seconds.
+
+**Import states per participant:**
+- `none` → No playlist imported, prompt visible
+- `importing` → Spinner with "Reading your playlist..."
+- `imported` → "Found {n} songs!" with checkmark
+- `error_private` → Spotify private playlist guidance (FR83)
+- `error_invalid` → "That doesn't look like a playlist URL. Try again?"
+- `skipped` → Dismissed, can import later from participant menu
+
+**Song normalization (FR84):** Songs are matched across platforms by title + artist name. Duplicates merge with overlap count tracking — "4/5 friends know this song" is the signal that powers suggestion ranking.
+
+#### Suggestion Engine UX (FR85-FR87)
+
+**The algorithm visualized:**
+```
+Friends' playlists     Songs sung tonight     Karaoke Catalog
+  (YouTube Music,    ∪  (detected via        ∩  (10K+ tracks from
+   Spotify)              Lounge API)             karaoke YouTube channels)
+        │                      │                        │
+        └──────────┬───────────┘                        │
+                   │                                    │
+         Songs the group knows  ──── intersection ─── Songs with karaoke versions
+                                                            │
+                                                    Suggestion Pool
+                                                            │
+                                              Ranked by:
+                                              1. Group overlap count (more friends = higher)
+                                              2. Genre momentum (avoid repetition)
+                                              3. Not-yet-sung (unplayed songs prioritized)
+```
+
+**Cold start fallback (FR91):** When no playlists have been imported and no songs have been sung, the engine falls back to "Karaoke Classics" — a pre-curated subset of the top 200 universally known karaoke songs. The app works out of the box before anyone imports anything.
+
+#### Quick Pick Mode (FR88) — Default Song Selection
+
+**Concept:** 5 AI-suggested songs displayed as cards. Everyone votes. Majority wins. Fast, democratic, data-driven.
+
+**Beat-by-beat:**
+1. DJ engine enters `song_selection` state → all phones show Quick Pick
+2. 5 song cards appear: title, artist, thumbnail, group overlap badge ("4/5 know this")
+3. Each participant taps 👍 or ➡️ (skip) on each card
+4. Real-time vote counts visible on cards as they fill
+5. First song to reach majority approval → auto-selected
+6. If no majority within 15 seconds → highest-voted song wins
+7. Selected song auto-queues on YouTube TV via Lounge API (FR78)
+8. Transition to Party Card Deal for the next singer
+
+**Screen layout — Quick Pick:**
+```
+┌─────────────────────┐
+│  TopBar: PICK A SONG │
+│                      │
+│  ┌────────────────┐  │
+│  │ 🎵 Bohemian    │  │
+│  │    Rhapsody    │  │
+│  │    Queen       │  │
+│  │  [5/5 know]    │  │  ← Overlap badge
+│  │  👍 3  ➡️ 1    │  │  ← Real-time votes
+│  └────────────────┘  │
+│                      │
+│  ┌────────────────┐  │
+│  │ 🎵 Cơn Mưa    │  │
+│  │    Ngang Qua   │  │
+│  │    Sơn Tùng    │  │
+│  │  [4/5 know]    │  │
+│  │  👍 2  ➡️ 0    │  │
+│  └────────────────┘  │
+│                      │
+│  ... (3 more cards)  │
+│                      │
+│  ⏱️ 12s             │  ← 15s auto-advance countdown
+│                      │
+│  [🎡 Spin Instead]  │  ← Mode switch (FR90)
+└─────────────────────┘
+```
+
+**Quick Pick design rules:**
+- Cards are vertically scrollable (5 cards won't fit on small screens)
+- Vote counts update in real-time via WebSocket broadcast
+- Overlap badge uses accent color for high overlap (4-5), secondary for low (1-2)
+- 15-second hard deadline is server-authoritative (consistent with ceremony timing pattern)
+- Song thumbnails are YouTube video thumbnails (free via YouTube Data API)
+- Tapping 👍 or ➡️ is a single-tap social action (Tier 2 tap)
+
+#### Spin the Wheel Mode (FR89) — Party Energy Selection
+
+**Concept:** 8 songs on an animated wheel. Someone spins. Dramatic reveal. One veto allowed.
+
+**Beat-by-beat:**
+1. Mode toggled via switch from Quick Pick
+2. 8 AI-suggested songs loaded onto wheel segments (title + artist visible on segments)
+3. Any participant taps SPIN → wheel animates with deceleration easing
+4. Wheel lands on a song → dramatic pause → song title enlarges with reveal sound
+5. Group gets one veto per round: "Not that one!" button appears for 5 seconds
+6. If vetoed → wheel re-spins automatically with the vetoed song removed
+7. If accepted (5s pass without veto) → song auto-queues on TV
+8. Transition to Party Card Deal
+
+**Screen layout — Spin the Wheel:**
+```
+┌─────────────────────┐
+│  TopBar: SPIN IT!    │
+│                      │
+│       ┌─────┐       │
+│     ╱    ▼    ╲     │  ← Pointer at top
+│    │  Song 1   │    │
+│   │   Song 8    │   │
+│   │             │   │  ← Animated wheel
+│   │   Song 2    │   │     with 8 segments
+│    │  Song 7   │    │
+│     ╲         ╱     │
+│       └─────┘       │
+│                      │
+│  ┌────────────────┐  │
+│  │     SPIN!      │  │  ← Big button, anyone can tap
+│  └────────────────┘  │
+│                      │
+│  [🗳️ Quick Pick]    │  ← Mode switch (FR90)
+└─────────────────────┘
+```
+
+**Post-spin reveal:**
+```
+┌─────────────────────┐
+│  TopBar: THE PICK!   │
+│                      │
+│                      │
+│   🎵 Cơn Mưa        │
+│      Ngang Qua       │  ← Song title scales in (elasticOut)
+│      Sơn Tùng       │
+│                      │
+│   [4/5 know this]    │
+│                      │
+│  ┌────────────────┐  │
+│  │  NOT THAT ONE! │  │  ← Veto button (5s window)
+│  └────────────────┘  │
+│       ⏱️ 5s          │
+│                      │
+└─────────────────────┘
+```
+
+**Spin the Wheel design rules:**
+- Wheel animation uses CSS `transform: rotate()` with custom deceleration easing (not linear)
+- Wheel segments show truncated song titles (max ~15 chars visible per segment)
+- SPIN button is 64×64px (Consequential tier — it selects a song for the group)
+- Veto button is a 5-second window, single-use per round (any participant can veto)
+- Reveal uses the same silence-before-reveal pattern as ceremonies (1s pause → reveal sound)
+- Reduced motion: wheel appears landed instantly, no spin animation
+
+#### Mode Toggle (FR90)
+
+Quick Pick is the default mode. A small toggle at the bottom of either mode allows switching:
+- From Quick Pick: "[🎡 Spin Instead]" text link
+- From Spin the Wheel: "[🗳️ Quick Pick]" text link
+- Toggle is per-session preference — remembered for the session, not persisted
+- Mode switch is instant — no loading, no state reset
+- The mode switch is a Private tier tap (no haptic, no broadcast)
+
+#### Suggestion-Only Fallback (FR92-FR95)
+
+**When the venue doesn't use YouTube for karaoke:** Host skips TV pairing at party creation → app enters suggestion-only mode. Everything works normally EXCEPT:
+- Songs are NOT auto-queued on the TV
+- Passive song detection is disabled (no `nowPlaying` events)
+- When a song is selected via Quick Pick / Spin the Wheel, the app displays the song title and artist prominently so the group can manually enter it into whatever karaoke system the venue uses
+
+**Manual "now playing" marking (FR94):** In suggestion-only mode, after the group selects a song, the host can tap "Now Playing" to feed the song data into the game engine — enabling genre-based mechanics and song-aware ceremonies even without Lounge API detection.
+
+**Screen layout — Suggestion-Only Song Selected:**
+```
+┌─────────────────────┐
+│  TopBar: NEXT SONG   │
+│                      │
+│                      │
+│   🎵 Bohemian        │
+│      Rhapsody        │  ← Large, prominent display
+│      Queen           │
+│                      │
+│   Enter this song    │
+│   on your karaoke    │
+│   machine!           │
+│                      │
+│  ┌────────────────┐  │
+│  │  NOW PLAYING   │  │  ← Host only (FR94)
+│  └────────────────┘  │
+│                      │
+└─────────────────────┘
+```
+
+**TV pairing is optional at any time (FR95):** Host can start without pairing and connect later from host controls. The system transitions from suggestion-only mode to full TV-paired mode seamlessly.
 
 ### Chosen Direction
 
-**Full DJ state walkthrough with genre-aware intelligence** — a single visual direction showing every screen in sequence, with the vibe-adaptive color system applied throughout and genre tags powering contextual ceremonies and challenges.
+**Full DJ state walkthrough with song intelligence** — a single visual direction showing every screen in sequence, with the vibe-adaptive color system applied throughout, the Song Integration Engine powering suggestions and auto-queuing, and genre/song data driving contextual ceremonies and challenges.
 
 Key design decisions locked in:
 - **Vote for singer, not song**: Vietnamese cultural respect (giữ thể diện — face-saving). Voting for a person is encouragement; voting against a song is personal
-- **Genre tag = one tap per song**: Singer tags genre before walking to mic
-- **No song titles for MVP**: Genre + singer name is sufficient for contextual intelligence
-- **Finale = stats recap**: Performances by singer + genre, not a track-by-track setlist
+- **Song data flows passively**: Lounge API detects what's playing — no user input required for song-level intelligence
+- **Quick Pick is the default**: Fast, democratic, data-driven. Spin the Wheel is the party-energy alternative
+- **Auto-queue eliminates friction**: Selected songs go directly to the TV — nobody types into the karaoke machine
+- **Playlist import is cold-start onboarding**: Lounge API passive detection is the core. Playlists seed the suggestion engine with "songs the group knows"
+- **Suggestion-only mode as graceful fallback**: App works at any venue, with or without YouTube TV
 
 ### Screen-by-Screen Design Decisions
 
 | Screen | Host View Difference | Key Interaction |
 |--------|---------------------|----------------|
-| Lobby | "Start Party" button | Name entry → JOIN (AudioContext unlock) |
+| Lobby + TV Pairing | "Start Party" button + TV pairing input | Name entry → JOIN (AudioContext unlock). Host: enter TV code |
+| Playlist Import | Same | Paste playlist URL → auto-import |
 | Icebreaker | Same | Tap answer → synchronized reveal |
+| Quick Pick | Same | Tap 👍 or ➡️ on song cards, 15s auto-advance |
+| Spin the Wheel | Same | Tap SPIN, watch animation, optional veto |
+| Party Card Deal | Same | Singer: accept/dismiss/redraw. Others: "challenge incoming" |
 | Song State | "Song Over!" long-press (500ms fill) | Soundboard taps (6 sounds), emoji reactions (5 emoji) |
 | Voting | Same | Single tap on one nominee, 4s hard window, circular countdown |
 | Silence | Same | None — 1.5-2s tension moment, all audio cuts, near-black |
 | Reveal | Same | Post-reveal reaction taps, vote bar chart visible |
 | Quick Ceremony | Same | None — DJ auto-selects from participation data, ~6s |
-| Interlude | Same | Vote for next singer → winner taps genre tag |
+| Interlude | Same | Mini-game (Kings Cup, Dare Pull, Quick Vote) |
+| Suggestion-Only Display | "Now Playing" button | Song title displayed for manual karaoke machine entry |
 | Finale | Same | Share button → native share sheet (screenshot-prompt MVP) |
 
-**Host vs. Participant divergence (3 differences only):**
+**Host vs. Participant divergence (5 differences):**
 1. Host sees "Song Over!" button during song state (500ms long-press with fill animation)
 2. Host sees "Start Party" in lobby
-3. Everything else identical — same ceremony, same reveal, same timing
+3. Host sees TV pairing input during party creation (FR74)
+4. Host sees "Now Playing" button in suggestion-only mode (FR94)
+5. Everything else identical — same ceremony, same reveal, same Quick Pick, same timing
 
 ### Ceremony Component Architecture
 
@@ -1536,17 +1842,20 @@ Phase transitions driven by WebSocket events (`ceremony_silence`, `ceremony_reve
 
 ### Design Rationale
 
-1. **Genre tags give 80% of the intelligence with 1% of the friction**: One tap per song makes ceremonies contextual, challenges genre-aware, and the finale meaningful — without any music service integration
-2. **Face-saving interlude**: "Vote for next singer" respects Vietnamese KTV culture — extends ceremony momentum and avoids the personal sting of someone's beloved song losing a vote
-3. **The app doesn't duplicate the karaoke machine**: The room knows what song is playing. The app adds the social layer — voting, ceremonies, challenges — that the karaoke machine can't provide
-4. **Song-level data is enrichment, not core**: The ceremony magic works on people and genres. Song titles are nice-to-have for the setlist, not essential for the core loop
+1. **Passive song detection eliminates double-entry**: The Lounge API knows what's playing — no user input required for song-level intelligence. Genre tags remain as a lightweight fallback in suggestion-only mode
+2. **Face-saving song selection**: Quick Pick and Spin the Wheel let the GROUP decide what to sing — no individual puts themselves on the line by suggesting a song that gets rejected. The algorithm suggests, the group approves
+3. **The app doesn't replace the karaoke machine — it enhances the pipeline**: From "what should we sing?" through "who's singing?" to "how did they do?" — Karamania owns the before and after, the TV owns the during
+4. **Playlist import is cold-start onboarding, not core**: The Lounge API passive detection is the always-on core. Playlists seed the suggestion engine with "songs the group knows" — valuable but not required
 5. **Full state walkthrough over generic mockups**: Seeing every screen in sequence reveals flow problems that isolated mockups hide — transition energy curves, information density shifts, attention mode switches
 
 ### Implementation Approach
 
-**Sprint 1 — Core loop with genre tags:**
-- Lobby → Icebreaker → Song (genre tag) → Ceremony → Interlude → Finale
+**Sprint 1 — Core loop skeleton:**
+- Lobby → Icebreaker → Song → Ceremony → Interlude → Finale
 - Hardcoded party creation (no Create Party screen)
+- YouTube TV pairing via Lounge API (host enters TV code)
+- `nowPlaying` event listener + video_id → metadata pipeline
+- Suggestion-only mode fallback (app works without TV)
 - Single-column nominees (scroll OK for 10+)
 - One confetti emoji set (no vibe-specific)
 - No spatial audio volume split (all devices same volume)
@@ -1554,16 +1863,27 @@ Phase transitions driven by WebSocket events (`ceremony_silence`, `ceremony_reve
 - Screenshot-prompting for share (no Canvas rendering)
 
 **Sprint 2 additions:**
+- Party Cards, Lightstick Mode, Hype Signal, Media Capture
 - Two-column nominee grid for 10+ participants
 - Vibe-specific confetti sets
 - Spatial audio (host 100%, participants 60%)
 - Share card Canvas rendering
-- Genre-based challenge library expansion
 
-**Post-MVP (future brainstorm):**
-- Music service integration for personalized playlist sharing (YouTube Data API v3 preferred)
-- Audio fingerprinting for auto-song-detection
-- Song-level setlist in finale
+**Sprint 3 — Song Discovery + Polish:**
+- Playlist URL import (YouTube Music + Spotify public)
+- Spotify "Make Public" guidance UI
+- Intersection-Based Suggestion Engine (overlap ∩ karaoke catalog)
+- Quick Pick mode (5 suggestions, group vote, 15s auto-advance)
+- Spin the Wheel mode (8 picks, animated wheel, veto)
+- Lounge API queue push (selected songs auto-queue on TV)
+- Genre momentum ranking
+- Karaoke Classics fallback (cold start, no playlists)
+
+**Post-MVP:**
+- Snowball Effect (cross-session learning)
+- Genre-based game triggers (song genre drives which challenges appear)
+- Audio fingerprinting as "magic" secondary detection method
+- Apple Music playlist import
 
 ## User Journey Flows
 
@@ -1588,10 +1908,10 @@ flowchart TD
     H --> I[Linh answers icebreaker too]
     I --> J["Synchronized reveal → room reacts"]
 
-    J --> K["First Song Prompt: Who is singing first?"]
-    K --> L{Someone volunteers or spin wheel}
-    L --> M["Winner phone: genre picker modal"]
-    M --> N["Everyone else: Duc is picking a song..."]
+    J --> K["Quick Pick: 5 suggested songs appear on all phones"]
+    K --> L{Group votes on songs}
+    L --> M["Winner song auto-queues on YouTube TV"]
+    M --> N["Party Card Deal → singer walks to mic"]
     N --> O["Song State — lean-in mode"]
 
     O --> P["Linh sees floating SONG OVER! button"]
@@ -1602,7 +1922,7 @@ flowchart TD
     S --> T["ceremony_silence event fires"]
 
     T --> U[Ceremony plays on all phones]
-    U --> V["Interlude: Who sings next?"]
+    U --> V["Interlude → Song Selection (Quick Pick / Spin)"]
     V --> W{More songs tonight?}
     W -->|Yes| M
     W -->|"Host taps End Party"| X[Finale ceremony triggers]
@@ -1615,37 +1935,41 @@ flowchart TD
 | Moment | What Linh Does | What Everyone Else Sees |
 |--------|---------------|----------------------|
 | Party creation | Sprint 1: opens URL (auto-host). Sprint 2: CREATE PARTY screen | N/A — they haven't joined |
+| TV pairing | Enters YouTube TV code → app connects via Lounge API | N/A — host-only during setup |
 | QR display | Holds phone up, says "scan this" | Scan → lobby |
 | Start party | Taps START PARTY (appears at 3+ joined) | Waiting... → icebreaker fires |
+| Song selection | Same Quick Pick / Spin the Wheel as everyone | Same — group votes together |
 | During song | Watches karaoke TV + friends. Phone at side. | Same lean-in mode |
 | Song ends | **Long-press SONG OVER!** (500ms fill + haptic) | They don't have this button |
 | Host override | Tap skip on a dare that's too spicy (1 tap) | Activity skips, next one loads |
 | End of night | Taps END PARTY in host controls | Finale ceremony triggers |
 
-**The "Song Over!" button is the ONLY recurring host duty.** Everything else is automated. Linh's cognitive load = "watch the song, press when it ends."
+**The "Song Over!" button is the ONLY recurring host duty.** TV pairing is one-time setup. Song selection is group-driven. Everything else is automated. Linh's cognitive load = "watch the song, press when it ends."
 
 **Error Recovery:**
 - Accidental Song Over: 500ms long-press prevents misfires. If it happens, ceremony still runs — worst case, a short ceremony for a short song
 - Host phone dies: Any participant can be promoted to host (server keeps party state)
 - Solo host (1 person): Lobby shows "Works best with 3+ friends!" — all features work, just less social
 
-### Journey 2: Core Party Loop — Join → Song → Ceremony → Interlude
+### Journey 2: Core Party Loop — Join → Song Selection → Song → Ceremony → Interlude
 
 The repeating engine. Every participant experiences this 5-15 times per night.
 
 ```mermaid
 flowchart TD
-    A[Scan QR / enter code] --> B[Lobby: enter name]
+    A[Scan QR / enter code] --> B[Lobby: enter name + paste playlist URL]
     B --> C["Tap JOIN PARTY → AudioContext unlocks"]
     C --> D[Wait for host to start]
     D --> E[Icebreaker: tap answer]
     E --> F[Synchronized reveal]
 
-    F --> G["First Song Prompt → singer picked"]
-    G --> H{"Winner phone only:"}
-    H --> I["Genre picker modal 🎤🎸🎵💃🎧"]
-    H --> J["Everyone else: Duc is picking a song..."]
-    I --> PC["PARTY CARD DEAL — singer's phone shows card"]
+    F --> SS["SONG SELECTION — Quick Pick or Spin the Wheel"]
+    SS --> SSQ{Selection mode?}
+    SSQ -->|Quick Pick| QP["5 songs, group votes, majority wins"]
+    SSQ -->|Spin the Wheel| SW["8 songs on wheel, tap SPIN"]
+    QP --> SQ["Song auto-queues on YouTube TV"]
+    SW --> SQ
+    SQ --> PC["PARTY CARD DEAL — singer's phone shows card"]
 
     PC --> PCA{Singer's choice}
     PCA -->|Accept| K["Song State with active challenge"]
@@ -1654,7 +1978,6 @@ flowchart TD
     PCR --> PCA2{Accept or dismiss?}
     PCA2 -->|Accept| K
     PCA2 -->|Dismiss| K2
-    J --> K
 
     K --> L["SONG STATE (lean-in / lightstick / hype modes)"]
     K2 --> L
@@ -1685,44 +2008,49 @@ flowchart TD
 
     Z --> ZG{Interlude type?}
     ZG -->|Game| ZGM["Kings Cup / Dare Pull / Quick Vote"]
-    ZG -->|Vote| AA["Who sings next? — vote for a friend"]
-    ZGM --> AA
-    AA --> I
+    ZG -->|Song Selection| SS
+    ZGM --> SS
 ```
 
-**Updated Screen Inventory (new states from PRD alignment):**
+**Updated Screen Inventory (includes Song Integration & Discovery):**
 
-| # | Screen | DJ State | Who Sees It |
-|---|--------|----------|------------|
-| 1 | Lobby + Join | `lobby` | Everyone |
-| 2 | Icebreaker | `icebreaker` | Everyone |
-| 3a | Genre Picker | `genre_pick` | **Winner only** |
-| 3b | Waiting for Singer | `waiting` | **Everyone else** |
-| 4 | Party Card Deal | `party_card_deal` | **Singer sees card** / Everyone sees "challenge incoming" |
-| 5 | Song State (Lean-in / Lightstick / Hype modes) | `song` | Everyone |
-| 6 | Voting | `ceremony.voting` | Everyone |
-| 7 | Silence | `ceremony.silence` | Everyone |
-| 8 | Reveal | `ceremony.reveal` | Everyone |
-| 9 | Quick Ceremony | `ceremony.quick_reveal` | Everyone |
-| 10 | Interlude Game (Kings Cup / Dare Pull / Quick Vote) | `interlude.game` | Everyone |
-| 11 | Interlude Vote (Next Singer) | `interlude.vote` | Everyone |
-| 12 | Capture Bubble | overlay on any state | Everyone (dismissable) |
-| 13 | Finale | `finale` | Everyone |
+| # | Screen | DJ State | Who Sees It | Sprint |
+|---|--------|----------|------------|--------|
+| 1 | Lobby + Join | `lobby` | Everyone | 1 |
+| 2 | TV Pairing (overlay) | `lobby.pairing` | **Host only** | 1 |
+| 3 | Playlist Import (card in lobby) | `lobby` | Everyone | 3 |
+| 4 | Icebreaker | `icebreaker` | Everyone | 1 |
+| 5 | Quick Pick | `song_selection.quick_pick` | Everyone | 3 |
+| 6 | Spin the Wheel | `song_selection.spin` | Everyone | 3 |
+| 7 | Suggestion-Only Display | `song_selection.display` | Everyone (host has "Now Playing") | 3 |
+| 8 | Party Card Deal | `party_card_deal` | **Singer sees card** / Everyone sees "challenge incoming" | 2 |
+| 9 | Song State (Lean-in / Lightstick / Hype modes) | `song` | Everyone | 1 (base), 2 (modes) |
+| 10 | Voting | `ceremony.voting` | Everyone | 1 |
+| 11 | Silence | `ceremony.silence` | Everyone | 1 |
+| 12 | Reveal | `ceremony.reveal` | Everyone | 1 |
+| 13 | Quick Ceremony | `ceremony.quick_reveal` | Everyone | 1 |
+| 14 | Interlude Game (Kings Cup / Dare Pull / Quick Vote) | `interlude.game` | Everyone | 4 |
+| 15 | Capture Bubble | overlay on any state | Everyone (dismissable) | 2 |
+| 16 | Finale | `finale` | Everyone | 4 |
 
-Implementation note: `genre_pick` and `waiting` are the only divergent states — server sends `pick_genre` to winner's socket only via `socket.to(winnerId).emit()`, `waiting_for_singer` to everyone else.
+**Pre-Sprint 3 song selection:** Before Song Integration is built, the DJ engine uses the genre-tag fallback — singer taps a genre before walking to the mic. Sprint 3 replaces this with the full Quick Pick / Spin the Wheel flow.
+
+**Song selection states are the new divergent entry point:** In TV-paired mode, `nowPlaying` events from the Lounge API feed song metadata to the game engine automatically. In suggestion-only mode, the host manually marks "Now Playing" (FR94).
 
 **Per-Loop Timing Budget:**
 
 | Phase | Duration | Attention Mode |
 |-------|----------|---------------|
+| Song Selection (Quick Pick / Spin) | 15-25s | Active — group deciding |
+| Party Card Deal | 3-8s | Active — singer decides |
 | Song | 3-5 min (real karaoke song) | Lean-in / Passive |
 | Transition fanfare | ~1s | Snap to Active |
 | Voting | 4s (hard) | Active |
 | Silence | 1.5-2s | Active (tension) |
 | Reveal + celebration | 5-8s | Active (peak) |
 | Quick ceremony (if queued) | ~6s | Active |
-| Interlude (singer vote + genre tag) | 15-20s | Active → settling |
-| **Total ceremony overhead** | **~30-40s per song** | |
+| Interlude (mini-game) | 15-20s | Active → settling |
+| **Total between-song overhead** | **~50-70s per song** | |
 
 **Post-Reveal Share Overlay (winner's phone only):**
 After the reveal, the winner sees a share card overlay on top of the celebration screen — one tap to share, auto-dismiss after 10s if ignored. Sprint 1: screenshot-prompt fallback. Sprint 2: Canvas-rendered 9:16 card.
@@ -1832,10 +2160,12 @@ flowchart TD
 
 | Reconnect During | Expected Behavior |
 |-----------------|-------------------|
+| Song selection (Quick Pick) | See current suggestions + vote counts. Can vote — timer shows remaining time |
+| Song selection (Spin) | If spinning → see result when lands. If veto window → can veto |
 | Song state | Phone renders song state, reactions work immediately |
 | Voting (still open) | Can vote — timer shows remaining time |
 | Voting (past window) | See current ceremony phase (silence/reveal) |
-| Interlude | Can vote for next singer immediately |
+| Interlude | Can participate in current game immediately |
 | Finale | See finale screen with full stats |
 
 Socket.io handles reconnection natively — `reconnection: true, reconnectionDelay: 1000, reconnectionDelayMax: 5000`. Server sends `state_snapshot` on reconnect with current DJ state, ceremony phase, participants, and user stats. Client renders whatever screen that state maps to.
@@ -1847,6 +2177,73 @@ Socket.io handles reconnection natively — `reconnection: true, reconnectionDel
 **Performance Rating Ceremony:** A different ceremony variant — star/score vote ("Rate Duc's performance: 1-5") instead of nominee selection. Generates score-based moment card ("4.7/5 — Vocal Assassin"). Sprint 2 ceremony type.
 
 **Auto-Share Overlay:** After a reveal where Duc wins, his phone shows floating share card overlay — one tap to share, auto-dismiss after 10s. Sprint 1: screenshot-prompt. Sprint 2: Canvas-rendered 9:16 card.
+
+### Journey 6: Song Discovery — "How They Stopped Arguing About What to Sing" (Sprint 3)
+
+The flow that eliminates "what should we sing?" — the single most common friction point at every karaoke night.
+
+```mermaid
+flowchart TD
+    A["Host creates party + enters YouTube TV code"] --> B["TV pairs via Lounge API"]
+    B --> C["Friends join room on their phones"]
+    C --> D["Prompt: Share your playlist!"]
+    D --> E["Each friend pastes YouTube Music / Spotify URL"]
+    E --> F{Platform detected?}
+    F -->|YouTube Music| G["API reads playlist (1-5s)"]
+    F -->|Spotify public| H["Client Credentials reads tracks"]
+    F -->|Spotify private| I["Make Public 3-step guide"]
+    I --> H
+    G --> J["Found N songs!"]
+    H --> J
+    J --> K["App cross-references against Karaoke Catalog"]
+    K --> L["Found 34 songs your group knows that you can sing tonight!"]
+
+    L --> M["Party starts → icebreaker → first song selection"]
+    M --> QP{Selection mode?}
+    QP -->|Quick Pick| N["5 cards appear on all phones"]
+    N --> O["Everyone taps 👍 or ➡️"]
+    O --> P{Majority in 15s?}
+    P -->|Yes| Q["Winner auto-queues on YouTube TV"]
+    P -->|No majority| R["Highest-voted wins"]
+    R --> Q
+    QP -->|Spin the Wheel| S["8 songs on animated wheel"]
+    S --> T["Someone taps SPIN"]
+    T --> U["Wheel lands → dramatic reveal"]
+    U --> V{Veto?}
+    V -->|"Not that one!" (5s)| W["Re-spin without vetoed song"]
+    W --> U
+    V -->|Accepted (5s pass)| Q
+
+    Q --> X["Party Card Deal → Song State"]
+    X --> Y["Lounge API detects song via nowPlaying"]
+    Y --> Z["Game engine receives {song, artist, genre}"]
+    Z --> AA["Song-aware ceremonies + genre momentum in next suggestions"]
+    AA --> QP
+```
+
+**Song Discovery Design Rules:**
+
+| Rule | Rationale |
+|------|-----------|
+| Playlist import happens IN the lobby, not before | User corrected this during brainstorming — people paste links when they arrive, not when they RSVP |
+| Quick Pick is default, Spin the Wheel is opt-in | Quick Pick is faster (15s). Spin is party-energy alternative |
+| 15s hard deadline on Quick Pick | Consistent with ceremony timing pattern — urgency prevents decision paralysis |
+| Auto-queue on TV = zero manual entry | The highest-impact UX improvement — nobody types into the karaoke machine |
+| Genre momentum in suggestions | After 3 ballads → suggestions shift to upbeat. Prevents repetitive nights |
+| Karaoke Classics fallback exists from minute zero | App works before anyone imports anything |
+| Suggestion-only mode is seamless | Non-YouTube venues get the same suggestion UX, just no auto-queue |
+| Song data feeds game engine passively | Lounge API `nowPlaying` → metadata → genre-aware challenges, song-aware ceremonies |
+
+**Timing Budget — Song Selection Phase:**
+
+| Phase | Duration | Attention Mode |
+|-------|----------|---------------|
+| Quick Pick voting | 15s (hard) | Active — everyone voting |
+| Spin the Wheel animation | 3-5s | Active — watching |
+| Spin veto window | 5s | Active — deciding |
+| Song queued confirmation | 2s | Transitional |
+| → Party Card Deal | 3-8s | Active |
+| **Total song selection overhead** | **~20-30s** | |
 
 ### Journey Patterns
 
@@ -1865,8 +2262,11 @@ The DJ engine has a 45-minute clock-based curriculum: icebreaker → reactions �
 **5. Graceful Degradation Pattern**
 Missing data never blocks the flow. No genre tag? DJ uses default categories. No votes? DJ picks. Phone disconnected? Skip their vote. Late joiner? Drop into current state. Every "missing" scenario has a silent fallback.
 
-**6. Divergent State Pattern**
-Two moments where phones show different screens: (a) genre picker on winner's phone vs. "waiting for singer" on everyone else, (b) share overlay on winner's phone vs. celebration on everyone else. Implemented via targeted Socket.io emits.
+**6. Group Decision Pattern (Song Selection)**
+Quick Pick and Spin the Wheel are group decisions — everyone participates, the collective output drives what happens next. This is the song-selection analog to ceremony voting: private input (individual votes) → collective output (song auto-queued). The pattern kills "what should we sing?" negotiation.
+
+**7. Divergent State Pattern**
+Two moments where phones show different screens: (a) party card deal shows card to singer vs. "challenge incoming" to everyone else, (b) share overlay on winner's phone vs. celebration on everyone else. In suggestion-only mode, host sees "Now Playing" button that others don't. Implemented via targeted Socket.io emits.
 
 ### Flow Optimization Principles
 
@@ -1908,6 +2308,7 @@ $: document.body.setAttribute('data-dj-state', $djState);
 ```
 
 ```css
+body[data-dj-state="song_selection"] { background: #0f0a1e; }
 body[data-dj-state="party_card_deal"] { background: #1a0a1a; }
 body[data-dj-state="ceremony"] { background: var(--dj-ceremony-bg); }
 body[data-dj-state="song"] { background: var(--dj-bg); }
@@ -1915,7 +2316,7 @@ body[data-dj-state="interlude"] { background: var(--dj-bg); }
 body[data-dj-state="finale"] { background: var(--dj-ceremony-bg); }
 ```
 
-### Custom Components (26 Components + 1 Action)
+### Custom Components (34 Components + 1 Action)
 
 #### File Structure (flat, no nesting)
 
@@ -1930,7 +2331,13 @@ src/
 │   ├── GlowEffect.svelte
 │   ├── LoadingSkeleton.svelte
 │   ├── LobbyScreen.svelte
+│   ├── TVPairingOverlay.svelte          ← NEW: TV code input for host
+│   ├── PlaylistImportCard.svelte        ← NEW: URL paste + import status
+│   ├── SpotifyGuide.svelte              ← NEW: "Make Public" 3-step guide
 │   ├── IcebreakerScreen.svelte
+│   ├── QuickPickScreen.svelte           ← NEW: 5 song cards + group voting
+│   ├── SpinWheelScreen.svelte           ← NEW: animated wheel + spin
+│   ├── SuggestionOnlyDisplay.svelte     ← NEW: song title for manual entry
 │   ├── SongScreen.svelte
 │   ├── LightstickMode.svelte
 │   ├── HypeSignalButton.svelte
@@ -1946,14 +2353,16 @@ src/
 │   ├── InterludeKingsCup.svelte
 │   ├── InterludeDarePull.svelte
 │   ├── InterludeQuickVote.svelte
-│   ├── GenrePickerScreen.svelte
+│   ├── GenrePickerScreen.svelte         ← Retained as fallback before Sprint 3
 │   ├── WaitingScreen.svelte
+│   ├── SongModeToggle.svelte            ← NEW: Quick Pick ↔ Spin the Wheel toggle
+│   ├── SongCard.svelte                  ← NEW: reusable song card (title, artist, overlap badge)
 │   └── FinaleScreen.svelte
 ├── lib/
 │   ├── actions/
 │   │   └── tap.js
 │   ├── stores/
-│   │   ├── party.js
+│   │   ├── party.js                     ← Updated with song integration stores
 │   │   ├── capture.js
 │   │   └── a11y.js
 │   ├── audio/
@@ -2063,11 +2472,27 @@ The action handles everything — `onTap` replaces `on:click`. Haptic fires BEFO
 
 **InterludeQuickVote.svelte** — Binary opinion poll. Props: `data`. Question text + two large buttons. 6s hard voting window with countdown. Results reveal as bar chart with vote split. 5s reveal display then auto-advance.
 
-**InterludeVoteScreen.svelte** — Vote for next singer. Reads: `$interludeData`. Singer cards with genre history, genre mix tag, CountdownTimer.
+#### Song Integration Components (Sprint 3)
 
-**GenrePickerScreen.svelte** — Winner-only. 5 genre buttons: 🎤 Pop · 🎸 Rock · 🎵 Ballad · 💃 Dance · 🎧 K-pop. Fires event on tap, no store reads.
+**TVPairingOverlay.svelte** — Host-only overlay during party creation. Reads: `$tvPairing`. Number input for 12-digit TV code. States: `pairing`, `connecting`, `paired`, `failed`, `skipped`. "Skip" option enters suggestion-only mode (FR92). Connection status indicator. Can be re-opened from host controls at any time (FR95). `role="dialog"`, `aria-label="Pair with YouTube TV"`.
 
-**WaitingScreen.svelte** — Everyone else during genre pick. Reads: `$waitingSinger`. "[Name] is picking a song..." Sprint 2: evolves into pre-song hype card.
+**PlaylistImportCard.svelte** — Inline card in lobby. Reads: `$playlists`. Text input for playlist URL paste (the only URL input in the app — distinct from the name entry input in Lobby). Auto-detects platform from URL domain (FR80). Shows import status per participant (checkmark + song count). "Skip for now" dismisses the card. Reduced motion: no status animations.
+
+**SpotifyGuide.svelte** — Inline 3-step guide for private Spotify playlists (FR83). Props: `onRetry`. Three numbered visual steps. No modal, no navigation away. Retry button re-attempts import. Appears only when Spotify private playlist is detected.
+
+**QuickPickScreen.svelte** — Default song selection mode. Reads: `$songSelection`, `$suggestions`. Displays 5 song cards (SongCard components) in a vertically scrollable list. Each card shows 👍/➡️ buttons with real-time vote counts. CountdownTimer (15s). Mode toggle link to Spin the Wheel at bottom. Server closes voting at 15s — majority wins, or highest-voted on timeout (FR88). `role="group"`, `aria-label="Pick a song"`.
+
+**SpinWheelScreen.svelte** — Party-energy song selection mode. Reads: `$songSelection`, `$suggestions`. 8 song segments on animated wheel. SPIN button (64×64px, Consequential tier — single-tap, selects for group). Post-spin: reveal with silence-before-reveal pattern (1s pause → song title scales in). 5s veto window ("Not that one!" button). If vetoed → auto re-spin with vetoed song removed (FR89). Wheel animation: CSS `transform: rotate()` with custom deceleration easing. Reduced motion: wheel appears landed instantly, no spin animation. `aria-label="Spin the wheel to pick a song"`.
+
+**SuggestionOnlyDisplay.svelte** — Shown in suggestion-only mode when a song is selected. Reads: `$songSelection`, `$isHost`. Large song title + artist display. "Enter this song on your karaoke machine!" instruction text. Host sees "Now Playing" button (FR94) to feed song data to game engine. Clean, prominent, designed for reading across a room.
+
+**SongCard.svelte** — Reusable song card primitive. Props: `song`, `artist`, `thumbnail`, `overlapCount`, `totalParticipants`, `votes`, `onVote`. Displays: YouTube thumbnail (lazy-loaded), song title (truncated at ~30 chars), artist, overlap badge ("4/5 know this" in accent color for high overlap, secondary for low). Vote buttons (👍/➡️) with real-time count. Social tier tap for voting. `data-testid="song-card-{index}"`.
+
+**SongModeToggle.svelte** — Simple text link toggle. Props: `currentMode`, `onToggle`. From Quick Pick: "[🎡 Spin Instead]". From Spin: "[🗳️ Quick Pick]". Private tier tap (no haptic). Mode is per-session, not persisted.
+
+**GenrePickerScreen.svelte** — Retained as pre-Sprint-3 fallback. Winner-only. 5 genre buttons: 🎤 Pop · 🎸 Rock · 🎵 Ballad · 💃 Dance · 🎧 K-pop. Fires event on tap, no store reads. After Sprint 3, genre data comes from Lounge API metadata instead.
+
+**WaitingScreen.svelte** — Everyone else during song selection (pre-Sprint 3 only). Reads: `$waitingSinger`. "[Name] is picking a song..." Sprint 2: evolves into pre-song hype card. Post-Sprint 3: replaced by QuickPickScreen/SpinWheelScreen where everyone participates.
 
 **FinaleScreen.svelte** — End-of-night recap. Reads: `$finaleData`. ConfettiLayer, party name, performance list, stats row, share button.
 
@@ -2103,19 +2528,30 @@ export const reducedMotion = readable(false, (set) => {
 | PartyCardDeal | Card appears instantly, no flip/slide animation |
 | CaptureBubble | Static circle, no pulse. Expand/collapse instant |
 | InterludeDarePull | Name appears instantly, no slot-machine animation |
+| SpinWheelScreen | Wheel appears landed, no spin animation. Reveal instant |
+| QuickPickScreen | Cards appear instantly, no slide-in. Vote counts update without animation |
+| PlaylistImportCard | Status updates instant, no progress animations |
 
 ### Bundle Analysis
 
 | Layer | Estimated Size |
 |-------|---------------|
-| 26 Svelte components (compiled) | ~35-50KB |
+| 34 Svelte components (compiled) | ~45-60KB |
 | Tailwind CSS (purged) | ~8-12KB |
 | Socket.io client | ~15KB |
 | Web Audio setup | ~5KB |
-| `tap` action + stores (party + capture + a11y) | ~3KB |
-| **Total** | **~66-85KB** |
+| `tap` action + stores (party + capture + a11y) | ~4KB |
+| **Total** | **~77-96KB** |
 
-Close to but within 80KB core budget. Sprint 2 additions (PartyCardDeal, LightstickMode, CaptureBubble, Interlude games) can be deferred-loaded after first ceremony if needed to stay under budget. CaptureOverlay is always deferred (lazy on first bubble tap).
+Slightly over 80KB core budget with all components eager-loaded. **Three-tier loading strategy:**
+
+| Tier | Contents | Budget | Loads |
+|---|---|---|---|
+| **Core (Sprint 1)** | Svelte runtime, stores/party.js, lobby + song + ceremony UI, CSS reset + tokens, Web Audio engine | <80KB gzipped | On page load |
+| **Deferred-Sprint 2** | PartyCardDeal, LightstickMode, CaptureBubble, CaptureOverlay, Interlude games | <15KB gzipped | Lazy after first ceremony |
+| **Deferred-Sprint 3** | QuickPickScreen, SpinWheelScreen, PlaylistImportCard, TVPairingOverlay, SongCard, SpotifyGuide, SuggestionOnlyDisplay | <12KB gzipped | Lazy on first `song_selection` state |
+
+Sprint 3 song integration components are deferred-loaded on first `song_selection` DJ state. Before Sprint 3, the genre picker fallback (already in core bundle) handles song transitions. CaptureOverlay is always deferred (lazy on first bubble tap).
 
 ### Component Implementation Roadmap
 
@@ -2134,7 +2570,7 @@ Close to but within 80KB core budget. Sprint 2 additions (PartyCardDeal, Lightst
 | 9 | Ceremony + 4 phases | Defining experience |
 | 10 | ConfettiLayer + GlowEffect | Reveal polish |
 | 11 | InterludeScreen (vote only) | Singer voting |
-| 12 | GenrePickerScreen + WaitingScreen | Song tagging |
+| 12 | GenrePickerScreen + WaitingScreen | Pre-Sprint 3 song tagging fallback |
 | 13 | FinaleScreen | End of night |
 
 **Sprint 2 additions (Party Cards + Song Modes + Media Capture):**
@@ -2146,7 +2582,17 @@ Close to but within 80KB core budget. Sprint 2 additions (PartyCardDeal, Lightst
 - HypeCard.svelte (pre-song "DUC IS UP NEXT")
 - PerformanceRating.svelte (star/score ceremony variant)
 
-**Sprint 3 additions (Interlude Games + Polish):**
+**Sprint 3 additions (Song Discovery + Interlude Games):**
+- TVPairingOverlay.svelte (host enters TV code, Lounge API pairing)
+- PlaylistImportCard.svelte (URL paste, auto-detect platform, import status)
+- SpotifyGuide.svelte ("Make Public" 3-step guide)
+- QuickPickScreen.svelte (5 songs, group voting, 15s auto-advance)
+- SpinWheelScreen.svelte (8 songs, animated wheel, veto)
+- SuggestionOnlyDisplay.svelte (manual entry fallback)
+- SongCard.svelte (reusable song card primitive)
+- SongModeToggle.svelte (Quick Pick ↔ Spin the Wheel)
+
+**Sprint 4 additions (Interlude Games + Polish):**
 - InterludeKingsCup.svelte
 - InterludeDarePull.svelte
 - InterludeQuickVote.svelte
@@ -2192,9 +2638,9 @@ export const TAP_TIERS = {
 **Canonical State Machine:**
 
 ```
-lobby → icebreaker → party_card_deal → song → ceremony → interlude → party_card_deal → song (loop) → finale
-                                                ↳ genre_pick (winner only) / waiting (everyone else)
-                          ↳ singer: accept/dismiss/redraw → song
+lobby → icebreaker → song_selection → party_card_deal → song → ceremony → interlude → song_selection → party_card_deal → song (loop) → finale
+                        ↳ quick_pick / spin_the_wheel
+                                          ↳ singer: accept/dismiss/redraw → song
 ```
 
 Valid transitions are server-authoritative. Client never self-transitions — every state change arrives via WebSocket emit. If the client receives an unexpected state, it accepts it (server wins).
@@ -2205,6 +2651,7 @@ State transitions play an audio cue before visual change. Race condition protect
 
 | Transition | Audio Cue | Visual | Duration |
 |---|---|---|---|
+| → song_selection | Upbeat prompt chime | Cards slide in / wheel assembles | 400ms |
 | → party_card_deal | Card-flip sound effect | Card slides in from bottom, playful bounce | 400ms |
 | → ceremony | Rising chime | Bg fade to `--dj-ceremony-bg` | 300ms |
 | → silence | All audio cuts to 0 | Screen fades to near-black | 200ms |
@@ -2244,6 +2691,8 @@ Three timing categories with clear authority rules:
 |---|---|---|
 | Ceremony vote | 4s | Abstention counted, advance to silence |
 | Icebreaker choice | 6s | Random assigned, advance to reveal |
+| Quick Pick vote | 15s | Highest-voted song wins, advance to queue |
+| Spin the Wheel veto | 5s | Song accepted, advance to queue |
 
 Client countdown is **advisory** — if the server sends `next_state` at 3.8s or 4.2s, the client obeys regardless of its own timer. The visual countdown creates urgency; the server enforces truth.
 
@@ -2253,6 +2702,8 @@ Client countdown is **advisory** — if the server sends `next_state` at 3.8s or
 
 | Screen | Duration | Override |
 |---|---|---|
+| Quick Pick voting | 15s | Auto-selects highest-voted on expiry |
+| Spin the Wheel veto | 5s | Auto-accepts on expiry |
 | Interlude | 15-20s | Host can skip, server auto-advances |
 | Ceremony reveal | 8-10s | Auto-advances to next ceremony or interlude |
 | Quick reveal | 4s | No override, auto-advances |
@@ -2283,10 +2734,18 @@ No error toasts. No "something went wrong." No retry buttons. The app either han
 | Late state arrival | Server push delayed 2s | Show LoadingSkeleton, not blank screen | Delay mock socket emit, assert skeleton visible |
 | Stale state | Reconnect to wrong ceremony phase | Accept server state, discard local | Emit conflicting state sequence, assert final state matches server |
 | Haptic unavailable | Device doesn't support vibration | Skip silently, no fallback UI | Stub `navigator.vibrate` as undefined |
+| TV pairing fails | Wrong code or Lounge API unavailable | "Couldn't connect" + retry option. Falls back to suggestion-only mode | Mock Lounge API to return error, assert fallback mode |
+| Lounge API drops mid-session | Unofficial API breaks or network issue | Non-blocking toast to host, switch to suggestion-only mode (NFR31) | Disconnect mock Lounge socket, assert party continues |
+| Playlist import fails | Invalid URL, private Spotify, API timeout | Platform-specific guidance (SpotifyGuide for private) or "Try again?" | Mock API errors per platform, assert guidance shown |
+| No playlists imported | Cold start, nobody imports | Karaoke Classics fallback suggestions (FR91) | Assert fallback pool when `$playlists` is empty |
+| YouTube Data API quota exceeded | >10K units/day | Suggestions based on previously cached data only. No new metadata lookups | Mock 403 response, assert cached data used |
 
 **Empty States:**
 - 0 reactions during song → No "be the first to react!" prompt. Just empty. Fine.
 - 0 votes in ceremony → DJ picks randomly, labeled "DJ's choice"
+- 0 votes in Quick Pick (15s timeout) → Highest-voted wins. If 0 total votes → DJ picks randomly from suggestions
+- 0 playlists imported → Karaoke Classics fallback. App works out of the box
+- TV not paired → Suggestion-only mode. Full song selection UX, just no auto-queue
 - 1 participant → App works. Ceremonies skip (need 2+ nominees). Song state + finale still function.
 
 **AC:** Given any error in the taxonomy, WHEN the error occurs, THEN no error message, toast, or modal is shown to the user, AND the app continues functioning with graceful degradation.
@@ -2316,6 +2775,7 @@ No error toasts. No "something went wrong." No retry buttons. The app either han
 |---|---|---|
 | App boot (Sprint 0 prep) | Lobby ambient only (~15KB) | Eager load on connect |
 | First ceremony entry | Ceremony set: chime, silence, reveal burst, confetti (~40KB) | Lazy load on first `ceremony` state |
+| Song selection entry | Song pick chime, wheel spin/decelerate, song-queued confirmation (~15KB) | Lazy load on first `song_selection` state |
 | Interlude entry | Interlude loop (~10KB) | Lazy load on first `interlude` state |
 | Finale | Finale swell + extended confetti (~20KB) | Lazy load on `finale` state |
 
@@ -2509,6 +2969,8 @@ Yes — social gatherings are for everyone. Karamania must not *break* for scree
 |---|---|---|
 | Lobby | "Karamania party. 6 of 8 joined. You are participant." | `aria-live="polite"` on participant count |
 | Icebreaker | "Choose one: Option A, Option B. 6 seconds remaining." | `role="radiogroup"`, `aria-live="assertive"` on timer |
+| Quick Pick | "Pick a song. 5 options. Bohemian Rhapsody by Queen, 5 of 5 know this. 12 seconds." | `role="group"`, `aria-live="polite"` on vote counts |
+| Spin the Wheel | "Spin the wheel. 8 songs loaded. Tap spin." → "Selected: Bohemian Rhapsody. Veto in 5 seconds." | `aria-live="assertive"` on result |
 | Song State | "Linh is singing. Ballad. Tap for reactions." | `aria-live="polite"`, soundboard buttons labeled |
 | Ceremony Vote | "Vote: Best Hype. 4 seconds. Duc. Minh. Trang." | `role="radiogroup"`, `aria-live="assertive"` on timer |
 | Ceremony Silence | "Revealing winner..." | `aria-live="polite"`, skip visual drama |

@@ -793,6 +793,318 @@
     color: var(--dj-text-secondary);
   }
 
+  /* ============ SCREEN: TV PAIRING (HOST) ============ */
+  .tv-pairing-screen .ps { background: #0a0a18; }
+  .tv-pairing-screen .pairing-content {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .tv-pairing-screen .pairing-icon { font-size: 2.5rem; margin-bottom: 12px; }
+  .tv-pairing-screen .pairing-title {
+    font-size: 1rem; font-weight: 700; color: var(--dj-text-primary);
+    margin-bottom: 4px;
+  }
+  .tv-pairing-screen .pairing-subtitle {
+    font-size: 0.7rem; color: var(--dj-text-secondary);
+    text-align: center; margin-bottom: 20px; line-height: 1.5;
+  }
+  .tv-pairing-screen .host-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 8px;
+    font-size: 0.55rem; text-transform: uppercase; letter-spacing: 1px;
+    background: rgba(239,68,68,0.15); color: var(--dj-action-danger);
+    margin-bottom: 12px;
+  }
+  .tv-pairing-screen .pairing-code-input {
+    display: flex; gap: 4px; margin-bottom: 16px; align-items: center;
+  }
+  .tv-pairing-screen .code-digit {
+    width: 28px; height: 38px; border-radius: 8px;
+    background: var(--dj-surface); border: 2px solid #333;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 700; color: var(--dj-text-primary);
+  }
+  .tv-pairing-screen .code-digit.filled { border-color: var(--dj-action-primary); }
+  .tv-pairing-screen .code-sep {
+    font-size: 0.8rem; color: var(--dj-text-secondary); padding: 0 2px;
+  }
+  .tv-pairing-screen .pair-btn {
+    width: 80%; padding: 14px; border-radius: 12px; border: none;
+    background: var(--dj-action-primary); color: #fff;
+    font-family: 'Space Grotesk', sans-serif; font-size: 0.85rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+    cursor: pointer; margin-bottom: 12px;
+  }
+  .tv-pairing-screen .pair-status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.7rem; color: var(--dj-action-confirm);
+  }
+  .tv-pairing-screen .pair-skip {
+    margin-top: 16px; font-size: 0.65rem; color: var(--dj-text-secondary);
+    cursor: pointer; text-decoration: underline;
+  }
+  .tv-pairing-screen .pairing-steps {
+    width: 85%; margin-top: 16px;
+  }
+  .tv-pairing-screen .pair-step {
+    display: flex; gap: 8px; align-items: flex-start;
+    padding: 4px 0; font-size: 0.6rem; color: var(--dj-text-secondary);
+  }
+  .tv-pairing-screen .pair-step-num {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--dj-surface-elevated);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.5rem; color: var(--dj-text-primary);
+    flex-shrink: 0;
+  }
+
+  /* ============ SCREEN: PLAYLIST IMPORT ============ */
+  .playlist-import-screen .ps { background: #0a0a14; }
+  .playlist-import-screen .import-content {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; padding: 20px;
+  }
+  .playlist-import-screen .import-title {
+    font-size: 0.9rem; font-weight: 700; color: var(--dj-text-primary);
+    margin-bottom: 4px;
+  }
+  .playlist-import-screen .import-subtitle {
+    font-size: 0.7rem; color: var(--dj-text-secondary);
+    text-align: center; margin-bottom: 16px;
+  }
+  .playlist-import-screen .service-pills {
+    display: flex; gap: 8px; margin-bottom: 14px;
+  }
+  .playlist-import-screen .service-pill {
+    padding: 6px 14px; border-radius: 20px; font-size: 0.7rem;
+    background: var(--dj-surface); border: 1px solid #333;
+    color: var(--dj-text-secondary); cursor: pointer;
+  }
+  .playlist-import-screen .service-pill.active {
+    border-color: var(--dj-action-primary); color: var(--dj-action-primary);
+  }
+  .playlist-import-screen .url-input-area { width: 100%; margin-bottom: 12px; }
+  .playlist-import-screen .url-input {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    background: var(--dj-surface); border: 2px solid #333;
+    color: var(--dj-text-primary); font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.75rem; outline: none;
+  }
+  .playlist-import-screen .url-input::placeholder { color: var(--dj-text-secondary); }
+  .playlist-import-screen .import-btn {
+    width: 100%; padding: 12px; border-radius: 10px; border: none;
+    background: var(--dj-action-primary); color: #fff;
+    font-family: 'Space Grotesk', sans-serif; font-size: 0.8rem;
+    font-weight: 700; text-transform: uppercase; cursor: pointer;
+    margin-top: 8px;
+  }
+  .playlist-import-screen .imported-list { width: 100%; margin-top: 12px; }
+  .playlist-import-screen .imported-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; margin-bottom: 6px; border-radius: 8px;
+    background: var(--dj-surface); font-size: 0.75rem;
+  }
+  .playlist-import-screen .imported-icon { font-size: 1rem; }
+  .playlist-import-screen .imported-info { flex: 1; min-width: 0; }
+  .playlist-import-screen .imported-name {
+    color: var(--dj-text-primary); font-weight: 600; font-size: 0.75rem;
+  }
+  .playlist-import-screen .imported-count {
+    font-size: 0.6rem; color: var(--dj-text-secondary);
+  }
+  .playlist-import-screen .imported-check { color: var(--dj-action-confirm); font-size: 0.8rem; }
+  .playlist-import-screen .import-note {
+    margin-top: 12px; font-size: 0.6rem; color: var(--dj-text-secondary);
+    text-align: center; line-height: 1.5;
+  }
+
+  /* ============ SCREEN: QUICK PICK ============ */
+  .quick-pick-screen .ps { background: #0f0a1e; }
+  .quick-pick-screen .qp-header { padding: 10px 16px; text-align: center; }
+  .quick-pick-screen .qp-mode {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--dj-accent); margin-bottom: 2px;
+  }
+  .quick-pick-screen .qp-title {
+    font-size: 0.95rem; font-weight: 700; color: var(--dj-text-primary);
+  }
+  .quick-pick-screen .qp-subtitle {
+    font-size: 0.6rem; color: var(--dj-text-secondary); margin-top: 2px;
+  }
+  .quick-pick-screen .qp-timer-bar {
+    height: 3px; margin: 0 16px; border-radius: 2px;
+    background: rgba(255,255,255,0.08); overflow: hidden;
+  }
+  .quick-pick-screen .qp-timer-fill {
+    height: 100%; width: 60%; border-radius: 2px;
+    background: linear-gradient(90deg, var(--dj-accent), var(--dj-ceremony-glow));
+  }
+  .quick-pick-screen .qp-songs { padding: 8px 12px; flex: 1; overflow-y: auto; }
+  .quick-pick-screen .qp-song {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; margin-bottom: 6px; border-radius: 12px;
+    background: var(--dj-surface); border: 2px solid transparent;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .quick-pick-screen .qp-song:hover { border-color: var(--dj-action-primary); }
+  .quick-pick-screen .qp-song.voted {
+    border-color: var(--dj-accent); background: rgba(255,215,0,0.06);
+  }
+  .quick-pick-screen .qp-song-info { flex: 1; min-width: 0; }
+  .quick-pick-screen .qp-song-name { font-size: 0.8rem; font-weight: 600; }
+  .quick-pick-screen .qp-song-artist {
+    font-size: 0.6rem; color: var(--dj-text-secondary); margin-top: 1px;
+  }
+  .quick-pick-screen .qp-overlap {
+    padding: 2px 8px; border-radius: 10px; font-size: 0.5rem;
+    background: rgba(74,222,128,0.12); color: var(--dj-action-confirm);
+    white-space: nowrap;
+  }
+  .quick-pick-screen .qp-votes {
+    font-size: 0.75rem; font-weight: 700; color: var(--dj-accent);
+    min-width: 20px; text-align: center;
+  }
+  .quick-pick-screen .qp-footer {
+    padding: 8px 16px; text-align: center;
+    font-size: 0.6rem; color: var(--dj-text-secondary);
+  }
+  .quick-pick-screen .qp-mode-toggle {
+    display: flex; gap: 6px; justify-content: center; padding: 6px 16px;
+  }
+  .quick-pick-screen .qp-toggle-btn {
+    padding: 5px 12px; border-radius: 16px; font-size: 0.6rem;
+    border: 1px solid #333; background: var(--dj-surface);
+    color: var(--dj-text-secondary); cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .quick-pick-screen .qp-toggle-btn.active {
+    border-color: var(--dj-accent); color: var(--dj-accent);
+    background: rgba(255,215,0,0.08);
+  }
+
+  /* ============ SCREEN: SPIN THE WHEEL ============ */
+  .spin-wheel-screen .ps { background: #0f0a1e; }
+  .spin-wheel-screen .sw-header { padding: 10px 16px; text-align: center; }
+  .spin-wheel-screen .sw-mode {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--dj-accent); margin-bottom: 2px;
+  }
+  .spin-wheel-screen .sw-title {
+    font-size: 0.95rem; font-weight: 700; color: var(--dj-text-primary);
+  }
+  .spin-wheel-screen .wheel-area {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 8px 20px;
+  }
+  .spin-wheel-screen .wheel-container {
+    width: 200px; height: 200px; position: relative; margin-bottom: 14px;
+  }
+  .spin-wheel-screen .wheel {
+    width: 100%; height: 100%; border-radius: 50%;
+    background: conic-gradient(
+      #ff6b6b 0deg 45deg, #ffd93d 45deg 90deg,
+      #6bcb77 90deg 135deg, #4d96ff 135deg 180deg,
+      #9b59b6 180deg 225deg, #ff8c94 225deg 270deg,
+      #45b7d1 270deg 315deg, #f0932b 315deg 360deg
+    );
+    border: 3px solid var(--dj-surface-elevated);
+    position: relative;
+  }
+  .spin-wheel-screen .wheel-pointer {
+    position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 8px solid transparent; border-right: 8px solid transparent;
+    border-top: 14px solid var(--dj-accent);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    z-index: 2;
+  }
+  .spin-wheel-screen .wheel-center {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--dj-surface); border: 3px solid var(--dj-accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; font-weight: 700; color: var(--dj-accent);
+    z-index: 1;
+  }
+  .spin-wheel-screen .wheel-songs {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .spin-wheel-screen .wheel-song-label {
+    position: absolute; font-size: 0.4rem; font-weight: 700;
+    color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+    width: 50px; text-align: center; line-height: 1.2;
+  }
+  .spin-wheel-screen .spin-btn {
+    width: 80%; padding: 14px; border-radius: 12px; border: none;
+    background: var(--dj-accent); color: #000;
+    font-family: 'Space Grotesk', sans-serif; font-size: 0.9rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+    cursor: pointer;
+  }
+  .spin-wheel-screen .sw-footer { padding: 8px 16px; text-align: center; }
+  .spin-wheel-screen .sw-veto {
+    font-size: 0.6rem; color: var(--dj-text-secondary); margin-bottom: 4px;
+  }
+  .spin-wheel-screen .sw-veto strong { color: var(--dj-action-danger); }
+  .spin-wheel-screen .sw-mode-toggle {
+    display: flex; gap: 6px; justify-content: center; padding: 6px 0;
+  }
+  .spin-wheel-screen .sw-toggle-btn {
+    padding: 5px 12px; border-radius: 16px; font-size: 0.6rem;
+    border: 1px solid #333; background: var(--dj-surface);
+    color: var(--dj-text-secondary); cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .spin-wheel-screen .sw-toggle-btn.active {
+    border-color: var(--dj-accent); color: var(--dj-accent);
+    background: rgba(255,215,0,0.08);
+  }
+
+  /* ============ SCREEN: SUGGESTION-ONLY DISPLAY ============ */
+  .suggestion-only-screen .ps { background: #0f0a1e; }
+  .suggestion-only-screen .so-content {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .suggestion-only-screen .so-label {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--dj-text-secondary); margin-bottom: 8px;
+    padding: 3px 12px; border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+  }
+  .suggestion-only-screen .so-icon { font-size: 2.5rem; margin-bottom: 12px; }
+  .suggestion-only-screen .so-song {
+    font-size: 1.3rem; font-weight: 700; color: var(--dj-text-primary);
+    text-align: center; margin-bottom: 4px;
+  }
+  .suggestion-only-screen .so-artist {
+    font-size: 0.85rem; color: var(--dj-text-secondary); margin-bottom: 16px;
+  }
+  .suggestion-only-screen .so-why {
+    padding: 8px 14px; border-radius: 10px;
+    background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.15);
+    font-size: 0.65rem; color: var(--dj-action-confirm); margin-bottom: 20px;
+  }
+  .suggestion-only-screen .so-manual-hint {
+    width: 85%; padding: 12px; border-radius: 10px;
+    background: var(--dj-surface); border: 1px solid #333;
+    text-align: center;
+  }
+  .suggestion-only-screen .so-manual-label {
+    font-size: 0.6rem; color: var(--dj-text-secondary);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
+  }
+  .suggestion-only-screen .so-manual-text {
+    font-size: 0.75rem; color: var(--dj-text-primary); line-height: 1.5;
+  }
+  .suggestion-only-screen .so-skip {
+    margin-top: 16px; padding: 10px 24px; border-radius: 10px;
+    background: var(--dj-surface-elevated); border: none;
+    color: var(--dj-text-secondary); font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.75rem; cursor: pointer;
+  }
+
   @media (max-width: 700px) {
     .screen-section { flex-direction: column-reverse; align-items: center; }
     .screen-info { min-width: unset; text-align: center; }
@@ -804,7 +1116,7 @@
 <body data-vibe="general">
 
 <h1>KARAMANIA</h1>
-<p class="subtitle">Full DJ State Walkthrough — Every screen, in sequence (15 screens)</p>
+<p class="subtitle">Full DJ State Walkthrough — Every screen, in sequence (20 screens)</p>
 
 <!-- VIBE SWITCHER -->
 <div class="vibe-switcher">
@@ -864,6 +1176,138 @@
   </div>
 </div>
 
+<div class="flow-arrow">↓ Host connects YouTube TV (optional) ↓</div>
+
+<!-- SCREEN: TV PAIRING (HOST ONLY) -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(239,68,68,0.15); color:var(--dj-action-danger);">LOBBY → HOST ONLY</div>
+    <h2>TV Pairing — YouTube Lounge API</h2>
+    <p>Host enters the 12-digit pairing code shown on YouTube TV's "Link with TV code" screen. One-time pairing per session — enables passive song detection (nowPlaying events) and auto-queue (addVideo). Skip button for non-YouTube venues.</p>
+    <ul class="detail-list">
+      <li><strong>API:</strong> YouTube Lounge (reverse-engineered, pairing code flow)</li>
+      <li><strong>Host-only:</strong> Only the party creator sees this screen</li>
+      <li><strong>Passive detection:</strong> After pairing, nowPlaying events fire automatically</li>
+      <li><strong>Auto-queue:</strong> Selected songs addVideo to YouTube TV queue</li>
+      <li><strong>Fallback:</strong> Skip → Suggestion-Only mode (no auto-queue)</li>
+    </ul>
+    <div class="timing"><strong>Time budget:</strong> &lt;30 seconds. If skipped, app still works — just no auto-queue.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone tv-pairing-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag">lobby</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">4 joined</span>
+        </div>
+        <div class="divider"></div>
+        <div class="pairing-content">
+          <div class="host-badge">HOST ONLY</div>
+          <div class="pairing-icon">📺</div>
+          <div class="pairing-title">Connect YouTube TV</div>
+          <div class="pairing-subtitle">Open YouTube TV → Settings → Link with TV code</div>
+          <div class="pairing-code-input">
+            <div class="code-digit filled">4</div>
+            <div class="code-digit filled">7</div>
+            <div class="code-digit filled">2</div>
+            <span class="code-sep">-</span>
+            <div class="code-digit filled">8</div>
+            <div class="code-digit filled">1</div>
+            <div class="code-digit">_</div>
+            <span class="code-sep">-</span>
+            <div class="code-digit">_</div>
+            <div class="code-digit">_</div>
+            <div class="code-digit">_</div>
+            <span class="code-sep">-</span>
+            <div class="code-digit">_</div>
+            <div class="code-digit">_</div>
+            <div class="code-digit">_</div>
+          </div>
+          <button class="pair-btn">CONNECT TV</button>
+          <div class="pairing-steps">
+            <div class="pair-step">
+              <div class="pair-step-num">1</div>
+              <span>Open YouTube on your TV</span>
+            </div>
+            <div class="pair-step">
+              <div class="pair-step-num">2</div>
+              <span>Go to Settings → Link with TV code</span>
+            </div>
+            <div class="pair-step">
+              <div class="pair-step-num">3</div>
+              <span>Enter the 12-digit code above</span>
+            </div>
+          </div>
+          <div class="pair-skip">Skip — I'll pick songs manually</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ Everyone imports playlists (optional) ↓</div>
+
+<!-- SCREEN: PLAYLIST IMPORT -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(108,99,255,0.15); color:var(--dj-action-primary);">LOBBY → ALL PARTICIPANTS</div>
+    <h2>Playlist Import — Cold-Start Assist</h2>
+    <p>Any participant pastes a YouTube Music or Spotify playlist URL. App extracts song data to seed the suggestion engine. Multiple imports stack — more data = better suggestions. Works during lobby wait time, turning dead time into productive input.</p>
+    <ul class="detail-list">
+      <li><strong>YouTube Music:</strong> YouTube Data API v3 (API key, no user auth)</li>
+      <li><strong>Spotify:</strong> Client Credentials flow (public playlists only)</li>
+      <li><strong>Purpose:</strong> Seeds intersection-based suggestion engine</li>
+      <li><strong>Optional:</strong> App works without imports (uses Karaoke Classics top 200)</li>
+      <li><strong>Privacy:</strong> "Make Public" guide shown for private Spotify playlists</li>
+    </ul>
+    <div class="timing"><strong>Timing:</strong> Happens during lobby — turns "waiting for host" into useful activity.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone playlist-import-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag">lobby</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">6 joined</span>
+        </div>
+        <div class="divider"></div>
+        <div class="import-content">
+          <div class="import-title">Share Your Music Taste</div>
+          <div class="import-subtitle">Paste a playlist link — helps pick songs everyone loves</div>
+          <div class="service-pills">
+            <div class="service-pill active">▶ YouTube Music</div>
+            <div class="service-pill">● Spotify</div>
+          </div>
+          <div class="url-input-area">
+            <input class="url-input" placeholder="Paste playlist URL here..." value="https://music.youtube.com/playlist?list=PL..." readonly>
+            <button class="import-btn">IMPORT PLAYLIST</button>
+          </div>
+          <div class="imported-list">
+            <div class="imported-item">
+              <span class="imported-icon">▶</span>
+              <div class="imported-info">
+                <div class="imported-name">Linh's KTV Hits</div>
+                <div class="imported-count">47 songs imported</div>
+              </div>
+              <span class="imported-check">✓</span>
+            </div>
+            <div class="imported-item">
+              <span class="imported-icon">●</span>
+              <div class="imported-info">
+                <div class="imported-name">Nam's V-Pop Mix</div>
+                <div class="imported-count">32 songs imported</div>
+              </div>
+              <span class="imported-check">✓</span>
+            </div>
+          </div>
+          <div class="import-note">Optional — skip if you don't have a playlist handy.<br>The more people import, the better the suggestions!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="flow-arrow">↓</div>
 
 <!-- SCREEN 2: ICEBREAKER -->
@@ -905,9 +1349,202 @@
   </div>
 </div>
 
+<!-- ========== PHASE: SONG SELECTION ========== -->
+<div class="section-divider">
+  <div class="phase-name">Phase 2 — Song Selection (what to sing next?)</div>
+</div>
+
+<!-- SCREEN: QUICK PICK -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(255,215,0,0.15); color:var(--dj-accent);">SONG SELECTION → QUICK PICK</div>
+    <h2>Quick Pick — 5 AI-Suggested Songs</h2>
+    <p>Intersection-based suggestion engine surfaces 5 songs the group is most likely to enjoy. Everyone taps to vote. Overlap badges show how many people have this song in their playlists. 15-second hard deadline — majority wins, auto-queues to YouTube TV.</p>
+    <ul class="detail-list">
+      <li><strong>Algorithm:</strong> (songs group listens to ∪ songs sung) ∩ Karaoke Catalog</li>
+      <li><strong>Overlap badge:</strong> "4/6 listen" — social proof drives decisions</li>
+      <li><strong>Voting:</strong> Tap to vote, majority wins at timer end</li>
+      <li><strong>Timer:</strong> 15s hard deadline, auto-advance prevents stalling</li>
+      <li><strong>Auto-queue:</strong> Winner sent to YouTube TV via Lounge API addVideo</li>
+    </ul>
+    <div class="timing"><strong>Design rule:</strong> 15 seconds max. Group picks or DJ picks. Never blocks the party.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone quick-pick-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag" style="color:var(--dj-accent);">🎵 song pick</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="divider"></div>
+        <div class="qp-header">
+          <div class="qp-mode">QUICK PICK</div>
+          <div class="qp-title">What's next?</div>
+          <div class="qp-subtitle">Tap to vote · Majority wins</div>
+        </div>
+        <div class="qp-timer-bar"><div class="qp-timer-fill"></div></div>
+        <div class="qp-songs">
+          <div class="qp-song voted">
+            <div class="qp-song-info">
+              <div class="qp-song-name">Chúng Ta Của Hiện Tại</div>
+              <div class="qp-song-artist">Sơn Tùng M-TP</div>
+            </div>
+            <div class="qp-overlap">5/8 listen</div>
+            <div class="qp-votes">4</div>
+          </div>
+          <div class="qp-song">
+            <div class="qp-song-info">
+              <div class="qp-song-name">See Tình</div>
+              <div class="qp-song-artist">Hoàng Thùy Linh</div>
+            </div>
+            <div class="qp-overlap">4/8 listen</div>
+            <div class="qp-votes">2</div>
+          </div>
+          <div class="qp-song">
+            <div class="qp-song-info">
+              <div class="qp-song-name">Waiting For You</div>
+              <div class="qp-song-artist">MONO</div>
+            </div>
+            <div class="qp-overlap">3/8 listen</div>
+            <div class="qp-votes">1</div>
+          </div>
+          <div class="qp-song">
+            <div class="qp-song-info">
+              <div class="qp-song-name">Có Chắc Yêu Là Đây</div>
+              <div class="qp-song-artist">Sơn Tùng M-TP</div>
+            </div>
+            <div class="qp-overlap">4/8 listen</div>
+            <div class="qp-votes">1</div>
+          </div>
+          <div class="qp-song">
+            <div class="qp-song-info">
+              <div class="qp-song-name">Bước Qua Đời Nhau</div>
+              <div class="qp-song-artist">Lê Bảo Bình</div>
+            </div>
+            <div class="qp-overlap">3/8 listen</div>
+            <div class="qp-votes">0</div>
+          </div>
+        </div>
+        <div class="qp-mode-toggle">
+          <div class="qp-toggle-btn active">🎯 Quick Pick</div>
+          <div class="qp-toggle-btn">🎡 Spin</div>
+        </div>
+        <div class="qp-footer">9s remaining · Auto-queues to YouTube TV</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ Or switch mode... ↓</div>
+
+<!-- SCREEN: SPIN THE WHEEL -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(255,215,0,0.15); color:var(--dj-accent);">SONG SELECTION → SPIN</div>
+    <h2>Spin the Wheel — 8 Songs, 1 Winner</h2>
+    <p>8 AI-suggested songs arranged on an animated wheel. Anyone taps SPIN. Dramatic slowdown reveal. Singer gets one veto (5s window) — if vetoed, wheel auto-re-spins. Creates excitement and removes the social pressure of choosing.</p>
+    <ul class="detail-list">
+      <li><strong>Songs:</strong> 8 suggestions from intersection engine on wheel segments</li>
+      <li><strong>Spin:</strong> Any participant can tap — first tap wins</li>
+      <li><strong>Reveal:</strong> Dramatic deceleration, pointer lands on winner</li>
+      <li><strong>Veto:</strong> Singer has 5s to reject — auto-re-spin once</li>
+      <li><strong>Toggle:</strong> Mode switch between Quick Pick ↔ Spin</li>
+    </ul>
+    <div class="timing"><strong>Party moment:</strong> The spin creates group anticipation. Everyone watches. "NO NOT THAT ONE!" — then laughter.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone spin-wheel-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag" style="color:var(--dj-accent);">🎡 spin</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="divider"></div>
+        <div class="sw-header">
+          <div class="sw-mode">SPIN THE WHEEL</div>
+          <div class="sw-title">Tap to spin!</div>
+        </div>
+        <div class="wheel-area">
+          <div class="wheel-container">
+            <div class="wheel-pointer"></div>
+            <div class="wheel">
+              <div class="wheel-songs">
+                <div class="wheel-song-label" style="top:8%;left:50%;transform:translateX(-50%);">Chúng Ta</div>
+                <div class="wheel-song-label" style="top:18%;right:8%;">See Tình</div>
+                <div class="wheel-song-label" style="top:50%;right:2%;transform:translateY(-50%);">Waiting</div>
+                <div class="wheel-song-label" style="bottom:18%;right:8%;">Có Chắc</div>
+                <div class="wheel-song-label" style="bottom:8%;left:50%;transform:translateX(-50%);">Bước Qua</div>
+                <div class="wheel-song-label" style="bottom:18%;left:8%;">Nơi Này</div>
+                <div class="wheel-song-label" style="top:50%;left:2%;transform:translateY(-50%);">Hãy Trao</div>
+                <div class="wheel-song-label" style="top:18%;left:8%;">Lạc Trôi</div>
+              </div>
+            </div>
+            <div class="wheel-center">SPIN</div>
+          </div>
+          <button class="spin-btn">🎡 SPIN THE WHEEL</button>
+        </div>
+        <div class="sw-footer">
+          <div class="sw-veto">Singer gets <strong>1 veto</strong> (5s window)</div>
+          <div class="sw-mode-toggle">
+            <div class="sw-toggle-btn">🎯 Quick Pick</div>
+            <div class="sw-toggle-btn active">🎡 Spin</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ At non-YouTube venues... ↓</div>
+
+<!-- SCREEN: SUGGESTION-ONLY DISPLAY -->
+<div class="screen-section">
+  <div class="screen-info">
+    <div class="state-badge" style="background:rgba(255,255,255,0.08); color:#888;">SONG SELECTION → FALLBACK</div>
+    <h2>Suggestion-Only — Manual Entry</h2>
+    <p>When YouTube TV isn't paired, app can't auto-queue. Instead, it displays the suggested song with a "type this into the karaoke machine" hint. The song selection experience still works — just without the auto-queue magic. Ensures the app works at any venue.</p>
+    <ul class="detail-list">
+      <li><strong>Trigger:</strong> TV not paired (Lounge API unavailable)</li>
+      <li><strong>Display:</strong> Song title + artist + "why this song" reason</li>
+      <li><strong>Manual hint:</strong> "Search for this on your karaoke machine"</li>
+      <li><strong>Skip:</strong> "Pick something else" button for override</li>
+      <li><strong>Graceful:</strong> Full experience minus auto-queue only</li>
+    </ul>
+    <div class="timing"><strong>Design principle:</strong> App works everywhere. YouTube TV is a bonus, not a requirement.</div>
+  </div>
+  <div class="phone-col">
+    <div class="phone suggestion-only-screen">
+      <div class="ps">
+        <div class="top-bar">
+          <span class="state-tag" style="color:#888;">🎵 suggestion</span>
+          <span class="party-name">Linh's Party</span>
+          <span class="people-count">8</span>
+        </div>
+        <div class="divider"></div>
+        <div class="so-content">
+          <div class="so-label">SUGGESTED SONG</div>
+          <div class="so-icon">🎤</div>
+          <div class="so-song">See Tình</div>
+          <div class="so-artist">Hoàng Thùy Linh</div>
+          <div class="so-why">4/8 people listen to this song</div>
+          <div class="so-manual-hint">
+            <div class="so-manual-label">No TV connected</div>
+            <div class="so-manual-text">Search for this song on<br>your karaoke machine</div>
+          </div>
+          <button class="so-skip">Pick something else</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flow-arrow">↓ Song selected → Challenge card dealt ↓</div>
+
 <!-- ========== PHASE: PARTY CARD DEAL ========== -->
 <div class="section-divider">
-  <div class="phase-name">Phase 2 — Party Card Deal (pre-song moment)</div>
+  <div class="phase-name">Phase 3 — Party Card Deal (pre-song moment)</div>
 </div>
 
 <!-- SCREEN: PARTY CARD DEAL -->
@@ -954,11 +1591,11 @@
   </div>
 </div>
 
-<div class="flow-arrow">↓ Singer accepts or dismisses → Song starts ↓</div>
+<div class="flow-arrow">↓ Singer accepts or dismisses → Song starts (auto-queued from selection) ↓</div>
 
 <!-- ========== PHASE: SONG ========== -->
 <div class="section-divider">
-  <div class="phase-name">Phase 3 — Song (60-70% of session time)</div>
+  <div class="phase-name">Phase 4 — Song (60-70% of session time)</div>
 </div>
 
 <!-- SCREEN 3: SONG STATE -->
@@ -1135,7 +1772,7 @@
 
 <!-- ========== PHASE: CEREMONY ========== -->
 <div class="section-divider">
-  <div class="phase-name">Phase 4 — Ceremony (the defining experience)</div>
+  <div class="phase-name">Phase 5 — Ceremony (the defining experience)</div>
 </div>
 
 <div class="flow-arrow">↓ Host long-presses "Song Over!" ↓</div>
@@ -1336,7 +1973,7 @@
 
 <!-- ========== PHASE: INTERLUDE ========== -->
 <div class="section-divider">
-  <div class="phase-name">Phase 5 — Interlude Games</div>
+  <div class="phase-name">Phase 6 — Interlude Games</div>
 </div>
 
 <!-- INTERLUDE: KINGS CUP -->
@@ -1527,7 +2164,7 @@
 
 <!-- ========== PHASE: FINALE ========== -->
 <div class="section-divider">
-  <div class="phase-name">Phase 6 — Finale (end of night)</div>
+  <div class="phase-name">Phase 7 — Finale (end of night)</div>
 </div>
 
 <!-- SCREEN 9: FINALE -->

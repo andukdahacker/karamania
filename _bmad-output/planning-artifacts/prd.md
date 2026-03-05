@@ -21,14 +21,17 @@ editHistory:
     changes: 'Added Party Cards system (19 curated challenges), Lightstick Mode, Camera Flash Hype Signal, Prompted Media Capture (bubble UX, photo/video/audio with iOS graceful degradation). Promoted interludes/icebreaker/democratic voting from fast-follow to core MVP. Updated Executive Summary, Product Scope, User Journeys, Journey Requirements Summary, DJ Engine FRs, Audience Participation FRs, Success Criteria, Sprint Plan, v3 Vision.'
   - date: '2026-03-05'
     changes: 'Validation fixes: Reconciled FR38-39 with FR67-73 bubble capture system. Added media capture moments to Minh and Duc journeys. Fixed 9 SMART FRs with measurable thresholds (FR23, FR28a, FR29, FR33, FR47, FR49, FR52, FR53). Removed implementation leakage from FR69. Quantified 6 vague NFRs (NFR6, NFR9, NFR12, NFR16, NFR18, NFR23). Fixed subjective adjectives in FR8, FR12, FR18b, FR19, FR20, FR22, FR26.'
+  - date: '2026-03-05'
+    changes: 'Added Song Integration & Discovery system to MVP: YouTube Lounge API TV pairing (passive song detection + queue control), YouTube Music + Spotify playlist import, Karaoke Catalog Index, Intersection-Based Suggestion Engine, Quick Pick + Spin the Wheel song selection UX. Added new FR section (FR74-FR90), new NFRs (NFR29-NFR32), new user journey (Song Discovery), updated Executive Summary, Product Scope, Innovation, Risk Mitigation, and Sprint Plan. Based on brainstorming session 2026-03-05 findings.'
 inputDocuments:
   - '_bmad-output/planning-artifacts/product-brief-karaoke-party-app-2026-03-04.md'
   - '_bmad-output/planning-artifacts/research/market-karaoke-party-companion-research-2026-03-03.md'
   - '_bmad-output/analysis/brainstorming-session-2026-03-03.md'
+  - '_bmad-output/analysis/brainstorming-session-2026-03-05.md'
 documentCounts:
   briefs: 1
   research: 1
-  brainstorming: 1
+  brainstorming: 2
   projectDocs: 0
 classification:
   projectType: web_app
@@ -48,17 +51,17 @@ date: '2026-03-04'
 
 ## Executive Summary
 
-Karamania is a second-screen PWA companion that transforms group karaoke nights from interactive party experiences into full entertainment sessions. Users join via QR code scan — zero downloads, zero accounts — and their phones become participation devices: reactions, soundboards, voting, party card challenges, lightstick mode, and mini-games that keep the entire room engaged before, during, and between songs.
+Karamania is a second-screen PWA companion that transforms group karaoke nights from interactive party experiences into full entertainment sessions. Users join via QR code scan — zero downloads, zero accounts — and their phones become participation devices: reactions, soundboards, voting, party card challenges, lightstick mode, song discovery, and mini-games that keep the entire room engaged before, during, and between songs.
 
-**Core Differentiator:** The only product that runs alongside existing karaoke systems rather than replacing them. Eliminates music licensing, works at any venue, and creates genuine white space in a $7.5B market. Party Cards and audience participation modes (lightstick, hype signals) turn every song into a shared performance event — not just one person singing at a screen.
+**Core Differentiator:** The only product that runs alongside existing karaoke systems rather than replacing them — AND connects directly to the YouTube TV karaoke session via the existing TV pairing code. Eliminates music licensing, works at any venue, and creates genuine white space in a $7.5B market. Party Cards, audience participation modes, and a song discovery engine that eliminates "what should we sing?" decision fatigue turn every karaoke night into a complete entertainment experience.
 
-**Core Innovation:** A server-authoritative DJ engine — a real-time state machine that automatically orchestrates party flow (party card deal → song → ceremony → interlude → repeat), eliminating dead air and freeing the host from MC duties. The Party Cards system adds a layer of unpredictability and challenge that makes each performance unique.
+**Core Innovation:** Two interconnected systems. (1) A server-authoritative DJ engine — a real-time state machine that automatically orchestrates party flow (party card deal → song → ceremony → interlude → repeat), eliminating dead air and freeing the host from MC duties. (2) A Song Integration Engine that pairs with the YouTube TV via the Lounge API, passively detects every song played, imports friends' playlists (YouTube Music + Spotify), and surfaces personalized suggestions through Quick Pick voting and Spin the Wheel — songs the group collectively knows that have karaoke versions available.
 
 **Target Users:** Vietnamese friend groups (ages 20-35) at commercial karaoke venues in HCMC and Hanoi. Four personas: the overwhelmed host (Linh), the non-singer (Minh), the shy joiner (Trang), and the performer seeking audience (Duc).
 
 **Business Model:** Free MVP. Memory-as-marketing flywheel — shareable setlist posters and moment cards ARE the acquisition channel. Premium features identified through usage data post-validation.
 
-**MVP Strategy:** Solo developer, 5.5 weeks. Prove the core loop with one real friend group. Success = "Would use again" >80%.
+**MVP Strategy:** Solo developer. Prove the core loop with one real friend group. Success = "Would use again" >80%.
 
 ## Success Criteria
 
@@ -112,6 +115,14 @@ Karamania is a second-screen PWA companion that transforms group karaoke nights 
 - Challenge completion rate tracked (accepted cards where singer followed through)
 - Group involvement card participation rate (did picked participants engage)
 
+**Song Integration Metrics:**
+- Playlist import success rate >95% for YouTube Music, >85% for Spotify (public playlists)
+- Lounge API song detection rate >90% (songs played that the app correctly identifies)
+- Quick Pick average decision time <15 seconds (from suggestions shown to song selected)
+- Suggestion relevance: >70% of Quick Pick suggestions recognized by 2+ group members (measured by vote participation)
+- Queue push success rate >95% (selected songs that successfully appear on YouTube TV)
+- TV pairing adoption: >60% of sessions use TV pairing (vs. suggestion-only mode)
+
 **Go/No-Go Gates (3 months):** If 5/6 core gates pass → proceed to v2. If 3-4 → iterate MVP. If <3 → reassess assumptions.
 
 ## Product Scope
@@ -133,6 +144,7 @@ Karamania is a second-screen PWA companion that transforms group karaoke nights 
 - **Interlude games:** Kings Cup (group rule card), Dare Pull (random dare assigned to random player), Quick Vote (binary opinion poll). Front-loaded universal interludes in first 30 minutes for maximum group inclusion
 - **Prompted media capture:** Floating capture bubble at key moments (session start, reaction peaks, post-ceremony, session end). Any participant pops the bubble to capture photo/video (5s max)/audio. Inline on Android, graceful degradation on iOS (photo inline, video via native picker). Background upload, tagged for future highlight reel assembly
 - **End-of-night ceremony + setlist poster**
+- **Song Integration & Discovery:** YouTube TV pairing via Lounge API (passive song detection + queue control), YouTube Music + Spotify playlist import (paste share URL), Karaoke Catalog Index (pre-scraped from popular karaoke YouTube channels), Intersection-Based Suggestion Engine (songs group knows ∩ karaoke catalog, ranked by overlap count + genre momentum), Quick Pick (5 AI suggestions, group tap-to-vote) + Spin the Wheel (8 picks, animated random selection) dual-mode song selection UX. Host pairs app with TV code → friends join room and paste playlist URLs → app builds shared song pool → suggestions flow automatically
 - **Fast-follow (1-2 weeks after core):** Group sing-along mode, additional interlude games, moment capture enhancements
 
 ### Growth Features (Post-MVP)
@@ -142,9 +154,10 @@ v2 — "The Smart Party" (target: 6 months post-MVP)
 - Adaptive DJ engine: energy signal reading, decision tree, three-act arc, DJ personality
 - Moment Economy: unified earn/spend currency connecting all participation
 - Hype combo system + power cards (Uno Reverse)
-- Spotify integration: Song Match, Destiny Song reveal
+- Song Intelligence evolution: Snowball Effect (cross-session learning — each session makes suggestions smarter for the group), genre-based game triggers (song genre drives which challenges appear), session history influence on suggestions
 - Smart interlude engine: 10+ games, contextual selection
 - Engagement ladder + fair play balancer
+- Apple Music playlist import support
 
 ### Vision (Future)
 
@@ -155,7 +168,8 @@ v3 — "The Memory Machine" (target: 12 months)
 - Flutter native migration unlocks seamless video/audio capture on iOS (removes V1 graceful degradation constraints)
 - Scrapbook assembly (cover, timeline, media, awards, stats, encore closing)
 - Karaoke Wrapped + Festival Wristband + Chronicle identity system
-- Flutter native migration for advanced capture capabilities
+- Audio fingerprinting party trick (ACRCloud integration — phone mic identifies songs as a "magic" secondary detection method)
+- Crowdsource song intelligence: anonymized data across all Karamania sessions builds a "songs people actually sing at karaoke" database, improving suggestions for all users
 
 v4 — "The Platform" (target: 18-24 months)
 - Hangout Mode: same engine for house parties, road trips, game nights
@@ -250,6 +264,22 @@ Current song ends. Ceremony fires. Thảo votes — full participant immediately
 
 End of night: her name appears on the setlist poster. The app doesn't differentiate early and late joiners. She was there. That's enough.
 
+### Journey 6: The Group — "How They Stopped Arguing About What to Sing"
+
+8:20 PM. Linh's party is starting. She opens Karamania, taps "Start Party." The QR code appears with the TV code: **VIBE**. She enters the same code into the app that's already on the YouTube TV — the app pairs with the karaoke session instantly.
+
+"Share your playlist so we can find songs you all know!" pops on everyone's phone as they join. Minh opens YouTube Music, copies his playlist link, pastes it. Three seconds later: "Found 47 songs!" Duc pastes his Spotify link. The app detects it's private — a quick 3-step guide appears: "Tap ••• → Make Public → paste again." Ten seconds. "Found 83 songs!" Trang pastes her YouTube Music link. Two others follow.
+
+The app cross-references everyone's music against the Karaoke Catalog — songs that actually have karaoke versions on YouTube. Within seconds: "Found 34 songs your group knows that you can sing tonight!"
+
+Quick Pick fires: five cards appear on everyone's phone. "Bohemian Rhapsody — 5 of 5 know this." "Cơn Mưa Ngang Qua — 4 of 5." Everyone taps thumbs up or skip. Bohemian Rhapsody wins in 8 seconds. The app auto-queues it on the TV via the Lounge API. No one typed anything into the karaoke machine.
+
+Three songs later, energy is high. Someone shouts "SPIN IT!" The app switches to Spin the Wheel — eight songs loaded. Minh taps SPIN. The wheel animates, lands on a deep cut from Duc's playlist. Nobody expected it. Duc jumps up. The room cheers.
+
+Between songs, the app already knows what just played (the Lounge API detected it). The game engine pulls the genre: "That was a ballad — time for something upbeat!" Next Quick Pick suggestions shift to high-energy tracks.
+
+By song 10, nobody has opened YouTube to browse. Nobody has argued about what to sing next. The app knows what they like, and the group decides in seconds.
+
 ### Edge Case: The Disconnected User
 
 Minh's phone hits 8% during song 6. Screen dims. It dies. The DJ engine detects his WebSocket disconnect. Name grays out on participant lists. His pending ceremony vote simply isn't counted — no error, no delay.
@@ -296,6 +326,17 @@ Taps "Start Party." QR and code appear. Lobby: "1 player — works best with 3+ 
 | Solo/empty party state (copy + share, no demo) | Solo Host | Core (minimal) |
 | Weighted participation tracking | Minh, Trang | Core (backend) |
 | Awards algorithm (non-singing recognition) | Minh, Trang | Core |
+| YouTube TV pairing via Lounge API (TV code = room code) | Song Discovery, Linh | Core |
+| Passive song detection (nowPlaying events → metadata) | Song Discovery | Core |
+| Queue control (push songs to TV via Lounge API) | Song Discovery | Core |
+| YouTube Music playlist import (URL paste → API read) | Song Discovery, Minh, Duc, Trang | Core |
+| Spotify public playlist import (URL paste → Client Credentials) | Song Discovery, Duc | Core |
+| Spotify "Make Public" guidance for private playlists | Song Discovery | Core |
+| Karaoke Catalog Index (pre-scraped karaoke YouTube channels) | Song Discovery | Core |
+| Intersection-Based Suggestion Engine (group overlap ∩ karaoke catalog) | Song Discovery | Core |
+| Quick Pick (5 suggestions, group tap-to-vote) | Song Discovery | Core |
+| Spin the Wheel (8 picks, animated random selection) | Song Discovery | Core |
+| Genre momentum in suggestions (avoid repetition) | Song Discovery | Core |
 
 ## Innovation & Novel Patterns
 
@@ -313,6 +354,12 @@ The product's shareable output IS the acquisition channel. Every setlist poster 
 **4. Participation-Over-Talent Design** (Product Design Philosophy)
 Non-singers are first-class citizens. Weighted participation, soundboard-as-gameplay, and reaction streaks flip the karaoke paradigm. Validated by whether non-singers match 70%+ of singer engagement and stay through the finale.
 
+**5. YouTube Lounge API Integration** (Core Technical Innovation — discovered via brainstorming)
+The YouTube TV pairing code (which users already enter to control the queue from their YouTube app) can be used by third-party apps via the reverse-engineered YouTube Lounge API. This enables: passive song detection (nowPlaying events return video_id), queue control (addVideo/insertVideo push songs to TV), and session binding — all without the user doing anything beyond entering the code they already know. Multiple open-source libraries exist (Node.js: youtube-remote, yt-cast-receiver; Python: pyytlounge; Go: ytcast). Risk: unofficial API, could break.
+
+**6. Intersection-Based Suggestion Engine** (Product Innovation)
+Song suggestions are not random or popularity-based. The engine computes: (songs the group listens to ∪ songs the group has sung) ∩ songs with karaoke versions on YouTube. Ranked by group overlap count (how many friends know the song), genre momentum (avoid repetition), and session history (unsung songs prioritized). This solves the core "what should we sing?" decision fatigue that plagues every karaoke night. The app doesn't ask "think of a song" — it says "here are songs you all know."
+
 ### Validation Approach
 
 | Innovation | Validation Method | Target | Fallback |
@@ -320,6 +367,8 @@ Non-singers are first-class citizens. Weighted participation, soundboard-as-game
 | DJ Engine (core bet) | Dead air incidents + qualitative flow metric | <2 dead air/session, >70% "felt continuous" | Increase host override prominence — let humans MC |
 | Memory-as-marketing | Share intents per session + share destination tracking | >1 share/session, public shares growing MoM | Invest in setlist poster design before assuming concept is wrong |
 | Participation-over-talent | Non-singer engagement + session completion | 70%+ of singer weighted score, stay through finale | Add interlude variety, lower engagement ladder first rung |
+| Lounge API integration | Song detection accuracy + queue push success | >90% songs detected, >95% queue pushes succeed | Manual song entry fallback, karaoke catalog search |
+| Suggestion engine | Group recognition of suggested songs | >70% of Quick Pick suggestions recognized by 2+ members | Broaden karaoke catalog, fall back to Karaoke Classics |
 
 **Qualitative flow metric:** Post-session — "Did tonight feel like one continuous experience or separate activities?" Binary. Target: >70% continuous.
 
@@ -433,9 +482,9 @@ Buffer size and timeout thresholds defined in architecture doc before coding.
 
 ### MVP Strategy & Philosophy
 
-**MVP Approach:** Experience MVP — prove the core loop (join → react → ceremony → interlude → repeat) creates a compelling party experience with one real friend group. One night, one karaoke room, one group that says "we're doing this again."
+**MVP Approach:** Experience MVP — prove the core loop (join → react → ceremony → interlude → repeat) AND the song discovery loop (paste playlists → suggestions → Quick Pick / Spin the Wheel → auto-queue on TV) create a compelling party experience with one real friend group. One night, one karaoke room, one group that says "we're doing this again."
 
-**Resource Requirements:** Solo developer, ~5.5 weeks (Sprint 0-4). No designer on staff — invest design time in setlist poster and ceremony flow mockups before dev.
+**Resource Requirements:** Solo developer, ~7 weeks (Sprint 0-5). No designer on staff — invest design time in setlist poster and ceremony flow mockups before dev.
 
 ### MVP Build Plan
 
@@ -446,6 +495,7 @@ The sprint plan below maps features from Product Scope into a build-order sequen
 - Minh (Non-Singer) — reactions, soundboard, ceremony voting, interludes
 - Duc (Performer) — pre-song hype, ceremony, moment cards
 - Trang (Shy Joiner) — low-pressure entry through reactions and universal interludes
+- The Group (Song Discovery) — TV pairing, playlist import, Quick Pick, Spin the Wheel, auto-queue
 - Late Joiner — mid-session join with stats catch-up
 - Disconnected User — basic reconnection with state sync
 
@@ -453,11 +503,11 @@ The sprint plan below maps features from Product Scope into a build-order sequen
 
 | Day | Focus |
 |-----|-------|
-| 1 | DJ state diagram: every state, transition, guard, timeout. Three ceremony weights (Full/Quick/Skip). Pause/resume logic. Bridge moments |
+| 1 | DJ state diagram: every state, transition, guard, timeout. Three ceremony weights (Full/Quick/Skip). Pause/resume logic. Bridge moments. Song Integration state additions (Quick Pick, Spin the Wheel, song-queued states) |
 | 2 | Server scaffolding, WebSocket infra, session management |
 | 3 | Setlist poster design mockup, ceremony flow mockup (all three weights) |
-| 4 | Sound asset selection + testing (6 core sounds) |
-| 5 | Award template pool (20+ titles, score-categorized), buffer day for state diagram refinement |
+| 4 | Sound asset selection + testing (6 core sounds). Lounge API spike: pair with real YouTube TV, read nowPlaying, push a video to queue |
+| 5 | Award template pool (20+ titles, score-categorized). Karaoke Catalog: scrape top 3 karaoke YouTube channels, parse titles, build initial index |
 
 **Sprint 1 — The Skeleton (1 week):**
 
@@ -465,12 +515,14 @@ Build order enforced — each depends on the previous:
 
 | Order | Feature | Depends On | Why Non-Negotiable |
 |-------|---------|------------|-------------------|
-| 1 | DJ state machine with ALL states (including bridge moments, ceremony sub-states, pause) + unit tests | Sprint 0 state diagram | THE core bet. Everything downstream depends on this |
+| 1 | DJ state machine with ALL states (including bridge moments, ceremony sub-states, pause, song selection states) + unit tests | Sprint 0 state diagram | THE core bet. Everything downstream depends on this |
 | 2 | Party launch — create/join via QR/code (PWA, no accounts) | WebSocket infra | No join = no product |
 | 3 | Host "Song Over!" trigger | DJ state machine | DJ can't know when physical songs end |
 | 4 | Host controls overlay (next, skip, pause) | DJ state machine | Host must be able to override DJ |
+| 5 | YouTube TV pairing via Lounge API (host enters TV code) + nowPlaying event listener + video_id → metadata pipeline | Server infra | Song Integration core — everything else in this feature depends on it |
+| 6 | Suggestion-only mode fallback (FR92-FR95) | DJ state machine | App must work even without YouTube TV |
 
-**Dry-testable at Sprint 1 end:** Can create party, join, trigger state transitions, host can control flow.
+**Dry-testable at Sprint 1 end:** Can create party, join, pair with TV, detect songs playing, trigger state transitions, host can control flow.
 
 **Sprint 2 — The Experience (1 week):**
 
@@ -492,7 +544,20 @@ Build order enforced — each depends on the previous:
 
 **Dry-run test at Sprint 2 end** with 2-3 friends.
 
-**Sprint 3 — Pre-Real-Session Polish (1 week):**
+**Sprint 3 — Song Discovery + Polish (1 week):**
+
+| Feature | Why This Sprint |
+|---------|------------------|
+| Playlist URL import (YouTube Music + Spotify public) | Cold start solution — seeds the suggestion engine |
+| Spotify "Make Public" guidance UI | Required for Spotify private playlists |
+| Intersection-Based Suggestion Engine (overlap ∩ karaoke catalog) | Core song discovery — "songs your group knows" |
+| Quick Pick mode (5 suggestions, group vote, 15s auto-advance) | Primary song selection UX |
+| Spin the Wheel mode (8 picks, animated wheel, veto) | Party-energy song selection UX |
+| Lounge API queue push (selected songs auto-queue on TV) | Zero-friction from suggestion to TV screen |
+| Genre momentum ranking | Prevents 5 ballads in a row |
+| Karaoke Classics fallback (cold start, no playlists) | App works out of the box before anyone imports |
+
+**Sprint 4 — Pre-Real-Session Polish (1 week):**
 
 | Feature | Why After Dry Run |
 |---------|------------------|
@@ -506,8 +571,10 @@ Build order enforced — each depends on the previous:
 | End-of-night ceremony + setlist poster | Critical for real session |
 | Awards algorithm (non-singing recognition, party card completion) | Needs real session data to tune |
 
-**Sprint 4 — Real World Test + Polish (5 days):**
+**Sprint 5 — Real World Test + Polish (5 days):**
 - Real karaoke night with friends. Screen record on 2-3 phones
+- Test Song Integration end-to-end: TV pairing → playlist import → Quick Pick → auto-queue → song plays → game engine receives metadata
+- Test suggestion-only mode at a non-YouTube venue (if available)
 - Bug fixes from dry run + real session
 - Host QR re-display mid-session (for late joiners)
 - Group sing-along mode
@@ -537,6 +604,10 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 | iOS AudioContext silent failure | Medium | Create AND resume in same tap handler. Test on real hardware |
 | Physical-digital mismatch (DJ cycles during breaks) | Medium | Pause meta-state + 90s inactivity auto-pause |
 | Budget Android performance | Medium | RAF dormancy, adaptive heartbeat, test on 3-year-old devices |
+| YouTube Lounge API is unofficial — could break | High | Abstract behind interface so detection method is swappable. Suggestion-only mode (FR92) as graceful fallback. Monitor open-source libraries (pyytlounge, youtube-remote) for breaking changes. Audio fingerprinting as future backup |
+| Karaoke video title parsing varies by channel | Medium | Fuzzy-match against karaoke catalog index. Cross-reference with MusicBrainz for validation. Build parser test suite against top 3 karaoke channels |
+| Spotify Dev Mode 5-user OAuth limit | Low | Avoided entirely — use Client Credentials flow for public playlists only. "Make Public" guide for private playlists. No user OAuth needed |
+| Venue does not use YouTube for karaoke | Medium | Suggestion-only mode (FR92-FR95). App still provides full playlist import, suggestions, Quick Pick, Spin the Wheel — just no auto-queue or passive detection |
 
 **Market Risks:**
 
@@ -556,12 +627,14 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 | Sprint 0 rushed (state diagram incomplete) | Medium | Protected 5-day Sprint 0. State diagram is non-negotiable gate |
 
 **Pre-Development Gates (non-negotiable before coding):**
-1. Formal DJ state diagram with every state, transition, guard, timeout — including three ceremony weights and pause/resume logic
+1. Formal DJ state diagram with every state, transition, guard, timeout — including three ceremony weights, pause/resume logic, and song selection states (Quick Pick, Spin the Wheel, song-queued)
 2. Setlist poster design mockup (screenshot-worthy, Instagram Story-ready)
 3. Ceremony flow mockup for all three weights (Full/Quick/Skip)
 4. 6 core sound assets curated and tested
 5. Award template pool: 20+ titles, categorized by score range
 6. Pause/resume logic decided (resume interrupted state vs advance to next)
+7. YouTube Lounge API spike: successful pairing with real YouTube TV, confirmed nowPlaying event reception, confirmed addVideo queue push. Document the exact API flow and library choice
+8. Karaoke Catalog Index: initial scrape of top 3 karaoke YouTube channels, title parsing validated against 100+ sample titles, stored and queryable
 
 ## Functional Requirements
 
@@ -639,7 +712,46 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 - **FR72:** All captured media is stored server-side per session, accessible to all session participants post-session
 - **FR73:** System auto-detects reaction peaks (sustained reaction rate spike above baseline threshold) and triggers a capture bubble on all phones. Peak detection logic is server-side to ensure consistent triggering
 
-### 5. Host Controls
+### 5. Song Integration & Discovery
+
+#### 5a. TV Pairing & Song Detection
+
+- **FR74:** Host can pair the app with a YouTube TV session by entering the TV pairing code displayed on the TV screen
+- **FR75:** System connects to the YouTube TV session via the Lounge API and receives real-time nowPlaying events containing the current video_id
+- **FR76:** System resolves each detected video_id to structured song metadata {title, artist, channel, thumbnail} via the YouTube Data API v3 within 5 seconds of song start
+- **FR77:** System parses karaoke video titles (e.g., "Song Title - Artist (Karaoke Version)") into structured {song, artist} data using title parsing rules
+- **FR78:** System can push songs to the YouTube TV queue via the Lounge API addVideo command — selected songs from Quick Pick or Spin the Wheel auto-queue on the TV without manual karaoke machine input
+- **FR79:** System maintains the Lounge API session throughout the party. If the connection drops, the system attempts automatic reconnection for up to 60 seconds before prompting the host to re-enter the TV code
+
+#### 5b. Playlist Import
+
+- **FR80:** System detects the music platform from a pasted URL (music.youtube.com → YouTube Music, open.spotify.com → Spotify) and routes to the appropriate import handler
+- **FR81:** System reads YouTube Music playlist contents via the YouTube Data API v3 using an API key (no user login required). Paginated retrieval for playlists with 50+ tracks
+- **FR82:** System reads Spotify public playlist contents via the Spotify Web API Client Credentials flow (no user login required). App owner maintains a Spotify developer account
+- **FR83:** When a Spotify playlist is private and cannot be read, the system displays a 3-step visual guide instructing the user to make their playlist public, then retry the paste
+- **FR84:** System normalizes imported songs across platforms by matching on title + artist name. Duplicate songs from multiple friends' playlists are merged, with an overlap count tracking how many friends share each song
+
+#### 5c. Karaoke Catalog & Suggestion Engine
+
+- **FR85:** System maintains a pre-built Karaoke Catalog Index scraped from popular karaoke YouTube channels (minimum 10,000 tracks) containing {song, artist, youtube_video_id} for each entry
+- **FR86:** System computes song suggestions as: (imported playlist songs ∪ previously sung songs) ∩ Karaoke Catalog Index — only songs with confirmed karaoke versions appear as suggestions
+- **FR87:** System ranks suggestions by: (1) group overlap count — songs known by more friends rank higher, (2) genre momentum — if the last 3 songs were the same genre, bias toward a different genre, (3) not-yet-sung — songs not performed in the current session rank higher
+
+#### 5d. Song Selection UX
+
+- **FR88:** Quick Pick mode displays 5 AI-suggested songs as cards showing song title, artist, thumbnail, and group overlap badge (e.g., "4/5 know this"). All participants vote thumbs up or skip. First song to reach majority approval is selected. If no majority within 15 seconds, the highest-voted song wins
+- **FR89:** Spin the Wheel mode loads 8 AI-suggested songs into an animated wheel. Any participant can tap SPIN. The wheel animates and lands on a song, which is auto-queued. Group gets one veto per round (re-spin)
+- **FR90:** Participants can toggle between Quick Pick and Spin the Wheel modes at any time via a mode switch control. Quick Pick is the default mode
+- **FR91:** When no playlists have been imported and no songs have been sung yet (cold start), the system falls back to suggesting songs from the Karaoke Classics subset of the catalog (top 200 universally known karaoke songs)
+
+#### 5e. Non-YouTube Venue Fallback
+
+- **FR92:** If the host skips TV pairing (venue does not use YouTube for karaoke), the app operates in suggestion-only mode: playlist import, suggestion engine, Quick Pick, and Spin the Wheel all function normally, but songs are not auto-queued on the TV and passive song detection is disabled
+- **FR93:** In suggestion-only mode, when a song is selected via Quick Pick or Spin the Wheel, the app displays the song title and artist prominently so the group can manually enter it into whatever karaoke system the venue uses
+- **FR94:** In suggestion-only mode, the host can manually mark a song as "now playing" from the suggestion list, enabling the game engine to receive song metadata for challenges and genre-based mechanics
+- **FR95:** TV pairing is optional at party creation — the host can start a party without pairing and add the TV connection later if desired
+
+### 6. Host Controls
 
 - **FR29:** Host has a persistent floating action button (bottom-right corner) that expands to a control overlay within 1 tap, providing party control without leaving the participant experience
 - **FR30:** Host can skip the current activity and advance to the next DJ state
@@ -647,7 +759,7 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 - **FR32:** Host can override the DJ's next activity selection
 - **FR33:** Host can access skip, pause, queue management, kick player, and end party controls from the overlay (FR29) without navigating away from the participant view
 
-### 6. Memory & Sharing
+### 7. Memory & Sharing
 
 - **FR34:** System generates a shareable moment card for each Full ceremony containing performer name, song title, award, and crowd score
 - **FR35:** Participant can share a moment card via native mobile share sheet
@@ -657,7 +769,7 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 - **FR39:** Any participant can manually initiate a media capture at any time via a persistent capture icon in the participant toolbar — independent of the bubble prompt system
 - **FR52:** System orchestrates an end-of-night finale sequence in 4 steps: (1) top 3 awards reveal with animation, (2) session stats summary (songs, reactions, participation), (3) setlist poster with share prompt, (4) one-tap post-session feedback ("Would you use again?" 1-5 scale) — total finale duration 60-90 seconds
 
-### 7. Session Intelligence & Analytics
+### 8. Session Intelligence & Analytics
 
 - **FR40:** System tracks weighted participation scores for each user across three tiers (passive: 1pt, active: 3pts, engaged: 5pts)
 - **FR41:** System generates end-of-night awards recognizing both singing and non-singing contributions
@@ -665,7 +777,7 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 - **FR43:** System presents a post-session North Star prompt ("Would you use Karamania next time?") during the finale ceremony
 - **FR44:** System tracks share intent taps as a viral signal metric
 
-### 8. Connection & Resilience
+### 9. Connection & Resilience
 
 - **FR45:** System maintains real-time WebSocket connections between all participant phones and the server
 - **FR46:** System detects participant disconnection via heartbeat monitoring and updates participant lists accordingly
@@ -715,4 +827,12 @@ DJ weight selection logic: never two Full ceremonies in a row. Default to Quick 
 - **NFR23:** Rate limiting on reaction and soundboard events: after 10 events in 5 seconds, each subsequent event earns 50% fewer participation points and visual feedback dims proportionally. No hard block — user can always tap, but reward and feedback diminish to near-zero after 20 events in 5 seconds. Resets after 5 seconds of inactivity
 - **NFR24:** Session data must be isolated — no participant can access or affect another party's session
 - **NFR25:** WebSocket connections must be authenticated to their session — a connection cannot inject events into a different party
+
+### Song Integration
+
+- **NFR29:** Playlist import must complete within 5 seconds for playlists of up to 200 tracks (including API call, parsing, and intersection matching against karaoke catalog)
+- **NFR30:** YouTube Data API v3 usage must remain within the free tier quota of 10,000 units per day. Playlist reads (1 unit each) and video metadata lookups (1 unit each) must be batched efficiently — a typical party session must consume fewer than 500 quota units
+- **NFR31:** If the YouTube Lounge API connection fails or becomes unavailable (unofficial API breakage), the system must degrade gracefully to suggestion-only mode (FR92) without crashing, losing session state, or interrupting the active party. Host sees a single non-blocking notification
+- **NFR32:** Karaoke Catalog Index must be pre-built and stored server-side — catalog matching must not require live API calls during a party session. Catalog refresh happens offline on a weekly or configurable schedule
+- **NFR33:** Spotify Client Credentials token must be managed server-side. Token refresh must happen automatically before expiry — no participant action required and no token exposure to the client
 
