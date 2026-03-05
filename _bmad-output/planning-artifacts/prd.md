@@ -28,7 +28,7 @@ editHistory:
   - date: '2026-03-05'
     changes: 'Added Vietnamese localization as fast-follow item. Added NFR38 requiring centralized string constants (not hardcoded in components) to enable i18n extraction, plus Vietnamese diacritics font support.'
   - date: '2026-03-05'
-    changes: 'Major platform pivot: PWA → Flutter native app (iOS + Android). Hybrid join flow via lightweight web landing page that deep-links into the app or redirects to app store. Removed all browser-specific workarounds (iOS Safari AudioContext, Web Audio API, screen wake lock hacks, PWA limitations). Updated tech stack to Flutter + Dart. Replaced JS bundle targets with app size targets. Simplified media capture (uniform native access). Updated deployment model to include app store distribution. Adjusted sprint plan for Flutter development. Removed Web App Specific Requirements section, replaced with Mobile App Specific Requirements. Removed all performance voting/scoring from ceremonies — awards are now context-driven (reaction volume, party card completion, song position) not audience-rated. Three ceremony weights (Full/Quick/Skip) simplified to two ceremony types (Full/Quick) with host skip option. Removed FR18a crowd votes, FR19 thumbs up/down, score-categorized award templates. Updated all user journeys, FRs, NFRs accordingly.'
+    changes: 'Major platform pivot: PWA → Flutter native app (iOS + Android). Hybrid join flow via lightweight web landing page that deep-links into the app or redirects to app store. Removed all browser-specific workarounds (iOS Safari AudioContext, Web Audio API, screen wake lock hacks, PWA limitations). Updated tech stack to Flutter + Dart. Replaced JS bundle targets with app size targets. Simplified media capture (uniform native access). Updated deployment model to include app store distribution. Adjusted sprint plan for Flutter development. Removed Web App Specific Requirements section, replaced with Mobile App Specific Requirements. Removed all performance voting/scoring from ceremonies — awards are now context-driven (reaction volume, party card completion, song position) not audience-rated. Three ceremony weights (Full/Quick/Skip) simplified to two ceremony types (Full/Quick) with host skip option. Removed FR18a crowd votes, FR19 thumbs up/down, score-categorized award templates. Updated all user journeys, FRs, NFRs accordingly. Added Session Timeline & Memories feature to MVP (FR108-FR115): timeline home screen, session detail with media gallery, shareable session link (read-only web view), "Let'\''s go again!" invite action. Auth-gated — guests see Start/Join only.'
 inputDocuments:
   - '_bmad-output/planning-artifacts/product-brief-karaoke-party-app-2026-03-04.md'
   - '_bmad-output/planning-artifacts/research/market-karaoke-party-companion-research-2026-03-03.md'
@@ -65,7 +65,7 @@ Karamania is a second-screen native mobile app (Flutter, iOS + Android) that tra
 
 **Target Users:** Vietnamese friend groups (ages 20-35) at commercial karaoke venues in HCMC and Hanoi. Four personas: the overwhelmed host (Linh), the non-singer (Minh), the shy joiner (Trang), and the performer seeking audience (Duc).
 
-**Business Model:** Free MVP. Memory-as-marketing flywheel — shareable setlist posters and moment cards ARE the acquisition channel. Premium features identified through usage data post-validation.
+**Business Model:** Free MVP. Memory-as-marketing flywheel — shareable setlist posters, moment cards, and session memory links ARE the acquisition channel. Between sessions, the Session Timeline keeps users engaged and the "Let's go again!" invite drives host return. Premium features identified through usage data post-validation.
 
 **MVP Strategy:** Solo developer. Prove the core loop with one real friend group. Success = "Would use again" >80%.
 
@@ -153,6 +153,7 @@ Karamania is a second-screen native mobile app (Flutter, iOS + Android) that tra
 - **Interlude games:** Kings Cup (group rule card), Dare Pull (random dare assigned to random player), Quick Vote (binary opinion poll). Front-loaded universal interludes in first 30 minutes for maximum group inclusion
 - **Prompted media capture:** Floating capture bubble at key moments (session start, reaction peaks, post-ceremony, session end). Any participant pops the bubble to capture photo/video (5s max)/audio. Uniform native camera/microphone access on both iOS and Android — no browser capability differences. Background upload, tagged for future highlight reel assembly
 - **End-of-night ceremony + setlist poster**
+- **Session Timeline & Memories:** App home screen for authenticated users — reverse-chronological timeline of past sessions. Tap into any session for full detail: participants, setlist, awards, captured media. Share sessions via link (read-only web view). "Let's go again!" action generates a pre-composed invite message for group chats. Auth-gated — guests see Start/Join party only
 - **Song Integration & Discovery:** YouTube TV pairing via Lounge API (passive song detection + queue control), YouTube Music + Spotify playlist import (paste share URL), Karaoke Catalog Index (pre-scraped from popular karaoke YouTube channels), Intersection-Based Suggestion Engine (songs group knows ∩ karaoke catalog, ranked by overlap count + genre momentum), Quick Pick (5 AI suggestions, group tap-to-vote) + Spin the Wheel (8 picks, animated random selection) dual-mode song selection UX. Host pairs app with TV code → friends join room and paste playlist URLs → app builds shared song pool → suggestions flow automatically
 - **Fast-follow (1-2 weeks after core):** Vietnamese language localization (i18n), group sing-along mode, additional interlude games, moment capture enhancements, push notifications for party invites and morning-after highlights
 
@@ -370,6 +371,10 @@ Taps "Start Party." QR and code appear. Lobby: "1 player — works best with 3+ 
 | Party history for authenticated users | Linh (host return), Duc (content) | Core |
 | Media ownership (captures linked to user profile) | Duc, Minh | Core |
 | Guest media expiry (7-day access via session link) | All personas | Core |
+| Session Timeline home screen (authenticated users) | Linh (host return), Duc (content), Minh (memories) | Core |
+| Session Detail with media gallery | All authenticated personas | Core |
+| Shareable session link (read-only web view) | Duc (content sharing), Linh (re-engagement) | Core |
+| "Let's go again!" invite via share sheet | Linh (host return) | Core |
 
 ## Innovation & Novel Patterns
 
@@ -605,7 +610,9 @@ Build order enforced — each depends on the previous:
 | Awards algorithm (non-singing recognition, party card completion) | Needs real session data to tune |
 | Session summary write to PostgreSQL at party end | Persistence pipeline — needs real session to validate |
 | Guest-to-account upgrade flow | Must be seamless mid-session |
-| Party history view for authenticated users | Cross-session value proposition |
+| Session Timeline home screen + Session Detail view | Cross-session value, re-engagement surface |
+| Shareable session link (read-only web view) | Viral loop between sessions |
+| "Let's go again!" invite action | Host return driver |
 | Media ownership linking (authenticated captures → user profile) | Media gallery depends on auth |
 | Guest media 7-day expiry + signed URLs | Non-authenticated media access |
 
@@ -814,7 +821,7 @@ Host can skip any ceremony to keep momentum. DJ type selection logic: never two 
 - **FR97:** Guest users can upgrade to a full account at any point during or after a session without losing any session data, participation scores, or captured media
 - **FR98:** Authenticated users have a persistent profile storing display name, avatar (from OAuth provider), and account creation date
 - **FR99:** On party end, the system writes a session summary to PostgreSQL containing: session ID, date, venue (if entered), participant list, song list, awards, participation scores, and party card stats
-- **FR100:** Authenticated users can view their party history — a chronological list of past sessions with date, venue, participant count, personal awards, and personal stats (songs sung, participation score, top award)
+- **FR100:** Authenticated users can view their party history via a Session Timeline screen — the app's home screen when no party is active. See FR108-FR115 for full timeline and session detail specifications
 - **FR101:** Media captures (photos, video clips, audio snippets) from authenticated users are linked to their user profile and accessible via a personal media gallery post-session. Guest captures are linked to session ID only and accessible to all session participants for 7 days
 - **FR102:** All media is stored in Firebase Storage, organized by session ID and tagged with capturing user ID (if authenticated). Authenticated users retain access to their captures indefinitely; guest session media expires after 7 days
 - **FR103:** System writes session summary to PostgreSQL within 30 seconds of party end. If the write fails, the system retries up to 3 times with exponential backoff. If all retries fail, session data is logged to server disk for manual recovery
@@ -838,6 +845,19 @@ Host can skip any ceremony to keep momentum. DJ type selection logic: never two 
 - **FR38:** System prompts participants to capture moments via the floating capture bubble (see FR67) at 4 defined trigger points: session start, reaction peaks (FR72 threshold), post-ceremony reveals, and session end
 - **FR39:** Any participant can manually initiate a media capture at any time via a persistent capture icon in the participant toolbar — independent of the bubble prompt system
 - **FR52:** System orchestrates an end-of-night finale sequence in 4 steps: (1) highlight awards reveal with animation, (2) session stats summary (songs, reactions, participation), (3) setlist poster with share prompt, (4) one-tap post-session feedback ("Would you use again?" 1-5 scale) — total finale duration 60-90 seconds
+
+### 7b. Session Timeline & Memories
+
+The Session Timeline is the app's home screen for authenticated users when no party is active. It gives users a reason to open Karamania between sessions and serves as the re-engagement surface.
+
+- **FR108:** Authenticated users see a Session Timeline as the app's home/default screen — a reverse-chronological list of past karaoke sessions. Each entry shows: session date, venue name (if entered), number of participants, the user's top award from that session, and a thumbnail from captured media (if available)
+- **FR109:** Tapping a session entry opens a Session Detail screen showing: (1) session header (date, venue, duration, participant count), (2) participant list with each person's top award and participation score, (3) full setlist with performer names and awards per song, (4) media gallery — all photos, video clips, and audio captured during the session, (5) the setlist poster generated at session end
+- **FR110:** Session Detail screen is scrollable as a single continuous view — no tabs or sub-navigation. Media gallery displays as an inline grid within the session detail flow
+- **FR111:** Authenticated users can share a session via native share sheet — generates a shareable link that opens a read-only web view of the session detail (setlist, awards, stats, media). No app required to view the shared link
+- **FR112:** Session Detail includes a "Let's go again!" action that generates a pre-composed message (venue name, date suggestion, link to download Karamania) for the user to share via their preferred messaging app (WhatsApp, Zalo, iMessage, etc.) using the native share sheet. No in-app messaging — leverages existing group chats
+- **FR113:** Guest users see a prompt to create an account to unlock session history. The Session Timeline is not accessible to guests — guest home screen shows only the "Start Party" / "Join Party" actions
+- **FR114:** Session Timeline loads the 20 most recent sessions initially, with infinite scroll for older sessions
+- **FR115:** If an authenticated user has zero past sessions, the Session Timeline shows an empty state with a "Start your first party" call-to-action
 
 ### 8. Session Intelligence & Analytics
 
