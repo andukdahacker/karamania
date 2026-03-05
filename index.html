@@ -10,16 +10,16 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
-    --bg: #050508;
-    --surface: #1a1a2e;
+    --bg: #0A0A0F;
+    --surface: #1A1A2E;
     --surface-elevated: #252542;
-    --text-primary: #f0f0f0;
-    --text-secondary: #8888aa;
-    --accent: #ffd700;
-    --action-primary: #6c63ff;
-    --action-confirm: #4ade80;
-    --action-danger: #ef4444;
-    --ceremony-bg: #1a0a2e;
+    --text-primary: #F0F0F0;
+    --text-secondary: #8888AA;
+    --accent: #FFD700;
+    --action-primary: #6C63FF;
+    --action-confirm: #4ADE80;
+    --action-danger: #EF4444;
+    --ceremony-bg: #1A0A2E;
   }
 
   body {
@@ -60,7 +60,7 @@
   .hero-sub {
     font-size: 1rem; color: var(--text-secondary);
     margin-top: 0.8rem; position: relative; z-index: 1;
-    max-width: 460px; line-height: 1.7;
+    max-width: 480px; line-height: 1.7;
   }
   .hero-pills {
     margin-top: 2rem; display: flex; gap: 12px; flex-wrap: wrap;
@@ -111,7 +111,7 @@
     width: 100%; height: 100%;
     display: flex; flex-direction: column;
     position: relative; overflow: hidden;
-    background: #0a0a0f;
+    background: var(--bg);
   }
   .ps .top-bar {
     padding: 10px 16px 6px; display: flex;
@@ -284,6 +284,11 @@
     background: rgba(108,99,255,0.15); border: 1px solid rgba(108,99,255,0.3);
     font-size: 0.6rem; color: var(--action-primary); margin-top: 4px;
   }
+  .challenge-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 10px;
+    background: rgba(170,102,255,0.12); border: 1px solid rgba(170,102,255,0.25);
+    font-size: 0.55rem; color: #aa66ff; margin-top: 4px;
+  }
   .soundboard {
     display: grid; grid-template-columns: 1fr 1fr 1fr;
     gap: 6px; padding: 10px 16px;
@@ -431,6 +436,22 @@
   .quote-author { font-size: 0.75rem; color: var(--text-secondary); }
   .quote-author strong { color: var(--accent); font-style: normal; }
 
+  /* ===== VIBE PILLS ===== */
+  .vibe-row {
+    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+    margin-top: 2rem;
+  }
+  .vibe-pill {
+    padding: 10px 20px; border-radius: 16px; font-size: 0.8rem;
+    font-weight: 600; border: 2px solid; text-align: center;
+    min-width: 100px;
+  }
+  .vibe-pill.general { border-color: #FFD700; color: #FFD700; background: rgba(255,215,0,0.08); }
+  .vibe-pill.kpop { border-color: #FF0080; color: #FF0080; background: rgba(255,0,128,0.08); }
+  .vibe-pill.rock { border-color: #FF4444; color: #FF4444; background: rgba(255,68,68,0.08); }
+  .vibe-pill.ballad { border-color: #FF9966; color: #FF9966; background: rgba(255,153,102,0.08); }
+  .vibe-pill.edm { border-color: #00FFC8; color: #00FFC8; background: rgba(0,255,200,0.08); }
+
   /* ===== CTA ===== */
   .cta-section {
     text-align: center; padding: 6rem 2rem;
@@ -464,6 +485,25 @@
     margin-top: 1rem; font-size: 0.75rem; color: var(--text-secondary);
     position: relative; z-index: 1;
   }
+
+  /* ===== SESSION TIMELINE ===== */
+  .session-card {
+    padding: 16px; border-radius: 14px;
+    background: var(--surface); border: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 8px;
+  }
+  .session-card.active {
+    border-color: rgba(108,99,255,0.3);
+    background: linear-gradient(135deg, rgba(108,99,255,0.06), var(--surface));
+  }
+  .session-date { font-size: 0.55rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+  .session-title { font-size: 0.85rem; font-weight: 700; margin-top: 4px; }
+  .session-meta { font-size: 0.6rem; color: var(--text-secondary); margin-top: 2px; }
+  .session-award {
+    display: inline-block; margin-top: 6px; padding: 3px 10px; border-radius: 8px;
+    font-size: 0.55rem; background: rgba(255,215,0,0.1); color: var(--accent);
+    font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -475,12 +515,13 @@
   <div class="hero-logo">KARAMANIA</div>
   <div class="hero-headline">Make every karaoke night legendary</div>
   <div class="hero-sub">
-    Turn everyone's phone into a party device. Games between songs. Challenges during songs. And a highlight reel of the whole night, waiting for you the next morning.
+    Turn every phone into a party device. Challenge cards before songs. Soundboard and lightsticks during songs. Games between songs. And a highlight reel the next morning.
   </div>
   <div class="hero-pills">
-    <div class="hero-pill"><span class="pill-emoji">📱</span> No download needed</div>
-    <div class="hero-pill"><span class="pill-emoji">⚡</span> Join in 8 seconds</div>
-    <div class="hero-pill"><span class="pill-emoji">🎤</span> Works at any karaoke venue</div>
+    <div class="hero-pill"><span class="pill-emoji">📲</span> Scan QR to join</div>
+    <div class="hero-pill"><span class="pill-emoji">🎤</span> Works at any venue</div>
+    <div class="hero-pill"><span class="pill-emoji">🎨</span> 5 party vibes</div>
+    <div class="hero-pill"><span class="pill-emoji">📺</span> Auto-queues to TV</div>
   </div>
   <div class="hero-scroll">Scroll to see how it works</div>
 </div>
@@ -496,21 +537,21 @@
   <div class="before-after">
     <div class="ba-card before">
       <div class="ba-label">Without Karamania</div>
-      <div class="ba-item"><span class="ba-icon">😶</span> <span>Awkward silence after every song</span></div>
-      <div class="ba-item"><span class="ba-icon">📱</span> <span>Half the room scrolling their phones</span></div>
+      <div class="ba-item"><span class="ba-icon">😶</span> <span>Awkward silence between every song</span></div>
+      <div class="ba-item"><span class="ba-icon">📱</span> <span>Half the room scrolling TikTok</span></div>
       <div class="ba-item"><span class="ba-icon">😰</span> <span>Host stressed picking songs and filling gaps</span></div>
       <div class="ba-item"><span class="ba-icon">🤷</span> <span>Non-singers have nothing to do</span></div>
-      <div class="ba-item"><span class="ba-icon">💭</span> <span>"What should we sing next?"</span></div>
+      <div class="ba-item"><span class="ba-icon">💭</span> <span>"What should we sing next?" on repeat</span></div>
       <div class="ba-item"><span class="ba-icon">🌅</span> <span>Night's over. No photos, no record, just blurry memories.</span></div>
     </div>
     <div class="ba-card after">
       <div class="ba-label">With Karamania</div>
-      <div class="ba-item"><span class="ba-icon">🏆</span> <span>Every song ends with a ceremony and crowd vote</span></div>
-      <div class="ba-item"><span class="ba-icon">🔊</span> <span>Everyone's phone = soundboard, reactions, lightstick</span></div>
-      <div class="ba-item"><span class="ba-icon">🎉</span> <span>The app runs the party — host just has fun</span></div>
-      <div class="ba-item"><span class="ba-icon">🎰</span> <span>Games, dares, and voting between every song</span></div>
-      <div class="ba-item"><span class="ba-icon">🎵</span> <span>Smart song picks from everyone's playlists</span></div>
-      <div class="ba-item"><span class="ba-icon">🎬</span> <span>Next morning: AI highlight reel with photos, videos, and awards</span></div>
+      <div class="ba-item"><span class="ba-icon">🃏</span> <span>Every singer gets a challenge card — Chipmunk Mode, Blind Karaoke, Tag Team...</span></div>
+      <div class="ba-item"><span class="ba-icon">🔊</span> <span>Every phone = soundboard + lightstick + hype signal</span></div>
+      <div class="ba-item"><span class="ba-icon">🤖</span> <span>The app runs the party — host just has fun</span></div>
+      <div class="ba-item"><span class="ba-icon">🎰</span> <span>Kings Cup, dares, and voting between every song</span></div>
+      <div class="ba-item"><span class="ba-icon">🎵</span> <span>Smart song picks from everyone's playlists, auto-queued to TV</span></div>
+      <div class="ba-item"><span class="ba-icon">🎬</span> <span>Next morning: highlight reel with photos, videos, awards, and a shareable setlist poster</span></div>
     </div>
   </div>
 </section>
@@ -522,26 +563,26 @@
 <!-- ============================================================ -->
 <section>
   <div class="section-label">Getting Started</div>
-  <div class="section-title">Three taps. That's it.</div>
+  <div class="section-title">Download once. Join every party instantly.</div>
   <div class="section-desc">
-    No app store. No account. No sign-up form. Just scan and go.
+    Host creates a party. Friends scan the QR code — it opens the app directly (or sends you to the App Store if you don't have it yet). Type your name and you're in.
   </div>
 
   <div class="steps" style="margin-bottom: 3rem;">
     <div class="step">
       <div class="step-number">1</div>
       <div class="step-title">Host starts a party</div>
-      <div class="step-desc">One tap creates a room with a QR code. Hold it up.</div>
+      <div class="step-desc">Pick a vibe, pair your TV, hold up the QR code.</div>
     </div>
     <div class="step">
       <div class="step-number">2</div>
       <div class="step-title">Friends scan & join</div>
-      <div class="step-desc">Scan the QR code. Type your name. You're in. Works in any browser.</div>
+      <div class="step-desc">Scan the QR. Type your name. Paste your playlist. You're in.</div>
     </div>
     <div class="step">
       <div class="step-number">3</div>
       <div class="step-title">The app runs the party</div>
-      <div class="step-desc">Games, challenges, voting, ceremonies — all automatic. Just have fun.</div>
+      <div class="step-desc">Songs, challenges, ceremonies, games — all automatic. Just have fun.</div>
     </div>
   </div>
 
@@ -558,6 +599,15 @@
           <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:24px;">Your phone. The party.</div>
           <div style="width:80%;padding:12px 16px;border-radius:12px;background:var(--surface);border:2px solid var(--action-primary);color:var(--text-primary);font-size:0.9rem;text-align:center;margin-bottom:12px;">Nam</div>
           <div style="width:80%;padding:14px;border-radius:12px;background:var(--action-primary);color:#fff;font-size:0.9rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;text-align:center;">JOIN PARTY</div>
+          <div style="display:flex;gap:8px;margin-top:16px;width:80%;">
+            <div style="flex:1;padding:10px;border-radius:10px;background:var(--surface);border:1px solid rgba(255,255,255,0.08);font-size:0.65rem;text-align:center;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;gap:4px;">
+              <span style="font-size:0.8rem;">G</span> Google
+            </div>
+            <div style="flex:1;padding:10px;border-radius:10px;background:var(--surface);border:1px solid rgba(255,255,255,0.08);font-size:0.65rem;text-align:center;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;gap:4px;">
+              <span style="font-size:0.8rem;">f</span> Facebook
+            </div>
+          </div>
+          <div style="font-size:0.5rem;color:var(--text-secondary);margin-top:6px;">Optional — save your session history</div>
         </div>
         <div style="padding:16px;text-align:center;">
           <div style="display:flex;justify-content:center;gap:6px;margin-bottom:8px;">
@@ -578,323 +628,15 @@
 <div class="divider-line"></div>
 
 <!-- ============================================================ -->
-<!--                  CHALLENGES & PARTY CARDS                     -->
-<!-- ============================================================ -->
-<section>
-  <div class="section-label">Challenges</div>
-  <div class="section-title">Every song is an adventure</div>
-  <div class="section-desc">
-    Before each performance, the app deals a challenge card. Sing in chipmunk voice. Perform without lyrics. Get your friends up as backup dancers. Accept it, skip it, or redraw for something different.
-  </div>
-
-  <div class="phone-row">
-    <div class="phone-with-caption">
-      <div class="phone">
-        <div class="ps" style="background: #1a0a1a;">
-          <div class="top-bar">
-            <span class="state-tag" style="color:var(--action-primary);">party card</span>
-            <span class="party-name">Linh's Party</span>
-            <span class="people-count">8</span>
-          </div>
-          <div class="divider-inner"></div>
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
-            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-secondary);margin-bottom:14px;">Challenge Dealt!</div>
-            <div class="party-card-display vocal">
-              <div class="card-type-badge vocal">Vocal Modifier</div>
-              <div class="card-emoji">🐿️</div>
-              <div class="card-title">Chipmunk Mode</div>
-              <div class="card-desc">Sing the entire song in the highest voice you can manage. No breaks allowed.</div>
-            </div>
-            <div class="card-actions">
-              <button class="card-btn accept">Accept</button>
-              <button class="card-btn dismiss">Nah</button>
-              <button class="card-btn redraw">Redraw <span class="free-badge">FREE</span></button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="phone-caption"><strong>Vocal Challenges</strong> — Change how you sing. Chipmunk, Barry White, Robot, Opera...</div>
-    </div>
-
-    <div class="phone-with-caption">
-      <div class="phone">
-        <div class="ps" style="background: #1a0a1a;">
-          <div class="top-bar">
-            <span class="state-tag" style="color:var(--action-primary);">party card</span>
-            <span class="party-name">Linh's Party</span>
-            <span class="people-count">8</span>
-          </div>
-          <div class="divider-inner"></div>
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
-            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-secondary);margin-bottom:14px;">Challenge Dealt!</div>
-            <div class="party-card-display performance">
-              <div class="card-type-badge performance">Performance Dare</div>
-              <div class="card-emoji">🥴</div>
-              <div class="card-title">The Drunk Uncle</div>
-              <div class="card-desc">Perform like you've had way too many. Stumble, slur, over-emote. Commit to the bit.</div>
-            </div>
-            <div class="card-actions">
-              <button class="card-btn accept">Accept</button>
-              <button class="card-btn dismiss">Nah</button>
-              <button class="card-btn redraw" style="opacity:0.4;">Redraw <span style="font-size:0.45rem;color:var(--text-secondary);">Used</span></button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="phone-caption"><strong>Performance Dares</strong> — Blind Karaoke, Statue, Drunk Uncle, Slow Motion...</div>
-    </div>
-
-    <div class="phone-with-caption">
-      <div class="phone">
-        <div class="ps" style="background: #1a0a1a;">
-          <div class="top-bar">
-            <span class="state-tag" style="color:var(--action-primary);">party card</span>
-            <span class="party-name">Linh's Party</span>
-            <span class="people-count">8</span>
-          </div>
-          <div class="divider-inner"></div>
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
-            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-secondary);margin-bottom:14px;">Group Challenge!</div>
-            <div class="party-card-display group">
-              <div class="card-type-badge group">Group Involvement</div>
-              <div class="card-emoji">🎙️</div>
-              <div class="card-title">Tag Team</div>
-              <div class="card-desc">Nam — you're singing the first half. Minh takes the second. No practice, no mercy.</div>
-            </div>
-            <div class="card-actions">
-              <button class="card-btn accept" style="flex:2;max-width:160px;">Let's Go!</button>
-              <button class="card-btn dismiss">Skip</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="phone-caption"><strong>Group Challenges</strong> — Tag Team, Backup Dancers, Hype Squad, Crowd Conductor</div>
-    </div>
-  </div>
-</section>
-
-<div class="divider-line"></div>
-
-<!-- ============================================================ -->
-<!--                  BETWEEN SONGS — GAMES                        -->
-<!-- ============================================================ -->
-<section>
-  <div class="section-label">Between Songs</div>
-  <div class="section-title">The non-singers are the loudest people in the room</div>
-  <div class="section-desc">
-    Between every song, mini-games hit everyone's phone. Kings Cup rules. Random dares. Hot-take polls. The "boring parts" of karaoke become the best parts.
-  </div>
-
-  <div class="phone-row">
-    <div class="phone-with-caption">
-      <div class="phone">
-        <div class="ps">
-          <div class="top-bar">
-            <span class="state-tag" style="color:var(--accent);">interlude</span>
-            <span class="people-count">8</span>
-          </div>
-          <div class="divider-inner"></div>
-          <div class="game-hero">
-            <div class="game-icon">👑</div>
-            <div class="game-label">Mini Game</div>
-            <div class="game-title">Kings Cup</div>
-            <div class="kings-card">
-              <div class="kings-rule">Anyone who can't name 3 songs by Son Tung M-TP in 10 seconds — you're singing the next duet!</div>
-              <div class="kings-action">Music Trivia King</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="phone-caption"><strong>Kings Cup</strong> — Card rules on every phone. No deck needed.</div>
-    </div>
-
-    <div class="phone-with-caption">
-      <div class="phone">
-        <div class="ps">
-          <div class="top-bar">
-            <span class="state-tag" style="color:var(--accent);">interlude</span>
-            <span class="people-count">8</span>
-          </div>
-          <div class="divider-inner"></div>
-          <div class="game-hero">
-            <div class="game-icon">🎰</div>
-            <div class="game-label">Mini Game</div>
-            <div class="game-title">Dare Pull</div>
-            <div class="dare-target">TRANG</div>
-            <div class="dare-text">Text someone "I love you" without any context. Show the room their reply.</div>
-            <div class="dare-timer">Time remaining: <strong>25s</strong></div>
-          </div>
-        </div>
-      </div>
-      <div class="phone-caption"><strong>Dare Pull</strong> — Random person, random dare. Pure chaos.</div>
-    </div>
-
-    <div class="phone-with-caption">
-      <div class="phone">
-        <div class="ps">
-          <div class="top-bar">
-            <span class="state-tag" style="color:var(--accent);">interlude</span>
-            <span class="people-count">8</span>
-          </div>
-          <div class="divider-inner"></div>
-          <div class="game-hero">
-            <div class="game-icon">⚡</div>
-            <div class="game-label">Mini Game</div>
-            <div class="game-title">Quick Vote</div>
-            <div style="font-size:1rem;font-weight:700;text-align:center;margin-bottom:20px;line-height:1.5;padding:0 12px;">
-              Who in this room would survive the longest in a zombie apocalypse?
-            </div>
-            <div style="width:85%;display:flex;flex-direction:column;gap:10px;">
-              <div style="padding:16px;border-radius:12px;background:rgba(74,222,128,0.1);border:2px solid rgba(74,222,128,0.3);color:var(--action-confirm);font-weight:700;text-align:center;text-transform:uppercase;">Minh</div>
-              <div style="padding:16px;border-radius:12px;background:rgba(239,68,68,0.1);border:2px solid rgba(239,68,68,0.3);color:var(--action-danger);font-weight:700;text-align:center;text-transform:uppercase;">Duc</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="phone-caption"><strong>Quick Vote</strong> — Hot takes. Results on every phone.</div>
-    </div>
-  </div>
-</section>
-
-<div class="divider-line"></div>
-
-<!-- ============================================================ -->
-<!--                  DURING SONGS — PARTICIPATION                 -->
-<!-- ============================================================ -->
-<section>
-  <div class="section-label">During Songs</div>
-  <div class="section-title">Be the audience every singer deserves</div>
-  <div class="section-desc">
-    React with emojis. Hit the soundboard. Switch to lightstick mode and wave your phone like you're at a concert. The singer actually feels like a star.
-  </div>
-
-  <div class="phone-row">
-    <div class="phone-with-caption">
-      <div class="phone">
-        <div class="ps">
-          <div class="top-bar">
-            <span class="state-tag" style="color:var(--action-confirm);">live</span>
-            <span class="party-name">Linh's Party</span>
-            <span class="people-count">8</span>
-          </div>
-          <div class="divider-inner"></div>
-          <div class="song-header">
-            <div class="song-title">Lac Troi</div>
-            <div class="song-artist">Son Tung M-TP</div>
-            <div class="singer-chip">Nam is singing</div>
-          </div>
-          <div class="divider-inner"></div>
-          <div class="soundboard">
-            <div class="sb-btn">📯 Horn</div>
-            <div class="sb-btn">👏 Clap</div>
-            <div class="sb-btn">🎺 Tada</div>
-            <div class="sb-btn">😂 Laugh</div>
-            <div class="sb-btn">😱 OHHH</div>
-            <div class="sb-btn">🥁 Drum</div>
-          </div>
-          <div class="divider-inner"></div>
-          <div class="reactions-row">
-            <div class="react-btn">🔥</div>
-            <div class="react-btn">❤️</div>
-            <div class="react-btn">😂</div>
-            <div class="react-btn">🎤</div>
-            <div class="react-btn">👑</div>
-          </div>
-          <div class="capture-bubble-overlay">
-            <div class="capture-bubble">📸</div>
-          </div>
-          <div style="margin-top:auto;padding:12px 16px 16px;">
-            <div style="width:100%;padding:14px;border-radius:12px;background:rgba(239,68,68,0.1);border:2px solid rgba(239,68,68,0.35);color:var(--action-danger);font-weight:700;font-size:0.85rem;text-align:center;">Song Over!</div>
-          </div>
-        </div>
-      </div>
-      <div class="phone-caption"><strong>Reactions & Soundboard</strong> — every tap plays sound on all phones</div>
-    </div>
-
-    <div class="phone-with-caption">
-      <div class="phone">
-        <div class="ps" style="background:#0a0a0f;">
-          <div class="lightstick-glow"></div>
-          <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:20px 20px 24px;">
-            <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:3px;color:var(--text-secondary);margin-bottom:16px;opacity:0.6;">Lightstick Mode</div>
-            <div style="display:flex;gap:12px;margin-bottom:12px;">
-              <div style="width:24px;height:24px;border-radius:50%;background:#ff0080;"></div>
-              <div style="width:24px;height:24px;border-radius:50%;background:#6c63ff;border:2px solid #fff;transform:scale(1.2);"></div>
-              <div style="width:24px;height:24px;border-radius:50%;background:#4ade80;"></div>
-              <div style="width:24px;height:24px;border-radius:50%;background:#ffd700;"></div>
-              <div style="width:24px;height:24px;border-radius:50%;background:#00c8ff;"></div>
-            </div>
-            <div style="display:flex;gap:12px;">
-              <div style="padding:10px 20px;border-radius:10px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);font-size:0.7rem;font-weight:600;">Flash Hype</div>
-              <div style="padding:10px 20px;border-radius:10px;background:rgba(255,255,255,0.06);color:var(--text-secondary);font-size:0.7rem;">Back</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="phone-caption"><strong>Lightstick Mode</strong> — wave your phone. A room full of glowing screens.</div>
-    </div>
-
-    <div class="phone-with-caption">
-      <div class="phone">
-        <div class="ps" style="background: var(--ceremony-bg);">
-          <div class="reveal-glow"></div>
-          <div class="confetti-layer">
-            <span style="left:10%;animation-delay:0s;">🎉</span>
-            <span style="left:30%;animation-delay:0.4s;">✨</span>
-            <span style="left:50%;animation-delay:0.2s;">🌟</span>
-            <span style="left:70%;animation-delay:0.6s;">🎊</span>
-            <span style="left:90%;animation-delay:0.3s;">✨</span>
-          </div>
-          <div class="top-bar" style="position:relative;z-index:2;">
-            <span class="state-tag" style="color:var(--accent);">reveal</span>
-          </div>
-          <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
-            <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-secondary);margin-bottom:12px;">And the award goes to...</div>
-            <div style="font-size:2.5rem;margin-bottom:6px;">🔥</div>
-            <div style="font-size:1.8rem;font-weight:700;color:var(--accent);text-shadow:0 0 30px rgba(255,215,0,0.4);text-transform:uppercase;letter-spacing:1px;">NAM</div>
-            <div style="font-size:0.8rem;color:#ffd700;margin-top:4px;">VOCAL MENACE</div>
-            <div style="width:100%;margin-top:20px;">
-              <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:0.7rem;">
-                <span style="width:40px;text-align:right;color:var(--text-secondary);">Nam</span>
-                <div style="flex:1;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;">
-                  <div style="height:100%;width:72%;border-radius:4px;background:linear-gradient(90deg,var(--accent),#ffd700);"></div>
-                </div>
-                <span style="width:24px;font-size:0.65rem;color:var(--text-secondary);">72%</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;font-size:0.7rem;">
-                <span style="width:40px;text-align:right;color:var(--text-secondary);">Linh</span>
-                <div style="flex:1;height:14px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;">
-                  <div style="height:100%;width:28%;border-radius:4px;background:var(--action-primary);opacity:0.5;"></div>
-                </div>
-                <span style="width:24px;font-size:0.65rem;color:var(--text-secondary);">28%</span>
-              </div>
-            </div>
-          </div>
-          <div style="position:relative;z-index:2;padding:12px 16px;display:flex;gap:10px;justify-content:center;">
-            <div class="react-btn">🔥</div>
-            <div class="react-btn">👑</div>
-            <div class="react-btn">😂</div>
-            <div class="react-btn">🎤</div>
-          </div>
-        </div>
-      </div>
-      <div class="phone-caption"><strong>The Ceremony</strong> — Confetti, votes, awards. Every. Single. Song.</div>
-    </div>
-  </div>
-</section>
-
-<div class="divider-line"></div>
-
-<!-- ============================================================ -->
 <!--              SONG DISCOVERY                                   -->
 <!-- ============================================================ -->
 <section>
   <div class="side-by-side" style="flex-direction:row-reverse;">
     <div class="info">
-      <div class="section-label">Song Picks</div>
+      <div class="section-label">Song Discovery</div>
       <div class="section-title">"What should we sing?" is solved forever</div>
       <div class="section-desc">
-        Paste your Spotify or YouTube Music playlist when you join. The app figures out which songs your group all knows — and that have karaoke versions. Vote on what's next. It auto-queues to the TV.
+        Paste your Spotify or YouTube Music playlist when you join. The app finds songs your group all knows — and that have karaoke versions. Vote on what's next. It auto-queues to the TV. Zero typing, zero scrolling through menus.
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;">
         <div style="padding:12px 16px;border-radius:12px;background:var(--surface);border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;">
@@ -902,8 +644,12 @@
           <div style="color:var(--text-secondary);font-size:0.7rem;">"5 of 8 friends listen to this"</div>
         </div>
         <div style="padding:12px 16px;border-radius:12px;background:var(--surface);border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;">
-          <div style="color:var(--accent);font-weight:700;margin-bottom:2px;">15-second vote</div>
-          <div style="color:var(--text-secondary);font-size:0.7rem;">Fast decisions, no stalling</div>
+          <div style="color:var(--accent);font-weight:700;margin-bottom:2px;">Auto-queue to TV</div>
+          <div style="color:var(--text-secondary);font-size:0.7rem;">Pairs with YouTube on your TV</div>
+        </div>
+        <div style="padding:12px 16px;border-radius:12px;background:var(--surface);border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;">
+          <div style="color:var(--action-primary);font-weight:700;margin-bottom:2px;">Two modes</div>
+          <div style="color:var(--text-secondary);font-size:0.7rem;">Quick Pick vote or Spin the Wheel</div>
         </div>
       </div>
     </div>
@@ -918,7 +664,7 @@
           <div style="padding:8px 16px;text-align:center;">
             <div style="font-size:0.55rem;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:2px;">Quick Pick</div>
             <div style="font-size:0.9rem;font-weight:700;">What's next?</div>
-            <div style="font-size:0.55rem;color:var(--text-secondary);margin-top:2px;">Tap to vote - Majority wins</div>
+            <div style="font-size:0.55rem;color:var(--text-secondary);margin-top:2px;">Tap to vote — Majority wins</div>
           </div>
           <div style="height:3px;margin:0 16px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden;">
             <div style="height:100%;width:55%;border-radius:2px;background:linear-gradient(90deg,var(--accent),#ffd700);"></div>
@@ -960,13 +706,373 @@
 <div class="divider-line"></div>
 
 <!-- ============================================================ -->
-<!--              THE HIGHLIGHT REEL                               -->
+<!--                  CHALLENGES & PARTY CARDS                     -->
 <!-- ============================================================ -->
 <section>
-  <div class="section-label">The Next Morning</div>
-  <div class="section-title">Wake up to your karaoke highlight reel</div>
+  <div class="section-label">Party Cards</div>
+  <div class="section-title">Every song is an adventure</div>
   <div class="section-desc">
-    Throughout the night, a floating bubble prompts everyone to capture moments — quick photos, 5-second video clips, audio snippets. The next morning, it's all assembled into a highlight reel: the best moments, the funniest awards, the group stats. Your night, preserved.
+    Before each performance, the app deals a challenge card from a deck of 19. Sing in chipmunk voice. Perform without lyrics. Get your friends up as backup dancers. Accept, skip, or redraw for something different.
+  </div>
+
+  <div class="phone-row">
+    <div class="phone-with-caption">
+      <div class="phone">
+        <div class="ps" style="background: #1a0a1a;">
+          <div class="top-bar">
+            <span class="state-tag" style="color:var(--action-primary);">party card</span>
+            <span class="party-name">Linh's Party</span>
+            <span class="people-count">8</span>
+          </div>
+          <div class="divider-inner"></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-secondary);margin-bottom:14px;">Challenge Dealt!</div>
+            <div class="party-card-display vocal">
+              <div class="card-type-badge vocal">Vocal Modifier</div>
+              <div class="card-emoji">🐿️</div>
+              <div class="card-title">Chipmunk Mode</div>
+              <div class="card-desc">Sing the entire song in the highest voice you can manage. No breaks allowed.</div>
+            </div>
+            <div class="card-actions">
+              <button class="card-btn accept">Accept</button>
+              <button class="card-btn dismiss">Nah</button>
+              <button class="card-btn redraw">Redraw <span class="free-badge">FREE</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-caption"><strong>Vocal Modifiers</strong> — Chipmunk, Barry White, Robot, Opera, Whisperer, Beatboxer, Accent Roulette</div>
+    </div>
+
+    <div class="phone-with-caption">
+      <div class="phone">
+        <div class="ps" style="background: #1a0a1a;">
+          <div class="top-bar">
+            <span class="state-tag" style="color:var(--action-primary);">party card</span>
+            <span class="party-name">Linh's Party</span>
+            <span class="people-count">8</span>
+          </div>
+          <div class="divider-inner"></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-secondary);margin-bottom:14px;">Challenge Dealt!</div>
+            <div class="party-card-display performance">
+              <div class="card-type-badge performance">Performance Dare</div>
+              <div class="card-emoji">🙈</div>
+              <div class="card-title">Blind Karaoke</div>
+              <div class="card-desc">Lyrics are hidden. Sing from memory. The crowd will help you when you forget.</div>
+            </div>
+            <div class="card-actions">
+              <button class="card-btn accept">Accept</button>
+              <button class="card-btn dismiss">Nah</button>
+              <button class="card-btn redraw" style="opacity:0.4;">Redraw <span style="font-size:0.45rem;color:var(--text-secondary);">Used</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-caption"><strong>Performance Dares</strong> — Blind Karaoke, Statue, Method Actor, Drunk Uncle, Slow Motion, News Anchor</div>
+    </div>
+
+    <div class="phone-with-caption">
+      <div class="phone">
+        <div class="ps" style="background: #1a0a1a;">
+          <div class="top-bar">
+            <span class="state-tag" style="color:var(--action-primary);">party card</span>
+            <span class="party-name">Linh's Party</span>
+            <span class="people-count">8</span>
+          </div>
+          <div class="divider-inner"></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-secondary);margin-bottom:14px;">Group Challenge!</div>
+            <div class="party-card-display group">
+              <div class="card-type-badge group">Group Involvement</div>
+              <div class="card-emoji">💃</div>
+              <div class="card-title">Backup Dancers</div>
+              <div class="card-desc">Trang and Huy — get behind the singer! Full choreography. No excuses.</div>
+            </div>
+            <div class="card-actions">
+              <button class="card-btn accept" style="flex:2;max-width:160px;">Let's Go!</button>
+              <button class="card-btn dismiss">Skip</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-caption"><strong>Group Challenges</strong> — Backup Dancers, Tag Team, Hype Squad, Crowd Conductor, Name That Tune</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider-line"></div>
+
+<!-- ============================================================ -->
+<!--                  DURING SONGS — PARTICIPATION                 -->
+<!-- ============================================================ -->
+<section>
+  <div class="section-label">During Songs</div>
+  <div class="section-title">Be the audience every singer deserves</div>
+  <div class="section-desc">
+    React with emojis. Hit the soundboard. Switch to lightstick mode and wave your phone like you're at a concert. Flash your camera light to hype the singer. The singer actually feels like a star.
+  </div>
+
+  <div class="phone-row">
+    <div class="phone-with-caption">
+      <div class="phone">
+        <div class="ps">
+          <div class="top-bar">
+            <span class="state-tag" style="color:var(--action-confirm);">live</span>
+            <span class="party-name">Linh's Party</span>
+            <span class="people-count">8</span>
+          </div>
+          <div class="divider-inner"></div>
+          <div class="song-header">
+            <div class="song-title">Lac Troi</div>
+            <div class="song-artist">Son Tung M-TP</div>
+            <div class="singer-chip">Nam is singing</div>
+            <div class="challenge-badge">🎭 Method Actor</div>
+          </div>
+          <div class="divider-inner"></div>
+          <div class="soundboard">
+            <div class="sb-btn">📯 Horn</div>
+            <div class="sb-btn">👏 Clap</div>
+            <div class="sb-btn">🎺 Tada</div>
+            <div class="sb-btn">😂 Laugh</div>
+            <div class="sb-btn">😱 OHHH</div>
+            <div class="sb-btn">🥁 Drum</div>
+          </div>
+          <div class="divider-inner"></div>
+          <div class="reactions-row">
+            <div class="react-btn">🔥</div>
+            <div class="react-btn">👏</div>
+            <div class="react-btn">😂</div>
+            <div class="react-btn">💀</div>
+            <div class="react-btn">👑</div>
+          </div>
+          <div style="padding:8px 16px;display:flex;gap:8px;">
+            <div style="flex:1;padding:10px;border-radius:10px;background:rgba(108,99,255,0.1);border:1px solid rgba(108,99,255,0.25);text-align:center;font-size:0.65rem;font-weight:600;color:var(--action-primary);">💡 Lightstick</div>
+            <div style="flex:1;padding:10px;border-radius:10px;background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.25);text-align:center;font-size:0.65rem;font-weight:600;color:var(--accent);">⚡ Hype</div>
+          </div>
+          <div class="capture-bubble-overlay" style="bottom:60px;">
+            <div class="capture-bubble">📸</div>
+          </div>
+          <div style="margin-top:auto;padding:12px 16px 16px;">
+            <div style="width:100%;padding:14px;border-radius:12px;background:rgba(239,68,68,0.1);border:2px solid rgba(239,68,68,0.35);color:var(--action-danger);font-weight:700;font-size:0.85rem;text-align:center;">Song Over!</div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-caption"><strong>Reactions & Soundboard</strong> — every tap plays sound on all phones. Challenge badge shows the active dare.</div>
+    </div>
+
+    <div class="phone-with-caption">
+      <div class="phone">
+        <div class="ps" style="background:#0a0a0f;">
+          <div class="lightstick-glow"></div>
+          <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:20px 20px 24px;">
+            <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:3px;color:var(--text-secondary);margin-bottom:16px;opacity:0.6;">Lightstick Mode</div>
+            <div style="display:flex;gap:12px;margin-bottom:12px;">
+              <div style="width:24px;height:24px;border-radius:50%;background:#ff0080;"></div>
+              <div style="width:24px;height:24px;border-radius:50%;background:#6c63ff;border:2px solid #fff;transform:scale(1.2);"></div>
+              <div style="width:24px;height:24px;border-radius:50%;background:#4ade80;"></div>
+              <div style="width:24px;height:24px;border-radius:50%;background:#ffd700;"></div>
+              <div style="width:24px;height:24px;border-radius:50%;background:#00c8ff;"></div>
+            </div>
+            <div style="display:flex;gap:12px;">
+              <div style="padding:10px 20px;border-radius:10px;background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.3);font-size:0.7rem;font-weight:600;color:var(--accent);">⚡ Hype</div>
+              <div style="padding:10px 20px;border-radius:10px;background:rgba(255,255,255,0.06);color:var(--text-secondary);font-size:0.7rem;">Back</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-caption"><strong>Lightstick Mode</strong> — wave your phone. Pick your color. A room full of glowing screens.</div>
+    </div>
+
+    <div class="phone-with-caption">
+      <div class="phone">
+        <div class="ps" style="background: var(--ceremony-bg);">
+          <div class="reveal-glow"></div>
+          <div class="confetti-layer">
+            <span style="left:10%;animation-delay:0s;">🎉</span>
+            <span style="left:30%;animation-delay:0.4s;">✨</span>
+            <span style="left:50%;animation-delay:0.2s;">🌟</span>
+            <span style="left:70%;animation-delay:0.6s;">🎊</span>
+            <span style="left:90%;animation-delay:0.3s;">✨</span>
+          </div>
+          <div class="top-bar" style="position:relative;z-index:2;">
+            <span class="state-tag" style="color:var(--accent);">reveal</span>
+          </div>
+          <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+            <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-secondary);margin-bottom:12px;">And the award goes to...</div>
+            <div style="font-size:2.5rem;margin-bottom:6px;">🔥</div>
+            <div style="font-size:1.8rem;font-weight:700;color:var(--accent);text-shadow:0 0 30px rgba(255,215,0,0.4);text-transform:uppercase;letter-spacing:1px;">NAM</div>
+            <div style="font-size:0.8rem;color:#ffd700;margin-top:4px;text-transform:uppercase;letter-spacing:1px;">VOCAL MENACE</div>
+            <div style="font-size:0.6rem;color:var(--text-secondary);margin-top:8px;">Lac Troi — Son Tung M-TP</div>
+            <div style="margin-top:16px;">
+              <div class="moment-card-display" style="width:100%;padding:12px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                  <span style="font-size:1.2rem;">🔥</span>
+                  <span style="font-size:0.65rem;font-weight:700;color:var(--accent);flex:1;">VOCAL MENACE</span>
+                </div>
+                <div style="font-size:0.9rem;font-weight:700;">NAM</div>
+                <div style="font-size:0.55rem;color:var(--text-secondary);margin-top:2px;">Lac Troi — Son Tung M-TP</div>
+                <div style="font-size:0.5rem;color:var(--text-secondary);margin-top:6px;">Linh's Party — Saturday Night</div>
+              </div>
+            </div>
+            <div style="margin-top:12px;padding:8px 20px;border-radius:10px;background:var(--action-primary);color:#fff;font-size:0.7rem;font-weight:700;text-transform:uppercase;">Share Moment</div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-caption"><strong>The Ceremony</strong> — Confetti, awards, shareable moment cards. Celebration, not competition.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider-line"></div>
+
+<!-- ============================================================ -->
+<!--                  BETWEEN SONGS — GAMES                        -->
+<!-- ============================================================ -->
+<section>
+  <div class="section-label">Between Songs</div>
+  <div class="section-title">The non-singers are the loudest people in the room</div>
+  <div class="section-desc">
+    Between every song, mini-games hit everyone's phone. Kings Cup rules. Random dares. Hot-take polls. The "boring parts" of karaoke become the best parts.
+  </div>
+
+  <div class="phone-row">
+    <div class="phone-with-caption">
+      <div class="phone">
+        <div class="ps">
+          <div class="top-bar">
+            <span class="state-tag" style="color:var(--accent);">interlude</span>
+            <span class="people-count">8</span>
+          </div>
+          <div class="divider-inner"></div>
+          <div class="game-hero">
+            <div class="game-icon">👑</div>
+            <div class="game-label">Mini Game</div>
+            <div class="game-title">Kings Cup</div>
+            <div class="kings-card">
+              <div class="kings-rule">Everyone who's been to Da Lat this year — you're singing the next chorus together!</div>
+              <div class="kings-action">Group Sing-Along</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-caption"><strong>Kings Cup</strong> — Group rules on every phone. No deck needed.</div>
+    </div>
+
+    <div class="phone-with-caption">
+      <div class="phone">
+        <div class="ps">
+          <div class="top-bar">
+            <span class="state-tag" style="color:var(--accent);">interlude</span>
+            <span class="people-count">8</span>
+          </div>
+          <div class="divider-inner"></div>
+          <div class="game-hero">
+            <div class="game-icon">🎰</div>
+            <div class="game-label">Mini Game</div>
+            <div class="game-title">Dare Pull</div>
+            <div class="dare-target">TRANG</div>
+            <div class="dare-text">Text someone "I love you" without any context. Show the room their reply.</div>
+            <div class="dare-timer">Time remaining: <strong>15s</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-caption"><strong>Dare Pull</strong> — Random person, random dare. Pure chaos.</div>
+    </div>
+
+    <div class="phone-with-caption">
+      <div class="phone">
+        <div class="ps">
+          <div class="top-bar">
+            <span class="state-tag" style="color:var(--accent);">interlude</span>
+            <span class="people-count">8</span>
+          </div>
+          <div class="divider-inner"></div>
+          <div class="game-hero">
+            <div class="game-icon">⚡</div>
+            <div class="game-label">Mini Game</div>
+            <div class="game-title">Quick Vote</div>
+            <div style="font-size:1rem;font-weight:700;text-align:center;margin-bottom:20px;line-height:1.5;padding:0 12px;">
+              Who in this room would survive the longest in a zombie apocalypse?
+            </div>
+            <div style="width:85%;display:flex;flex-direction:column;gap:10px;">
+              <div style="padding:16px;border-radius:12px;background:rgba(74,222,128,0.1);border:2px solid rgba(74,222,128,0.3);color:var(--action-confirm);font-weight:700;text-align:center;text-transform:uppercase;">Minh</div>
+              <div style="padding:16px;border-radius:12px;background:rgba(239,68,68,0.1);border:2px solid rgba(239,68,68,0.3);color:var(--action-danger);font-weight:700;text-align:center;text-transform:uppercase;">Duc</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-caption"><strong>Quick Vote</strong> — Hot takes. 15 seconds. Results on every phone.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider-line"></div>
+
+<!-- ============================================================ -->
+<!--              VIBES — PARTY THEMES                             -->
+<!-- ============================================================ -->
+<section>
+  <div class="side-by-side">
+    <div class="info">
+      <div class="section-label">Party Vibes</div>
+      <div class="section-title">Set the mood for the whole night</div>
+      <div class="section-desc">
+        When the host creates a party, they pick a vibe. It changes everything — the color scheme, the confetti, the reaction emoji, and the award tone. The same app feels completely different for a K-pop night vs. a rock session.
+      </div>
+      <div class="vibe-row" style="margin-top:1.5rem;justify-content:flex-start;">
+        <div class="vibe-pill general">🎤 General</div>
+        <div class="vibe-pill kpop">💖 K-pop</div>
+        <div class="vibe-pill rock">🎸 Rock</div>
+        <div class="vibe-pill ballad">🎵 Ballad</div>
+        <div class="vibe-pill edm">🎧 EDM</div>
+      </div>
+    </div>
+    <div class="phones">
+      <div class="phone">
+        <div class="ps" style="background: #1a0a20;">
+          <!-- K-pop vibe ceremony -->
+          <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 35%, rgba(255,0,128,0.15) 0%, transparent 70%);animation:revealGlow 2s ease-in-out infinite;"></div>
+          <div class="confetti-layer">
+            <span style="left:15%;animation-delay:0s;">💖</span>
+            <span style="left:35%;animation-delay:0.3s;">💜</span>
+            <span style="left:55%;animation-delay:0.1s;">✨</span>
+            <span style="left:75%;animation-delay:0.5s;">💖</span>
+            <span style="left:85%;animation-delay:0.2s;">✨</span>
+          </div>
+          <div class="top-bar" style="position:relative;z-index:2;">
+            <span class="state-tag" style="color:#FF0080;">reveal</span>
+            <span style="font-size:0.5rem;padding:2px 8px;border-radius:8px;background:rgba(255,0,128,0.15);color:#FF0080;">💖 K-POP VIBE</span>
+          </div>
+          <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+            <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-secondary);margin-bottom:12px;">And the award goes to...</div>
+            <div style="font-size:2.5rem;margin-bottom:6px;">💖</div>
+            <div style="font-size:1.8rem;font-weight:700;color:#FF0080;text-shadow:0 0 30px rgba(255,0,128,0.4);text-transform:uppercase;letter-spacing:1px;">LINH</div>
+            <div style="font-size:0.8rem;color:#FF69B4;margin-top:4px;text-transform:uppercase;letter-spacing:1px;">MAIN CHARACTER ENERGY</div>
+            <div style="font-size:0.6rem;color:var(--text-secondary);margin-top:8px;">See Tinh — Hoang Thuy Linh</div>
+          </div>
+          <div style="position:relative;z-index:2;padding:12px 16px;display:flex;gap:10px;justify-content:center;">
+            <div class="react-btn" style="background:rgba(255,0,128,0.1);border-color:rgba(255,0,128,0.25);">🔥</div>
+            <div class="react-btn" style="background:rgba(255,0,128,0.1);border-color:rgba(255,0,128,0.25);">😍</div>
+            <div class="react-btn" style="background:rgba(255,0,128,0.1);border-color:rgba(255,0,128,0.25);">👏</div>
+            <div class="react-btn" style="background:rgba(255,0,128,0.1);border-color:rgba(255,0,128,0.25);">💀</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider-line"></div>
+
+<!-- ============================================================ -->
+<!--              CAPTURE, MEMORIES & SESSION TIMELINE              -->
+<!-- ============================================================ -->
+<section>
+  <div class="section-label">Memories</div>
+  <div class="section-title">Every night remembered. Every moment shareable.</div>
+  <div class="section-desc">
+    Throughout the night, capture bubbles pop up at peak moments — reaction spikes, post-ceremony, group challenges. Snap a photo, grab a 5-second video, record an audio snippet. The next morning, it's all assembled into a highlight reel. And every session lives on in your timeline.
   </div>
 
   <div class="phone-row" style="margin-bottom: 3rem;">
@@ -987,7 +1093,6 @@
           </div>
           <div class="divider-inner"></div>
           <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
-            <!-- Expanded capture menu -->
             <div style="text-align:center;margin-bottom:16px;">
               <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:2px;color:var(--action-primary);margin-bottom:12px;">Capture this moment!</div>
               <div style="display:flex;gap:12px;justify-content:center;">
@@ -1006,7 +1111,7 @@
               </div>
             </div>
             <div style="font-size:0.6rem;color:var(--text-secondary);text-align:center;line-height:1.5;max-width:220px;">
-              The bubble pops up at peak moments — reaction spikes, post-ceremony, group challenges. Tap to capture.
+              Bubbles pop up at reaction spikes, post-ceremony, and group challenges. Tap to capture.
             </div>
           </div>
           <div class="capture-bubble-overlay" style="bottom:16px;">
@@ -1017,64 +1122,15 @@
       <div class="phone-caption"><strong>During the night</strong> — capture bubbles pop up at the right moments</div>
     </div>
 
-    <!-- Morning Push Notification -->
-    <div class="phone-with-caption">
-      <div class="phone">
-        <div class="ps" style="background:#0f0f14;justify-content:flex-start;">
-          <div style="padding:8px 16px;display:flex;justify-content:space-between;font-size:0.55rem;color:var(--text-secondary);">
-            <span>Sunday 10:32 AM</span>
-            <span>WiFi 92%</span>
-          </div>
-          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px;">
-            <div class="notif-card highlight">
-              <div class="notif-app-row">
-                <div class="notif-app-icon">K</div>
-                <span class="notif-app-name">Karamania</span>
-                <span class="notif-time">just now</span>
-              </div>
-              <div class="notif-title">Your highlight reel is ready! 🎬</div>
-              <div class="notif-body">Linh's Party — 7 songs, 4 ceremonies, 23 captures from the group. Tap to relive last night.</div>
-              <div style="display:flex;gap:6px;margin-top:10px;">
-                <div style="width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#6c63ff,#aa66ff);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">📸</div>
-                <div style="width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#ef4444,#ff6b6b);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🎬</div>
-                <div style="width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#4ade80,#22c55e);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🎤</div>
-                <div style="width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#ffd700,#ff9900);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🏆</div>
-              </div>
-            </div>
-            <div class="notif-card" style="opacity:0.5;">
-              <div class="notif-app-row">
-                <div class="notif-app-icon" style="background:#333;color:var(--text-secondary);">Z</div>
-                <span class="notif-app-name">Zalo</span>
-                <span class="notif-time">1h ago</span>
-              </div>
-              <div class="notif-title">KTV Gang</div>
-              <div class="notif-body">Linh: "best karaoke night ever 😂"</div>
-            </div>
-            <div class="notif-card" style="opacity:0.35;">
-              <div class="notif-app-row">
-                <div class="notif-app-icon" style="background:#333;color:var(--text-secondary);">IG</div>
-                <span class="notif-app-name">Instagram</span>
-                <span class="notif-time">3h ago</span>
-              </div>
-              <div class="notif-title">Duc posted a story</div>
-              <div class="notif-body">mention: @linh @nam @trang</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="phone-caption"><strong>The next morning</strong> — your highlight reel is ready and waiting</div>
-    </div>
-
     <!-- Highlight Reel Browse -->
     <div class="phone-with-caption">
       <div class="phone">
         <div class="ps" style="background:linear-gradient(180deg, #0a0818, #1a0a2e, #0a0818);">
           <div class="top-bar">
-            <span class="state-tag" style="color:var(--action-primary);">highlights</span>
+            <span class="state-tag" style="color:var(--action-primary);">session detail</span>
           </div>
           <div class="divider-inner"></div>
           <div style="padding:12px 16px 6px;text-align:center;">
-            <div style="display:inline-block;padding:3px 12px;border-radius:12px;font-size:0.5rem;text-transform:uppercase;letter-spacing:2px;background:rgba(108,99,255,0.15);color:var(--action-primary);margin-bottom:6px;">AI Assembled</div>
             <div style="font-size:0.95rem;font-weight:700;">Linh's Party</div>
             <div style="font-size:0.6rem;color:var(--text-secondary);margin-top:2px;">Saturday night — 7 songs — 8 friends</div>
           </div>
@@ -1084,7 +1140,7 @@
               <div class="reel-info">
                 <div class="reel-moment-type">Video</div>
                 <div class="reel-moment-title">Duc's Chipmunk Mode</div>
-                <div class="reel-moment-meta">5s clip - peak reaction moment</div>
+                <div class="reel-moment-meta">5s clip — peak reaction moment</div>
               </div>
             </div>
             <div class="reel-moment">
@@ -1100,7 +1156,7 @@
               <div class="reel-info">
                 <div class="reel-moment-type">Award</div>
                 <div class="reel-moment-title">Nam — Vocal Menace</div>
-                <div class="reel-moment-meta">72% of votes</div>
+                <div class="reel-moment-meta">Lac Troi — Son Tung M-TP</div>
               </div>
             </div>
             <div class="reel-moment">
@@ -1120,13 +1176,133 @@
               </div>
             </div>
           </div>
-          <div style="padding:10px 16px;">
-            <div style="width:100%;padding:12px;border-radius:12px;background:var(--action-primary);color:#fff;font-size:0.8rem;font-weight:700;text-transform:uppercase;text-align:center;">Share Highlight Reel</div>
-            <div style="text-align:center;font-size:0.5rem;color:var(--text-secondary);margin-top:4px;">Assembled from 23 captures by your group</div>
+          <div style="padding:10px 16px;display:flex;gap:8px;">
+            <div style="flex:1;padding:12px;border-radius:12px;background:var(--action-primary);color:#fff;font-size:0.7rem;font-weight:700;text-transform:uppercase;text-align:center;">Share Session</div>
+            <div style="flex:1;padding:12px;border-radius:12px;background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.3);color:var(--accent);font-size:0.7rem;font-weight:700;text-transform:uppercase;text-align:center;">Let's Go Again!</div>
           </div>
         </div>
       </div>
-      <div class="phone-caption"><strong>The Highlight Reel</strong> — photos, videos, audio, awards. All in one place.</div>
+      <div class="phone-caption"><strong>Session Detail</strong> — setlist, awards, captured media. Share or plan the next night.</div>
+    </div>
+
+    <!-- Session Timeline -->
+    <div class="phone-with-caption">
+      <div class="phone">
+        <div class="ps" style="background:#0a0a0f;">
+          <div class="top-bar">
+            <span style="font-size:1rem;font-weight:700;color:var(--accent);letter-spacing:-1px;">KARAMANIA</span>
+          </div>
+          <div style="padding:8px 16px;display:flex;gap:8px;">
+            <div style="flex:1;padding:12px;border-radius:12px;background:var(--action-primary);color:#fff;font-size:0.75rem;font-weight:700;text-transform:uppercase;text-align:center;">+ Create Party</div>
+            <div style="flex:1;padding:12px;border-radius:12px;background:var(--surface);border:1px solid rgba(255,255,255,0.1);color:var(--text-primary);font-size:0.75rem;font-weight:700;text-transform:uppercase;text-align:center;">Join Party</div>
+          </div>
+          <div class="divider-inner" style="margin:4px 0;"></div>
+          <div style="padding:6px 16px;">
+            <div style="font-size:0.55rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-secondary);margin-bottom:8px;">Your Sessions</div>
+            <div class="session-card active">
+              <div class="session-date">Mar 3, 2026</div>
+              <div class="session-title">Linh's Party — ICOOL Thao Dien</div>
+              <div class="session-meta">8 friends — 7 songs — 2h 15m</div>
+              <div class="session-award">🔥 Vocal Menace</div>
+            </div>
+            <div class="session-card">
+              <div class="session-date">Feb 22, 2026</div>
+              <div class="session-title">Birthday Karaoke — Kingdom</div>
+              <div class="session-meta">12 friends — 11 songs — 3h</div>
+              <div class="session-award">💖 Main Character</div>
+            </div>
+            <div class="session-card">
+              <div class="session-date">Feb 8, 2026</div>
+              <div class="session-title">Friday Night — Su Viet</div>
+              <div class="session-meta">5 friends — 6 songs — 1h 45m</div>
+              <div class="session-award">😂 Crowd Comedian</div>
+            </div>
+            <div class="session-card" style="opacity:0.5;">
+              <div class="session-date">Jan 26, 2026</div>
+              <div class="session-title">Tet Reunion — ICOOL Q1</div>
+              <div class="session-meta">15 friends — 14 songs — 4h</div>
+              <div class="session-award">👑 Party Legend</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-caption"><strong>Session Timeline</strong> — every party lives on. Tap to relive, share, or plan the next one.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider-line"></div>
+
+<!-- ============================================================ -->
+<!--              THE NEXT MORNING                                 -->
+<!-- ============================================================ -->
+<section>
+  <div class="side-by-side">
+    <div class="info">
+      <div class="section-label">The Next Morning</div>
+      <div class="section-title">Your group chat is already buzzing</div>
+      <div class="section-desc">
+        Push notification when your session is ready. Setlist poster designed for Instagram Stories. Shareable session links that work without the app. And a "Let's go again!" button that pre-composes an invite for your group chat.
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div style="padding:12px 16px;border-radius:12px;background:var(--surface);border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;">
+          <div style="color:var(--accent);font-weight:700;margin-bottom:2px;">Setlist poster</div>
+          <div style="color:var(--text-secondary);font-size:0.7rem;">Every song, performer, award</div>
+        </div>
+        <div style="padding:12px 16px;border-radius:12px;background:var(--surface);border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;">
+          <div style="color:var(--action-primary);font-weight:700;margin-bottom:2px;">Share links</div>
+          <div style="color:var(--text-secondary);font-size:0.7rem;">No app needed to view</div>
+        </div>
+        <div style="padding:12px 16px;border-radius:12px;background:var(--surface);border:1px solid rgba(255,255,255,0.06);font-size:0.8rem;">
+          <div style="color:var(--action-confirm);font-weight:700;margin-bottom:2px;">"Let's go again!"</div>
+          <div style="color:var(--text-secondary);font-size:0.7rem;">Pre-composed invite for Zalo/WhatsApp</div>
+        </div>
+      </div>
+    </div>
+    <div class="phones">
+      <div class="phone">
+        <div class="ps" style="background:#0f0f14;justify-content:flex-start;">
+          <div style="padding:8px 16px;display:flex;justify-content:space-between;font-size:0.55rem;color:var(--text-secondary);">
+            <span>Sunday 10:32 AM</span>
+            <span>WiFi 92%</span>
+          </div>
+          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px;">
+            <div class="notif-card highlight">
+              <div class="notif-app-row">
+                <div class="notif-app-icon">K</div>
+                <span class="notif-app-name">Karamania</span>
+                <span class="notif-time">just now</span>
+              </div>
+              <div class="notif-title">Your session recap is ready! 🎬</div>
+              <div class="notif-body">Linh's Party — 7 songs, 4 ceremonies, 23 captures from the group. Tap to relive last night.</div>
+              <div style="display:flex;gap:6px;margin-top:10px;">
+                <div style="width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#6c63ff,#aa66ff);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">📸</div>
+                <div style="width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#ef4444,#ff6b6b);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🎬</div>
+                <div style="width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#4ade80,#22c55e);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🎤</div>
+                <div style="width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#ffd700,#ff9900);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🏆</div>
+              </div>
+            </div>
+            <div class="notif-card" style="opacity:0.5;">
+              <div class="notif-app-row">
+                <div class="notif-app-icon" style="background:#333;color:var(--text-secondary);">Z</div>
+                <span class="notif-app-name">Zalo</span>
+                <span class="notif-time">1h ago</span>
+              </div>
+              <div class="notif-title">KTV Gang</div>
+              <div class="notif-body">Linh: "best karaoke night ever 😂 who's down for next Saturday?"</div>
+            </div>
+            <div class="notif-card" style="opacity:0.35;">
+              <div class="notif-app-row">
+                <div class="notif-app-icon" style="background:#333;color:var(--text-secondary);">IG</div>
+                <span class="notif-app-name">Instagram</span>
+                <span class="notif-time">3h ago</span>
+              </div>
+              <div class="notif-title">Duc posted a story</div>
+              <div class="notif-body">mention: @linh @nam @trang</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -1143,15 +1319,15 @@
 
   <div class="quote-row">
     <div class="quote-card">
-      <div class="quote-text">"I had fun at my own party for the first time. I didn't manage anything — the app did it all."</div>
+      <div class="quote-text">"I had fun at my own party for the first time. I didn't manage anything — the app ran everything. I just sang and laughed."</div>
       <div class="quote-author"><strong>Linh</strong> — the host who finally stopped working</div>
     </div>
     <div class="quote-card">
-      <div class="quote-text">"I don't sing. But I was the loudest person in the room all night. The soundboard and dares were insane."</div>
+      <div class="quote-text">"I don't sing. But I was the loudest person in the room all night. The soundboard, lightstick, and Kings Cup had me screaming."</div>
       <div class="quote-author"><strong>Minh</strong> — the non-singer who never checked out</div>
     </div>
     <div class="quote-card">
-      <div class="quote-text">"The ceremony after my song? I felt like a real performer. Then I shared the moment card immediately."</div>
+      <div class="quote-text">"The ceremony after my song? I felt like a real performer. I shared the moment card to my story immediately."</div>
       <div class="quote-author"><strong>Duc</strong> — the singer who got the audience he deserved</div>
     </div>
   </div>
@@ -1166,11 +1342,11 @@
   <div class="cta-logo">KARAMANIA</div>
   <div class="cta-headline">Your next karaoke night will never be the same</div>
   <div class="cta-sub">
-    No download. No sign-up. Just scan and party.<br>
-    Games, challenges, ceremonies, and a highlight reel the next morning.
+    Download the app. Create a party. Scan and sing.<br>
+    Challenge cards, ceremonies, games, and a session timeline the next morning.
   </div>
-  <a class="cta-button" href="#">Try It Free</a>
-  <div class="cta-footnote">Works on any phone. Any browser. Any karaoke venue.</div>
+  <a class="cta-button" href="#">Download Free</a>
+  <div class="cta-footnote">iOS & Android. Works at any karaoke venue.</div>
 </div>
 
 </body>
