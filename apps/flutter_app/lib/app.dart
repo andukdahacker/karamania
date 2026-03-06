@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:karamania/state/accessibility_provider.dart';
@@ -54,18 +55,18 @@ final GoRouter _router = GoRouter(
   ],
 );
 
+/// Default system UI overlay style for dark backgrounds (Task 9.4).
+const _darkOverlayStyle = SystemUiOverlayStyle(
+  statusBarColor: Colors.transparent,
+  statusBarIconBrightness: Brightness.light,
+  statusBarBrightness: Brightness.dark,
+);
+
 class KaramaniaApp extends StatelessWidget {
   const KaramaniaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Update accessibility state from MediaQuery
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.mounted) {
-        context.read<AccessibilityProvider>().updateFromMediaQuery(context);
-      }
-    });
-
     final vibe = context.watch<PartyProvider>().vibe;
 
     return MaterialApp.router(
@@ -74,8 +75,39 @@ class KaramaniaApp extends StatelessWidget {
       routerConfig: _router,
       scrollBehavior: _NoOverscrollGlowBehavior(),
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return _AccessibilityMediaQueryUpdater(
+          child: AnnotatedRegion<SystemUiOverlayStyle>(
+            value: _darkOverlayStyle,
+            child: child ?? const SizedBox.shrink(),
+          ),
+        );
+      },
     );
   }
+}
+
+/// Updates AccessibilityProvider from MediaQuery on dependency changes.
+/// Uses didChangeDependencies to avoid accumulating callbacks on rebuild.
+class _AccessibilityMediaQueryUpdater extends StatefulWidget {
+  const _AccessibilityMediaQueryUpdater({required this.child});
+  final Widget child;
+
+  @override
+  State<_AccessibilityMediaQueryUpdater> createState() =>
+      _AccessibilityMediaQueryUpdaterState();
+}
+
+class _AccessibilityMediaQueryUpdaterState
+    extends State<_AccessibilityMediaQueryUpdater> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    context.read<AccessibilityProvider>().updateFromMediaQuery(context);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Placeholder home screen.
@@ -86,15 +118,17 @@ class _PlaceholderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scaleFactor = MediaQuery.textScalerOf(context).scale(1.0);
+    final horizontalPadding =
+        DJTokens.spaceMd * scaleFactor.clamp(1.0, 1.5);
+
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 428),
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: DJTokens.spaceMd,
-              ),
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
               child: Text(
                 title,
                 style: Theme.of(context).textTheme.displayLarge,
@@ -114,6 +148,9 @@ class _PartyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final party = context.watch<PartyProvider>();
+    final scaleFactor = MediaQuery.textScalerOf(context).scale(1.0);
+    final horizontalPadding =
+        DJTokens.spaceMd * scaleFactor.clamp(1.0, 1.5);
 
     return Scaffold(
       body: AnimatedContainer(
@@ -124,9 +161,7 @@ class _PartyScreen extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 428),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DJTokens.spaceMd,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                 child: Semantics(
                   liveRegion: true,
                   child: Text(

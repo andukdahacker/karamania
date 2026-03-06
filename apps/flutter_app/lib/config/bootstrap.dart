@@ -8,6 +8,7 @@ import 'package:karamania/state/accessibility_provider.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/capture_provider.dart';
 import 'package:karamania/state/party_provider.dart';
+import 'package:karamania/socket/client.dart';
 import 'package:karamania/state/timeline_provider.dart';
 
 Future<void> bootstrap() async {
@@ -40,6 +41,7 @@ Future<void> bootstrap() async {
         ChangeNotifierProvider(create: (_) => CaptureProvider()),
         ChangeNotifierProvider(create: (_) => TimelineProvider()),
         ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
+        Provider<SocketClient>(create: (_) => SocketClient.instance),
       ],
       child: const KaramaniaApp(),
     ),

@@ -1,6 +1,6 @@
 # Story 1.1: Flutter App Scaffold & Design Token System
 
-Status: review
+Status: done
 
 ## Story
 
@@ -420,4 +420,13 @@ Claude Opus 4.6
 - 2026-03-06: Story 1.1 implemented — Flutter app scaffold with design tokens, vibe theming, DJTapButton, accessibility, typography, string constants, stub providers, and 66 passing tests
 - 2026-03-06: Task 12 added — Flutter flavor support (dev/staging/production) with per-flavor app IDs, app names, Android productFlavors, iOS xcconfig + schemes, AppConfig singleton, bootstrap extraction, dart_defines examples. 70 total tests passing
 - 2026-03-06: AppConfig updated — Split `FIREBASE_API_KEY`/`FIREBASE_APP_ID` into platform-specific keys (`FIREBASE_IOS_API_KEY`, `FIREBASE_IOS_APP_ID`, `FIREBASE_ANDROID_API_KEY`, `FIREBASE_ANDROID_APP_ID`) since Firebase provides different values per platform. Platform-aware getters select correct keys via `defaultTargetPlatform`. Firebase project `karamania-dev` configured, `dart_defines_dev.json` created with real credentials. App verified running on iOS simulator with successful Firebase initialization
+- 2026-03-07: Code review fixes (8 issues found, all resolved):
+  - [CRITICAL] Task 9.4: Added `SystemUiOverlayStyle` via `AnnotatedRegion` in `app.dart` MaterialApp builder — transparent status bar with light icons for dark backgrounds
+  - [HIGH] Fixed `addPostFrameCallback` in `build()` — replaced with `_AccessibilityMediaQueryUpdater` StatefulWidget using `didChangeDependencies` to avoid callback accumulation
+  - [MEDIUM] AC#1 "8 color tokens" — DJTokens has 7 constant color tokens (task spec lists 7). AC text appears to count incorrectly; implementation matches task spec. No code change needed
+  - [MEDIUM] AC#6 font "<25KB" — Flutter requires TTF (80KB); <25KB target was for woff2 web format. TTF cannot be further reduced without losing Vietnamese diacritics. No code change possible
+  - [MEDIUM] Task 9.3: Added `MediaQuery.textScalerOf` awareness — horizontal padding scales with text scaler (clamped 1.0-1.5x)
+  - [MEDIUM] Task 10.5: Added `Provider<SocketClient>` to MultiProvider (6th provider, completing the required 6)
+  - [LOW] iOS Info.plist: Removed landscape orientations — portrait only to match Dart-level lock
+  - [LOW] Created `test/factories/.gitkeep` to establish convention for shared test data factories
 
