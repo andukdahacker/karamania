@@ -1,0 +1,10 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    always_use_package_imports: true
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    avoid_print: true
+    prefer_single_quotes: true
+    unawaited_futures: true

@@ -1,0 +1,12 @@
+{
+  "SERVER_URL": "https://api.karamania.com",
+  "FIREBASE_IOS_API_KEY": "YOUR_PRODUCTION_IOS_API_KEY",
+  "FIREBASE_IOS_APP_ID": "YOUR_PRODUCTION_IOS_APP_ID",
+  "FIREBASE_ANDROID_API_KEY": "YOUR_PRODUCTION_ANDROID_API_KEY",
+  "FIREBASE_ANDROID_APP_ID": "YOUR_PRODUCTION_ANDROID_APP_ID",
+  "FIREBASE_MESSAGING_SENDER_ID": "YOUR_PRODUCTION_SENDER_ID",
+  "FIREBASE_PROJECT_ID": "karamania-production",
+  "FIREBASE_STORAGE_BUCKET": "karamania-production.firebasestorage.app",
+  "FIREBASE_AUTH_DOMAIN": "karamania-production.firebaseapp.com",
+  "FIREBASE_IOS_BUNDLE_ID": "com.karamania.app"
+}

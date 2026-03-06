@@ -1,0 +1,12 @@
+{
+  "SERVER_URL": "http://localhost:3000",
+  "FIREBASE_IOS_API_KEY": "YOUR_DEV_IOS_API_KEY",
+  "FIREBASE_IOS_APP_ID": "YOUR_DEV_IOS_APP_ID",
+  "FIREBASE_ANDROID_API_KEY": "YOUR_DEV_ANDROID_API_KEY",
+  "FIREBASE_ANDROID_APP_ID": "YOUR_DEV_ANDROID_APP_ID",
+  "FIREBASE_MESSAGING_SENDER_ID": "YOUR_DEV_SENDER_ID",
+  "FIREBASE_PROJECT_ID": "karamania-dev",
+  "FIREBASE_STORAGE_BUCKET": "karamania-dev.firebasestorage.app",
+  "FIREBASE_AUTH_DOMAIN": "karamania-dev.firebaseapp.com",
+  "FIREBASE_IOS_BUNDLE_ID": "com.karamania.dev"
+}

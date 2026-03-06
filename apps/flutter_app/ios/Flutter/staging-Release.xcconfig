@@ -1,0 +1,3 @@
+#include "Release.xcconfig"
+APP_DISPLAY_NAME=Karamania Staging
+PRODUCT_BUNDLE_IDENTIFIER=com.karamania.staging
