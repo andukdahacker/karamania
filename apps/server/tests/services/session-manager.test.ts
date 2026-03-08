@@ -28,9 +28,15 @@ vi.mock('../../src/services/party-code.js', () => ({
 
 const mockSessionCreate = vi.fn();
 const mockAddParticipant = vi.fn();
+const mockAddParticipantIfNotExists = vi.fn();
+const mockGetParticipants = vi.fn();
+const mockFindById = vi.fn();
 vi.mock('../../src/persistence/session-repository.js', () => ({
   create: mockSessionCreate,
   addParticipant: mockAddParticipant,
+  addParticipantIfNotExists: mockAddParticipantIfNotExists,
+  getParticipants: mockGetParticipants,
+  findById: mockFindById,
 }));
 
 describe('session-manager', () => {
@@ -114,6 +120,88 @@ describe('session-manager', () => {
       expect(mockSessionCreate).toHaveBeenCalledWith(
         expect.objectContaining({ vibe: 'general' })
       );
+    });
+  });
+
+  describe('handleParticipantJoin', () => {
+    it('adds participant and returns participant list with count and vibe', async () => {
+      mockAddParticipantIfNotExists.mockResolvedValue(undefined);
+      mockGetParticipants.mockResolvedValue([
+        { id: 'p1', user_id: 'user-1', guest_name: null, display_name: 'Host', joined_at: new Date() },
+        { id: 'p2', user_id: null, guest_name: 'Alice', display_name: null, joined_at: new Date() },
+      ]);
+      mockFindById.mockResolvedValue(createTestSession({ id: 'session-1', vibe: 'rock' }));
+
+      const { handleParticipantJoin } = await import('../../src/services/session-manager.js');
+      const result = await handleParticipantJoin({
+        sessionId: 'session-1',
+        userId: 'guest-uuid',
+        role: 'guest',
+        displayName: 'Alice',
+      });
+
+      expect(result.participantCount).toBe(2);
+      expect(result.vibe).toBe('rock');
+      expect(result.participants).toEqual([
+        { userId: 'user-1', displayName: 'Host' },
+        { userId: 'p2', displayName: 'Alice' },
+      ]);
+    });
+
+    it('calls addParticipantIfNotExists with guestName for guest role', async () => {
+      mockAddParticipantIfNotExists.mockResolvedValue(undefined);
+      mockGetParticipants.mockResolvedValue([]);
+      mockFindById.mockResolvedValue(createTestSession({ id: 'session-1' }));
+
+      const { handleParticipantJoin } = await import('../../src/services/session-manager.js');
+      await handleParticipantJoin({
+        sessionId: 'session-1',
+        userId: 'guest-uuid',
+        role: 'guest',
+        displayName: 'Bob',
+      });
+
+      expect(mockAddParticipantIfNotExists).toHaveBeenCalledWith({
+        sessionId: 'session-1',
+        userId: undefined,
+        guestName: 'Bob',
+      });
+    });
+
+    it('calls addParticipantIfNotExists with userId for authenticated role', async () => {
+      mockAddParticipantIfNotExists.mockResolvedValue(undefined);
+      mockGetParticipants.mockResolvedValue([]);
+      mockFindById.mockResolvedValue(createTestSession({ id: 'session-1' }));
+
+      const { handleParticipantJoin } = await import('../../src/services/session-manager.js');
+      await handleParticipantJoin({
+        sessionId: 'session-1',
+        userId: 'firebase-user-1',
+        role: 'authenticated',
+        displayName: 'Charlie',
+      });
+
+      expect(mockAddParticipantIfNotExists).toHaveBeenCalledWith({
+        sessionId: 'session-1',
+        userId: 'firebase-user-1',
+        guestName: undefined,
+      });
+    });
+
+    it('defaults vibe to general when session has no vibe', async () => {
+      mockAddParticipantIfNotExists.mockResolvedValue(undefined);
+      mockGetParticipants.mockResolvedValue([]);
+      mockFindById.mockResolvedValue(createTestSession({ id: 'session-1', vibe: null }));
+
+      const { handleParticipantJoin } = await import('../../src/services/session-manager.js');
+      const result = await handleParticipantJoin({
+        sessionId: 'session-1',
+        userId: 'guest-uuid',
+        role: 'guest',
+        displayName: 'Dave',
+      });
+
+      expect(result.vibe).toBe('general');
     });
   });
 });

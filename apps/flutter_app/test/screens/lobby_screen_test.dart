@@ -10,8 +10,8 @@ import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 
 Widget _wrapWithProviders(Widget child, {PartyProvider? partyProvider}) {
-  final provider = partyProvider ?? PartyProvider()
-    ..onPartyCreated('test-session', 'ABCD');
+  final provider = partyProvider ??
+      (PartyProvider()..onPartyCreated('test-session', 'ABCD'));
 
   return MultiProvider(
     providers: [
@@ -34,7 +34,7 @@ void main() {
   });
 
   group('LobbyScreen', () {
-    testWidgets('renders QR code widget', (tester) async {
+    testWidgets('renders QR code widget for host', (tester) async {
       await tester.pumpWidget(_wrapWithProviders(const LobbyScreen()));
       await tester.pump();
 
@@ -48,7 +48,7 @@ void main() {
       expect(find.textContaining('ABCD'), findsOneWidget);
     });
 
-    testWidgets('renders 5 vibe selector buttons', (tester) async {
+    testWidgets('renders 5 vibe selector buttons for host', (tester) async {
       await tester.pumpWidget(_wrapWithProviders(const LobbyScreen()));
       await tester.pump();
 
@@ -59,7 +59,7 @@ void main() {
       expect(find.byKey(const Key('vibe-edm')), findsOneWidget);
     });
 
-    testWidgets('renders START PARTY button (disabled)', (tester) async {
+    testWidgets('renders START PARTY button for host', (tester) async {
       await tester.pumpWidget(_wrapWithProviders(const LobbyScreen()));
       await tester.pump();
 
@@ -80,6 +80,100 @@ void main() {
       await tester.pump();
 
       expect(find.text('1 joined'), findsOneWidget);
+    });
+
+    testWidgets('shows waiting for guests when fewer than 3 participants', (tester) async {
+      await tester.pumpWidget(_wrapWithProviders(const LobbyScreen()));
+      await tester.pump();
+
+      expect(find.text('Waiting for guests...'), findsOneWidget);
+    });
+
+    testWidgets('hides waiting for guests when 3 or more participants', (tester) async {
+      final provider = PartyProvider()
+        ..onPartyCreated('test-session', 'ABCD');
+      provider.onParticipantsSync([
+        ParticipantInfo(userId: 'u1', displayName: 'Host'),
+        ParticipantInfo(userId: 'u2', displayName: 'Alice'),
+        ParticipantInfo(userId: 'u3', displayName: 'Bob'),
+      ]);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const LobbyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.text('Waiting for guests...'), findsNothing);
+    });
+
+    testWidgets('guest view hides QR code and vibe selector', (tester) async {
+      final guestProvider = PartyProvider()
+        ..onPartyJoined(
+          sessionId: 'session-1',
+          partyCode: 'ROCK',
+          vibe: PartyVibe.rock,
+        );
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const LobbyScreen(), partyProvider: guestProvider));
+      await tester.pump();
+
+      // QR code should NOT be present for guest
+      expect(find.byType(QrImageView), findsNothing);
+      // Vibe selector buttons should NOT be present for guest
+      expect(find.byKey(const Key('vibe-general')), findsNothing);
+      // START PARTY button should NOT be present for guest
+      expect(find.byKey(const Key('start-party-btn')), findsNothing);
+      // Share button SHOULD still be present
+      expect(find.byKey(const Key('share-party-btn')), findsOneWidget);
+      // Party code SHOULD still be displayed
+      expect(find.textContaining('ROCK'), findsOneWidget);
+    });
+
+    testWidgets('displays participant list when participants exist', (tester) async {
+      final provider = PartyProvider()
+        ..onPartyCreated('test-session', 'ABCD');
+      provider.onParticipantsSync([
+        ParticipantInfo(userId: 'u1', displayName: 'Host'),
+        ParticipantInfo(userId: 'u2', displayName: 'Alice'),
+        ParticipantInfo(userId: 'u3', displayName: 'Bob'),
+      ]);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const LobbyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.text('Host'), findsOneWidget);
+      expect(find.text('Alice'), findsOneWidget);
+      expect(find.text('Bob'), findsOneWidget);
+      expect(find.text('Participants'), findsOneWidget);
+    });
+
+    testWidgets('shows best with 3+ message when fewer than 3 participants', (tester) async {
+      final provider = PartyProvider()
+        ..onPartyCreated('test-session', 'ABCD');
+      // Host is 1 participant
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const LobbyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.text('Works best with 3+ friends!'), findsOneWidget);
+    });
+
+    testWidgets('hides best with 3+ message when 3 or more participants', (tester) async {
+      final provider = PartyProvider()
+        ..onPartyCreated('test-session', 'ABCD');
+      provider.onParticipantsSync([
+        ParticipantInfo(userId: 'u1', displayName: 'Host'),
+        ParticipantInfo(userId: 'u2', displayName: 'Alice'),
+        ParticipantInfo(userId: 'u3', displayName: 'Bob'),
+      ]);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const LobbyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.text('Works best with 3+ friends!'), findsNothing);
     });
 
     testWidgets('vibe tap starts preview, second tap confirms selection',

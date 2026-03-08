@@ -25,6 +25,10 @@ const mockWhere = vi.fn();
 const mockValues = vi.fn();
 const mockSet = vi.fn();
 
+const mockLeftJoin = vi.fn();
+const mockSelect = vi.fn();
+const mockOrderBy = vi.fn();
+
 vi.mock('../../src/db/connection.js', () => {
   const createWhereChain = () => ({
     where: (...args: unknown[]) => {
@@ -39,6 +43,18 @@ vi.mock('../../src/db/connection.js', () => {
       };
     },
     executeTakeFirst: mockExecuteTakeFirst,
+  });
+
+  const createSelectChain = () => ({
+    where: (...args: unknown[]) => {
+      mockWhere(...args);
+      return {
+        orderBy: (...orderArgs: unknown[]) => {
+          mockOrderBy(...orderArgs);
+          return { execute: mockExecute };
+        },
+      };
+    },
   });
 
   const createInsertChain = () => ({
@@ -68,6 +84,15 @@ vi.mock('../../src/db/connection.js', () => {
     db: {
       selectFrom: vi.fn().mockReturnValue({
         selectAll: () => createWhereChain(),
+        leftJoin: (...args: unknown[]) => {
+          mockLeftJoin(...args);
+          return {
+            select: (...selectArgs: unknown[]) => {
+              mockSelect(...selectArgs);
+              return createSelectChain();
+            },
+          };
+        },
       }),
       insertInto: vi.fn().mockReturnValue(createInsertChain()),
       updateTable: vi.fn().mockReturnValue(createUpdateChain()),
@@ -188,6 +213,66 @@ describe('session-repository', () => {
 
       expect(mockSet).toHaveBeenCalledWith({ vibe: 'kpop' });
       expect(mockWhere).toHaveBeenCalledWith('id', '=', 'session-1');
+    });
+  });
+
+  describe('getParticipants', () => {
+    it('queries session_participants with left join on users and orders by joined_at asc', async () => {
+      const participants = [
+        { id: 'p1', user_id: 'user-1', guest_name: null, display_name: 'Host', joined_at: new Date('2026-03-01') },
+        { id: 'p2', user_id: null, guest_name: 'Alice', display_name: null, joined_at: new Date('2026-03-02') },
+      ];
+      mockExecute.mockResolvedValue(participants);
+
+      const { getParticipants } = await import('../../src/persistence/session-repository.js');
+      const result = await getParticipants('session-1');
+
+      expect(mockLeftJoin).toHaveBeenCalledWith('users', 'users.id', 'session_participants.user_id');
+      expect(mockSelect).toHaveBeenCalledWith([
+        'session_participants.id',
+        'session_participants.user_id',
+        'session_participants.guest_name',
+        'users.display_name',
+        'session_participants.joined_at',
+      ]);
+      expect(mockWhere).toHaveBeenCalledWith('session_participants.session_id', '=', 'session-1');
+      expect(mockOrderBy).toHaveBeenCalledWith('session_participants.joined_at', 'asc');
+      expect(result).toEqual(participants);
+    });
+
+    it('returns empty array when no participants exist', async () => {
+      mockExecute.mockResolvedValue([]);
+
+      const { getParticipants } = await import('../../src/persistence/session-repository.js');
+      const result = await getParticipants('session-empty');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('addParticipantIfNotExists', () => {
+    it('does not throw on unique constraint violation', async () => {
+      const error = new Error('duplicate key value violates unique constraint') as Error & { code: string };
+      error.code = '23505';
+      mockExecuteTakeFirstOrThrow.mockRejectedValue(error);
+
+      const { addParticipantIfNotExists } = await import('../../src/persistence/session-repository.js');
+
+      await expect(
+        addParticipantIfNotExists({ sessionId: 'session-1', guestName: 'Alice' })
+      ).resolves.toBeUndefined();
+    });
+
+    it('throws on non-unique-constraint errors', async () => {
+      const error = new Error('connection error') as Error & { code: string };
+      error.code = '08001';
+      mockExecuteTakeFirstOrThrow.mockRejectedValue(error);
+
+      const { addParticipantIfNotExists } = await import('../../src/persistence/session-repository.js');
+
+      await expect(
+        addParticipantIfNotExists({ sessionId: 'session-1', guestName: 'Bob' })
+      ).rejects.toThrow('connection error');
     });
   });
 

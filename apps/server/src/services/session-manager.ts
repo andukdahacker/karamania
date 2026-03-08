@@ -28,3 +28,36 @@ export async function createSession(params: {
 
   return { sessionId: session.id, partyCode: session.party_code };
 }
+
+export async function handleParticipantJoin(params: {
+  sessionId: string;
+  userId: string;
+  role: 'guest' | 'authenticated';
+  displayName: string;
+}): Promise<{
+  participants: Array<{ userId: string; displayName: string }>;
+  participantCount: number;
+  vibe: string;
+}> {
+  // 1. Add participant (idempotent — handles reconnection + host duplicate)
+  await sessionRepo.addParticipantIfNotExists({
+    sessionId: params.sessionId,
+    userId: params.role === 'guest' ? undefined : params.userId,
+    guestName: params.role === 'guest' ? params.displayName : undefined,
+  });
+
+  // 2. Get current participants + session metadata
+  const [participants, session] = await Promise.all([
+    sessionRepo.getParticipants(params.sessionId),
+    sessionRepo.findById(params.sessionId),
+  ]);
+
+  return {
+    participants: participants.map(p => ({
+      userId: p.user_id ?? p.id,
+      displayName: p.guest_name ?? p.display_name ?? 'Unknown',
+    })),
+    participantCount: participants.length,
+    vibe: session?.vibe ?? 'general',
+  };
+}

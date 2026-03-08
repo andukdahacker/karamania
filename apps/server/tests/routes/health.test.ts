@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify from 'fastify';
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
 
 // Mock config before any imports that use it
 vi.mock('../../src/config.js', () => ({
@@ -43,6 +44,8 @@ describe('GET /health', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     app = Fastify();
+    app.setValidatorCompiler(validatorCompiler);
+    app.setSerializerCompiler(serializerCompiler);
     const { healthRoutes } = await import('../../src/routes/health.js');
     await app.register(healthRoutes);
     await app.ready();

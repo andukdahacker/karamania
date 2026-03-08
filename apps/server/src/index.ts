@@ -6,6 +6,7 @@ import {
   serializerCompiler,
   validatorCompiler,
   jsonSchemaTransform,
+  jsonSchemaTransformObject,
 } from 'fastify-type-provider-zod';
 import { config } from './config.js';
 import { db } from './db/connection.js';
@@ -27,6 +28,11 @@ fastify.setValidatorCompiler(validatorCompiler);
 fastify.setSerializerCompiler(serializerCompiler);
 
 await fastify.register(cors);
+// Import schema files so they register in z.globalRegistry before swagger init
+await import('./shared/schemas/common-schemas.js');
+await import('./shared/schemas/auth-schemas.js');
+await import('./shared/schemas/session-schemas.js');
+
 await fastify.register(swagger, {
   openapi: {
     info: {
@@ -35,6 +41,7 @@ await fastify.register(swagger, {
     },
   },
   transform: jsonSchemaTransform,
+  transformObject: jsonSchemaTransformObject,
 });
 
 fastify.setErrorHandler(errorHandler);
@@ -61,6 +68,11 @@ const shutdown = async () => {
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
+
+// Serve OpenAPI spec JSON (available after ready)
+fastify.get('/openapi.json', { schema: { hide: true } }, async (_request, reply) => {
+  return reply.send(fastify.swagger());
+});
 
 try {
   initializeFirebaseAdmin();

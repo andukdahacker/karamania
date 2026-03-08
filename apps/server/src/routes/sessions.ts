@@ -4,13 +4,17 @@ import { upsertFromFirebase } from '../persistence/user-repository.js';
 import { createGuestUser } from '../persistence/user-repository.js';
 import { createSession } from '../services/session-manager.js';
 import { generateGuestToken } from '../services/guest-token.js';
-import { badRequestError } from '../shared/errors.js';
-import { createSessionRequestSchema } from '../shared/schemas/session-schemas.js';
+import { createSessionRequestSchema, createSessionResponseSchema } from '../shared/schemas/session-schemas.js';
+import { errorResponseSchema } from '../shared/schemas/common-schemas.js';
 
 export async function sessionRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post('/api/sessions', {
     schema: {
       body: createSessionRequestSchema,
+      response: {
+        201: createSessionResponseSchema,
+        400: errorResponseSchema,
+      },
     },
   }, async (request, reply) => {
     const body = request.body as { displayName?: string; vibe?: string; venueName?: string };
@@ -47,9 +51,8 @@ export async function sessionRoutes(fastify: FastifyInstance): Promise<void> {
     } else {
       // Guest path
       if (!body.displayName) {
-        const error = badRequestError('displayName is required for guest hosts');
-        return reply.status(error.statusCode!).send({
-          error: { code: error.code, message: error.message },
+        return reply.status(400).send({
+          error: { code: 'BAD_REQUEST', message: 'displayName is required for guest hosts' },
         });
       }
 

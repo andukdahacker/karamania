@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify from 'fastify';
 import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
+import { errorHandler } from '../../src/shared/errors.js';
 import { createTestUser } from '../factories/user.js';
 import { createTestSession } from '../factories/session.js';
 
@@ -53,6 +54,7 @@ describe('POST /api/sessions', () => {
     app = Fastify();
     app.setValidatorCompiler(validatorCompiler);
     app.setSerializerCompiler(serializerCompiler);
+    app.setErrorHandler(errorHandler);
     const { sessionRoutes } = await import('../../src/routes/sessions.js');
     await app.register(sessionRoutes);
     await app.ready();

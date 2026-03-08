@@ -6,13 +6,21 @@ export type { DecodedIdToken };
 
 export function initializeFirebaseAdmin(): void {
   if (getApps().length > 0) return;
-  initializeApp({
-    credential: cert({
-      projectId: config.FIREBASE_PROJECT_ID,
-      clientEmail: config.FIREBASE_CLIENT_EMAIL,
-      privateKey: config.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    }),
-  });
+  try {
+    initializeApp({
+      credential: cert({
+        projectId: config.FIREBASE_PROJECT_ID,
+        clientEmail: config.FIREBASE_CLIENT_EMAIL,
+        privateKey: config.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      }),
+    });
+  } catch {
+    if (config.NODE_ENV === 'development') {
+      console.warn('Firebase Admin SDK initialization failed — Firebase auth disabled for local dev');
+      return;
+    }
+    throw new Error('Firebase Admin SDK initialization failed');
+  }
 }
 
 export async function verifyFirebaseToken(idToken: string): Promise<DecodedIdToken> {

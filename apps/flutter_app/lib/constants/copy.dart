@@ -55,8 +55,17 @@ class Copy {
 
   // Join screen
   static const String enterPartyCode = 'Enter party code';
-  static const String joinFlowComingSoon = 'Join flow coming in the next update!';
   static const String backToHome = 'Back to home';
+
+  // Join flow
+  static const String joiningParty = 'Joining party...';
+  static const String partyNotFound = 'No active party with that code';
+  static const String partyIsFull = 'This party is full. Maximum 12 participants.';
+  static const String joinFailed = 'Failed to join party. Please try again.';
+  static const String bestWith3Plus = 'Works best with 3+ friends!';
+
+  // Participant list
+  static const String participants = 'Participants';
 
   // Dialogs
   static const String cancel = 'CANCEL';

@@ -18,6 +18,10 @@ dependencies:
   qr_flutter: ^4.1.0
   http: ^1.6.0
   share_plus: ^12.0.1
+  dart_open_fetch_runtime:
+    git:
+      url: https://github.com/andukdahacker/dart-open-fetch.git
+      path: packages/dart_open_fetch_runtime
 
 dev_dependencies:
   flutter_test:

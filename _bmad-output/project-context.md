@@ -1,7 +1,7 @@
 ---
 project_name: 'karaoke-party-app'
 user_name: 'Ducdo'
-date: '2026-03-06'
+date: '2026-03-08'
 status: 'complete'
 optimized_for_llm: true
 ---
@@ -26,6 +26,7 @@ _Critical rules and patterns for implementing Karamania. Read this before writin
 - **Zod validation:** `fastify-type-provider-zod` v6.1.0 (Fastify 5 compatible)
 - **TypeScript:** strict mode, ESM, `noUncheckedIndexedAccess: true`
 - **Type generation:** Zod -> `@fastify/swagger` -> OpenAPI -> `dart-open-fetch` -> Dart types
+- **dart-open-fetch:** CLI tool that generates typed Dart HTTP clients from OpenAPI spec. Installed from git: `dart pub global activate --source path <local-clone>/packages/dart_open_fetch`. Runtime dep: `dart_open_fetch_runtime` (git ref in pubspec.yaml)
 - **DB types:** `kysely-codegen` auto-generates from live schema. `db/types.ts` is DO NOT EDIT
 - **Guest JWT:** `jose` library (not jsonwebtoken). Server-signed, same shape as Firebase JWT
 
@@ -186,13 +187,64 @@ Per-operation, not global (e.g., `playlistImportState`, not `isLoading`).
 
 1. Write Kysely migration -> `kysely-ctl migrate` -> `kysely-codegen` updates `db/types.ts`
 2. Update Zod schemas in `shared/schemas/`
-3. Run server -> `@fastify/swagger` generates OpenAPI
-4. Run `tools/generate-dart-types.sh` -> dart-open-fetch -> Flutter `api/generated/`
+3. **Register schemas in `z.globalRegistry`** so they emit as `$ref` components in OpenAPI:
+   ```typescript
+   z.globalRegistry.add(mySchema, { id: 'MySchemaName' });
+   ```
+4. Add `response` schemas to route definitions (not just `body`)
+5. Run server -> `@fastify/swagger` generates OpenAPI at `http://localhost:3000/openapi.json`
+6. Run dart-open-fetch to generate Dart types:
+   ```bash
+   dart_open_fetch generate \
+     --source http://localhost:3000/openapi.json \
+     --output apps/flutter_app/lib/api/generated \
+     --client-name KaramaniaApiClient
+   ```
+7. Generated output: `api/generated/models.dart` (typed models), `api/generated/clients/karamania_api_client.dart` (typed HTTP client), `api/generated/karamania_api.dart` (barrel)
+
+**Schema registration pattern (required for `$ref`):**
+- All Zod schemas in `shared/schemas/` must register with `z.globalRegistry.add(schema, { id: 'Name' })`
+- Import schema files in `index.ts` BEFORE swagger init: `await import('./shared/schemas/auth-schemas.js')`
+- Swagger config requires both `transform: jsonSchemaTransform` and `transformObject: jsonSchemaTransformObject`
+
+**Known dart-open-fetch v0.1.0 limitations:**
+- Nested inline objects generate as `Map<String, dynamic>` (not typed classes)
+- Input/Output model duplication (`FooInput` + `Foo` for same schema)
+- Enum fields generate as `String`
+- See `~/Desktop/code/dart-open-fetch-improvements.md` for planned fixes
+
+### Local Development Setup
+
+```bash
+# 1. Start PostgreSQL
+docker compose up -d          # from repo root — postgres:16-alpine on port 5432
+
+# 2. Run migrations
+cd apps/server && npx kysely-ctl migrate
+
+# 3. Start server (serves OpenAPI at /openapi.json)
+cd apps/server && npx tsx --watch src/index.ts
+
+# 4. Regenerate Dart types (requires server running)
+dart_open_fetch generate \
+  --source http://localhost:3000/openapi.json \
+  --output apps/flutter_app/lib/api/generated \
+  --client-name KaramaniaApiClient
+
+# 5. Run Flutter
+cd apps/flutter_app && flutter run --dart-define-from-file=dart_defines_local.json
+```
+
+Firebase Admin SDK gracefully skips initialization in development mode (placeholder credentials in `.env` are fine for local dev without Firebase features).
 
 ### Commands
 
-- Server dev: `tsx --watch src/index.ts`
-- Flutter dev: `flutter run --dart-define-from-file=dart_defines_local.json`
+- Server dev: `cd apps/server && npx tsx --watch src/index.ts`
+- Flutter dev: `cd apps/flutter_app && flutter run --dart-define-from-file=dart_defines_local.json`
+- Server tests: `cd apps/server && npm test`
+- Flutter tests: `cd apps/flutter_app && flutter test`
+- Dart type generation: `dart_open_fetch generate --source http://localhost:3000/openapi.json --output apps/flutter_app/lib/api/generated --client-name KaramaniaApiClient`
+- Docker postgres: `docker compose up -d` (from repo root)
 - Server deploy: Railway auto-deploy on push to `main`
 
 ---
@@ -204,4 +256,4 @@ Per-operation, not global (e.g., `playlistImportState`, not `isLoading`).
 - For deeper context on any decision, read the full architecture doc
 - Update this file when patterns change during implementation
 
-Last Updated: 2026-03-06
+Last Updated: 2026-03-08

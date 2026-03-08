@@ -64,8 +64,8 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     )
     .execute();
 
-  // Unique constraint for session_participants
-  await sql`ALTER TABLE session_participants ADD CONSTRAINT uq_session_participant UNIQUE(session_id, COALESCE(user_id::text, guest_name))`.execute(db);
+  // Unique index for session_participants (expression-based, must be an index not a constraint)
+  await sql`CREATE UNIQUE INDEX uq_session_participant ON session_participants(session_id, COALESCE(user_id::text, guest_name))`.execute(db);
 
   // Media captures table
   await db.schema

@@ -78,6 +78,29 @@ class SocketClient {
     _socket?.emit(event, data);
   }
 
+  void _setupPartyListeners(PartyProvider partyProvider) {
+    on('party:joined', (data) {
+      final payload = data as Map<String, dynamic>;
+      partyProvider.onParticipantJoined(
+        userId: payload['userId'] as String,
+        displayName: payload['displayName'] as String,
+        participantCount: payload['participantCount'] as int,
+      );
+    });
+
+    on('party:participants', (data) {
+      final payload = data as Map<String, dynamic>;
+      final rawList = payload['participants'] as List<dynamic>;
+      final participants = rawList
+          .map((p) => ParticipantInfo(
+                userId: (p as Map<String, dynamic>)['userId'] as String,
+                displayName: p['displayName'] as String,
+              ))
+          .toList();
+      partyProvider.onParticipantsSync(participants);
+    });
+  }
+
   void updateVibe({
     required PartyProvider partyProvider,
     required PartyVibe vibe,
@@ -126,8 +149,50 @@ class SocketClient {
         sessionId: sessionId,
         displayName: displayName ?? authProvider.displayName,
       );
+      _setupPartyListeners(partyProvider);
     } catch (e) {
       partyProvider.onCreatePartyLoading(LoadingState.error);
+      rethrow;
+    }
+  }
+
+  Future<void> joinParty({
+    required ApiClient apiClient,
+    required AuthProvider authProvider,
+    required PartyProvider partyProvider,
+    required String serverUrl,
+    required String displayName,
+    required String partyCode,
+  }) async {
+    partyProvider.onJoinPartyLoading(LoadingState.loading);
+    try {
+      final result = await apiClient.guestAuth(
+        displayName: displayName,
+        partyCode: partyCode,
+      );
+      final token = result['token'] as String;
+      final guestId = result['guestId'] as String;
+      final sessionId = result['sessionId'] as String;
+      final vibeString = result['vibe'] as String? ?? 'general';
+
+      authProvider.onGuestAuthenticated(token, guestId, displayName);
+
+      final parsedVibe = PartyVibe.values.byName(vibeString);
+      partyProvider.onPartyJoined(
+        sessionId: sessionId,
+        partyCode: partyCode,
+        vibe: parsedVibe,
+      );
+
+      await connect(
+        serverUrl: serverUrl,
+        token: token,
+        sessionId: sessionId,
+        displayName: displayName,
+      );
+      _setupPartyListeners(partyProvider);
+    } catch (e) {
+      partyProvider.onJoinPartyLoading(LoadingState.error);
       rethrow;
     }
   }

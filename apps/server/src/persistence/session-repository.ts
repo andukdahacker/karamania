@@ -63,6 +63,42 @@ export async function addParticipant(params: {
     .executeTakeFirstOrThrow();
 }
 
+export async function getParticipants(sessionId: string) {
+  return db
+    .selectFrom('session_participants')
+    .leftJoin('users', 'users.id', 'session_participants.user_id')
+    .select([
+      'session_participants.id',
+      'session_participants.user_id',
+      'session_participants.guest_name',
+      'users.display_name',
+      'session_participants.joined_at',
+    ])
+    .where('session_participants.session_id', '=', sessionId)
+    .orderBy('session_participants.joined_at', 'asc')
+    .execute();
+}
+
+export async function addParticipantIfNotExists(params: {
+  sessionId: string;
+  userId?: string;
+  guestName?: string;
+}): Promise<void> {
+  try {
+    await addParticipant(params);
+  } catch (error: unknown) {
+    // Ignore unique constraint violation (participant already exists)
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      (error as Error & { code: string }).code === '23505'
+    ) {
+      return;
+    }
+    throw error;
+  }
+}
+
 export async function updateVibe(sessionId: string, vibe: string): Promise<void> {
   await db
     .updateTable('sessions')

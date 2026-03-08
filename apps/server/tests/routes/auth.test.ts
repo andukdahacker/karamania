@@ -19,8 +19,10 @@ vi.mock('../../src/config.js', () => ({
 }));
 
 const mockFindByPartyCode = vi.fn();
+const mockGetParticipants = vi.fn();
 vi.mock('../../src/persistence/session-repository.js', () => ({
   findByPartyCode: mockFindByPartyCode,
+  getParticipants: mockGetParticipants,
 }));
 
 vi.mock('../../src/db/connection.js', () => ({
@@ -44,9 +46,10 @@ describe('POST /api/auth/guest', () => {
     await app.close();
   });
 
-  it('returns 200 with token and guestId for valid request', async () => {
-    const testSession = createTestSession({ party_code: 'VIBE', status: 'lobby' });
+  it('returns 200 with token, guestId, sessionId, and vibe for valid request', async () => {
+    const testSession = createTestSession({ party_code: 'VIBE', status: 'lobby', vibe: 'rock' });
     mockFindByPartyCode.mockResolvedValue(testSession);
+    mockGetParticipants.mockResolvedValue([]);
 
     const response = await app.inject({
       method: 'POST',
@@ -62,6 +65,8 @@ describe('POST /api/auth/guest', () => {
     expect(typeof data['token']).toBe('string');
     expect(data['guestId']).toBeDefined();
     expect(typeof data['guestId']).toBe('string');
+    expect(data['sessionId']).toBe(testSession.id);
+    expect(data['vibe']).toBe('rock');
   });
 
   it('returns 404 for invalid partyCode', async () => {
@@ -98,5 +103,46 @@ describe('POST /api/auth/guest', () => {
     });
 
     expect(response.statusCode).toBe(400);
+  });
+
+  it('returns 403 SESSION_FULL when session has 12 participants', async () => {
+    const testSession = createTestSession({ party_code: 'FULL', status: 'lobby' });
+    mockFindByPartyCode.mockResolvedValue(testSession);
+    mockGetParticipants.mockResolvedValue(Array.from({ length: 12 }, (_, i) => ({
+      id: `participant-${i}`,
+      user_id: null,
+      guest_name: `Guest${i}`,
+      display_name: null,
+      joined_at: new Date(),
+    })));
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/guest',
+      payload: { displayName: 'OneMore', partyCode: 'FULL' },
+    });
+
+    expect(response.statusCode).toBe(403);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    expect(body).toHaveProperty('error');
+    const error = body['error'] as Record<string, unknown>;
+    expect(error['code']).toBe('SESSION_FULL');
+  });
+
+  it('returns default vibe when session has no vibe set', async () => {
+    const testSession = createTestSession({ party_code: 'NOVM', status: 'lobby', vibe: null });
+    mockFindByPartyCode.mockResolvedValue(testSession);
+    mockGetParticipants.mockResolvedValue([]);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/guest',
+      payload: { displayName: 'TestUser', partyCode: 'NOVM' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    const data = body['data'] as Record<string, unknown>;
+    expect(data['vibe']).toBe('general');
   });
 });

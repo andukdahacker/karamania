@@ -36,10 +36,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   void _onVibeTap(PartyVibe tappedVibe) {
     final partyProvider = context.read<PartyProvider>();
-    final currentVibe = partyProvider.vibe;
 
     if (_previewVibe == tappedVibe) {
-      // Same vibe tapped during preview → confirm selection
+      // Same vibe tapped during preview -> confirm selection
       _previewTimer?.cancel();
       setState(() => _previewVibe = null);
       context.read<SocketClient>().updateVibe(
@@ -47,7 +46,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             vibe: tappedVibe,
           );
     } else {
-      // New vibe tapped or first tap → start preview
+      // New vibe tapped or first tap -> start preview
       _previewTimer?.cancel();
       setState(() => _previewVibe = tappedVibe);
       _previewTimer = Timer(_vibePreviewDuration, () {
@@ -64,6 +63,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final partyCode = partyProvider.partyCode ?? '';
     final currentVibe = partyProvider.vibe;
     final displayVibe = _previewVibe ?? currentVibe;
+    final isHost = partyProvider.isHost;
     final scaleFactor = MediaQuery.textScalerOf(context).scale(1.0);
     final horizontalPadding =
         DJTokens.spaceMd * scaleFactor.clamp(1.0, 1.5);
@@ -88,23 +88,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: DJTokens.spaceLg),
-                      // QR code
-                      QrImageView(
-                        data: '${AppConfig.instance.webLandingUrl}?code=$partyCode',
-                        version: QrVersions.auto,
-                        size: _qrSize,
-                        backgroundColor: Colors.white,
-                        padding: const EdgeInsets.all(DJTokens.spaceMd),
-                        eyeStyle: QrEyeStyle(
-                          eyeShape: QrEyeShape.square,
-                          color: displayVibe.primary,
+                      // QR code — host only
+                      if (isHost) ...[
+                        QrImageView(
+                          data: '${AppConfig.instance.webLandingUrl}?code=$partyCode',
+                          version: QrVersions.auto,
+                          size: _qrSize,
+                          backgroundColor: Colors.white,
+                          padding: const EdgeInsets.all(DJTokens.spaceMd),
+                          eyeStyle: QrEyeStyle(
+                            eyeShape: QrEyeShape.square,
+                            color: displayVibe.primary,
+                          ),
+                          dataModuleStyle: QrDataModuleStyle(
+                            dataModuleShape: QrDataModuleShape.square,
+                            color: displayVibe.primary,
+                          ),
                         ),
-                        dataModuleStyle: QrDataModuleStyle(
-                          dataModuleShape: QrDataModuleShape.square,
-                          color: displayVibe.primary,
-                        ),
-                      ),
-                      const SizedBox(height: DJTokens.spaceLg),
+                        const SizedBox(height: DJTokens.spaceLg),
+                      ],
                       // Party code
                       Text(
                         '${Copy.partyCodeLabel}: $partyCode',
@@ -113,79 +115,126 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             ),
                       ),
                       const SizedBox(height: DJTokens.spaceLg),
-                      // Vibe selector
-                      Text(
-                        Copy.pickYourVibe,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DJTokens.textSecondary,
-                            ),
-                      ),
-                      const SizedBox(height: DJTokens.spaceSm),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: DJTokens.spaceXs,
-                        children: PartyVibe.values.map((vibe) {
-                          final isSelected = currentVibe == vibe;
-                          final isPreviewing = _previewVibe == vibe;
-                          return Container(
-                            decoration: (isSelected || isPreviewing)
-                                ? BoxDecoration(
-                                    border: Border.all(
-                                      color: vibe.accent,
-                                      width: 2,
-                                    ),
-                                    borderRadius: BorderRadius.circular(
-                                      DJTokens.spaceSm,
-                                    ),
-                                  )
-                                : null,
-                            child: DJTapButton(
-                              key: Key('vibe-${vibe.name}'),
-                              tier: TapTier.social,
-                              onTap: () => _onVibeTap(vibe),
-                              child: Text(
-                                vibeEmojiLabels[vibe]!,
-                                style: const TextStyle(fontSize: 28),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: DJTokens.spaceLg),
-                      // TV pairing placeholder
-                      Text(
-                        Copy.pairWithTv,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: DJTokens.textSecondary,
-                            ),
-                      ),
-                      TextButton(
-                        // TODO: Implement TV pairing in Story 5.7
-                        onPressed: () {},
-                        child: Text(
-                          Copy.skipNoTv,
+                      // Vibe selector — host only
+                      if (isHost) ...[
+                        Text(
+                          Copy.pickYourVibe,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: DJTokens.textSecondary,
                               ),
                         ),
-                      ),
-                      const SizedBox(height: DJTokens.spaceLg),
-                      // Participant count
-                      Text(
-                        Copy.waitingForGuests,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      const SizedBox(height: DJTokens.spaceXs),
+                        const SizedBox(height: DJTokens.spaceSm),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: DJTokens.spaceXs,
+                          children: PartyVibe.values.map((vibe) {
+                            final isSelected = currentVibe == vibe;
+                            final isPreviewing = _previewVibe == vibe;
+                            return Container(
+                              decoration: (isSelected || isPreviewing)
+                                  ? BoxDecoration(
+                                      border: Border.all(
+                                        color: vibe.accent,
+                                        width: 2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(
+                                        DJTokens.spaceSm,
+                                      ),
+                                    )
+                                  : null,
+                              child: DJTapButton(
+                                key: Key('vibe-${vibe.name}'),
+                                tier: TapTier.social,
+                                onTap: () => _onVibeTap(vibe),
+                                child: Text(
+                                  vibeEmojiLabels[vibe]!,
+                                  style: const TextStyle(fontSize: 28),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: DJTokens.spaceLg),
+                        // TV pairing placeholder
+                        Text(
+                          Copy.pairWithTv,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: DJTokens.textSecondary,
+                              ),
+                        ),
+                        TextButton(
+                          // TODO: Implement TV pairing in Story 5.7
+                          onPressed: () {},
+                          child: Text(
+                            Copy.skipNoTv,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: DJTokens.textSecondary,
+                                ),
+                          ),
+                        ),
+                        const SizedBox(height: DJTokens.spaceLg),
+                      ],
+                      // Participant list
+                      if (partyProvider.participants.isNotEmpty) ...[
+                        Text(
+                          Copy.participants,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: DJTokens.spaceSm),
+                        ...partyProvider.participants.map((p) => Padding(
+                              key: ValueKey(p.userId),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: DJTokens.spaceXs),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor:
+                                        displayVibe.accent.withValues(alpha: 0.3),
+                                    child: Text(
+                                      p.displayName.isNotEmpty
+                                          ? p.displayName[0].toUpperCase()
+                                          : '?',
+                                      style: TextStyle(
+                                          color: displayVibe.accent,
+                                          fontSize: 14),
+                                    ),
+                                  ),
+                                  const SizedBox(width: DJTokens.spaceSm),
+                                  Text(p.displayName,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium),
+                                ],
+                              ),
+                            )),
+                        const SizedBox(height: DJTokens.spaceMd),
+                      ],
+                      // Participant count + waiting state
                       Semantics(
                         liveRegion: true,
                         child: Text(
                           '${partyProvider.participantCount} ${Copy.joined}',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ),
+                      if (partyProvider.participantCount < 3) ...[
+                        const SizedBox(height: DJTokens.spaceXs),
+                        Text(
+                          Copy.waitingForGuests,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: DJTokens.textSecondary,
                               ),
-                          // TODO: Listen to party:joined events in Story 1.6 to update participant count
                         ),
-                      ),
+                        const SizedBox(height: DJTokens.spaceXs),
+                        Text(
+                          Copy.bestWith3Plus,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: DJTokens.textSecondary,
+                              ),
+                        ),
+                      ],
                       const SizedBox(height: DJTokens.spaceMd),
                       // Share button
                       DJTapButton(
@@ -194,7 +243,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         onTap: () {
                           SharePlus.instance.share(
                             ShareParams(
-                              text: '${Copy.sharePartyMessage}$partyCode\n${AppConfig.instance.webLandingUrl}?code=$partyCode',
+                              text:
+                                  '${Copy.sharePartyMessage}$partyCode\n${AppConfig.instance.webLandingUrl}?code=$partyCode',
                             ),
                           );
                         },
@@ -203,21 +253,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           style: Theme.of(context).textTheme.labelLarge,
                         ),
                       ),
-                      const SizedBox(height: DJTokens.spaceMd),
-                      // Start party button (disabled)
-                      Opacity(
-                        opacity: 0.5,
-                        child: DJTapButton(
-                          key: const Key('start-party-btn'),
-                          tier: TapTier.consequential,
-                          // TODO: Enable when 3+ participants joined (Story 1.7)
-                          onTap: () {},
-                          child: Text(
-                            Copy.startParty,
-                            style: Theme.of(context).textTheme.labelLarge,
+                      // Start party button — host only
+                      if (isHost) ...[
+                        const SizedBox(height: DJTokens.spaceMd),
+                        Opacity(
+                          opacity: 0.5,
+                          child: DJTapButton(
+                            key: const Key('start-party-btn'),
+                            tier: TapTier.consequential,
+                            // TODO: Enable when 3+ participants joined (Story 1.7)
+                            onTap: () {},
+                            child: Text(
+                              Copy.startParty,
+                              style: Theme.of(context).textTheme.labelLarge,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                       const SizedBox(height: DJTokens.spaceMd),
                     ],
                   ),
