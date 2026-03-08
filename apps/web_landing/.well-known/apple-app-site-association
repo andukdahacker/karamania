@@ -1,0 +1,24 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "TEAM_ID.com.karamania.app",
+          "TEAM_ID.com.karamania.dev",
+          "TEAM_ID.com.karamania.staging"
+        ],
+        "components": [
+          {
+            "/": "*",
+            "comment": "Match all paths for deep linking"
+          },
+          {
+            "/": "/api/*",
+            "exclude": true,
+            "comment": "Exclude API routes from deep linking"
+          }
+        ]
+      }
+    ]
+  }
+}

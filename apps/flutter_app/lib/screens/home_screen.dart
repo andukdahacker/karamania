@@ -60,9 +60,7 @@ class HomeScreen extends StatelessWidget {
                   DJTapButton(
                     key: const Key('join-party-btn'),
                     tier: TapTier.social,
-                    onTap: () {
-                      // TODO: Navigate to join screen (Story 1.5/1.6)
-                    },
+                    onTap: () => context.go('/join'),
                     child: Text(
                       Copy.joinParty,
                       style: Theme.of(context).textTheme.labelLarge,

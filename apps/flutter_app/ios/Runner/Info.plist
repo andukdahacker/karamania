@@ -40,5 +40,16 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>karamania</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>com.karamania.app</string>
+		</dict>
+	</array>
 </dict>
 </plist>

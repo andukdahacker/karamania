@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0A0A0F">
+  <title>Karamania - Join the Party</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <h1>KARAMANIA</h1>
+    <p class="subtitle">Join the party!</p>
+
+    <section id="party-code-display" class="hidden">
+      <p class="label">Your party code</p>
+      <p id="code-value" class="code-display"></p>
+      <button id="open-app-btn" class="btn btn-primary">OPEN IN APP</button>
+    </section>
+
+    <div class="divider"><span>or</span></div>
+
+    <section id="store-buttons" class="hidden">
+      <p class="label">Don't have the app?</p>
+      <a id="ios-store-btn" href="https://apps.apple.com/app/karamania/id000000000" class="btn btn-store">Download for iOS</a>
+      <a id="android-store-btn" href="https://play.google.com/store/apps/details?id=com.karamania.app" class="btn btn-store">Download for Android</a>
+    </section>
+
+    <section id="desktop-message" class="hidden">
+      <p class="label">Open the Karamania app on your phone and enter the code</p>
+    </section>
+
+    <div id="store-divider" class="divider hidden"><span>or</span></div>
+
+    <section id="manual-entry">
+      <p class="label">Enter party code</p>
+      <input
+        id="code-input"
+        type="text"
+        maxlength="4"
+        pattern="[A-Z0-9]{4}"
+        placeholder="_ _ _ _"
+        autocomplete="off"
+        spellcheck="false"
+      >
+      <button id="join-btn" class="btn btn-confirm" disabled>JOIN</button>
+    </section>
+  </main>
+  <script src="/script.js"></script>
+</body>
+</html>

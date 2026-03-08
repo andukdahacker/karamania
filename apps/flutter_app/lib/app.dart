@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:karamania/state/accessibility_provider.dart';
 import 'package:karamania/screens/home_screen.dart';
+import 'package:karamania/screens/join_screen.dart';
 import 'package:karamania/screens/lobby_screen.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
@@ -23,10 +24,25 @@ class _NoOverscrollGlowBehavior extends ScrollBehavior {
 
 /// GoRouter configuration with placeholder routes.
 final GoRouter _router = GoRouter(
+  redirect: (context, state) {
+    // Deep link: /?code=VIBE → /join?code=VIBE
+    if (state.matchedLocation == '/' && state.uri.queryParameters.containsKey('code')) {
+      final code = state.uri.queryParameters['code'];
+      return '/join?code=$code';
+    }
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/',
       builder: (context, state) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: '/join',
+      builder: (context, state) {
+        final code = state.uri.queryParameters['code'];
+        return JoinScreen(initialCode: code);
+      },
     ),
     GoRoute(
       path: '/lobby',
