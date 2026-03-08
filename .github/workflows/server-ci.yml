@@ -1,0 +1,67 @@
+name: Server CI
+
+on:
+  push:
+    paths:
+      - 'apps/server/**'
+  pull_request:
+    paths:
+      - 'apps/server/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: karamania_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/karamania_test
+      DATABASE_URL_TEST: postgresql://test:test@localhost:5432/karamania_test
+      JWT_SECRET: ci-test-secret-key-at-least-32-characters-long
+      YOUTUBE_API_KEY: ci-test-youtube-key
+      SPOTIFY_CLIENT_ID: ci-test-spotify-id
+      SPOTIFY_CLIENT_SECRET: ci-test-spotify-secret
+      FIREBASE_PROJECT_ID: ci-test-project
+      FIREBASE_CLIENT_EMAIL: ci-test@ci-test.iam.gserviceaccount.com
+      FIREBASE_PRIVATE_KEY: ci-test-private-key
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        working-directory: apps/server
+        run: npm ci
+
+      - name: TypeScript type check
+        working-directory: apps/server
+        run: npx tsc --noEmit
+
+      - name: Run migrations
+        working-directory: apps/server
+        run: npx kysely migrate:latest
+
+      - name: Run tests
+        working-directory: apps/server
+        run: npm test
+
+      - name: Verify kysely-codegen runs against schema
+        working-directory: apps/server
+        run: npx kysely-codegen --out-file src/db/types-verify.ts && rm src/db/types-verify.ts

@@ -47,6 +47,10 @@ export const EVENTS = {
   HOST_OVERRIDE: 'host:override',
   HOST_SONG_OVER: 'host:songOver',
 
+  // Session events (auth-related errors)
+  SESSION_NOT_FOUND: 'session:notFound',
+  SESSION_FULL: 'session:full',
+
   // Auth events
   AUTH_REFRESH_REQUIRED: 'auth:refreshRequired',
   AUTH_INVALID: 'auth:invalid',

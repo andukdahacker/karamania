@@ -9,8 +9,11 @@ import {
 } from 'fastify-type-provider-zod';
 import { config } from './config.js';
 import { db } from './db/connection.js';
+import { initializeFirebaseAdmin } from './integrations/firebase-admin.js';
+import { authRoutes } from './routes/auth.js';
 import { healthRoutes } from './routes/health.js';
 import { errorHandler } from './shared/errors.js';
+import { setupSocketHandlers } from './socket-handlers/connection-handler.js';
 
 const fastify = Fastify({
   logger: {
@@ -35,6 +38,7 @@ await fastify.register(swagger, {
 fastify.setErrorHandler(errorHandler);
 
 await fastify.register(healthRoutes);
+await fastify.register(authRoutes);
 
 const io = new SocketIOServer(fastify.server, {
   cors: {
@@ -55,6 +59,8 @@ process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
 try {
+  initializeFirebaseAdmin();
+  setupSocketHandlers(io, fastify.log);
   await fastify.listen({ port: config.PORT, host: '0.0.0.0' });
 } catch (err) {
   fastify.log.error(err);
