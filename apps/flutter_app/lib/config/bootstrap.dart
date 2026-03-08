@@ -10,6 +10,7 @@ import 'package:karamania/state/capture_provider.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/socket/client.dart';
 import 'package:karamania/state/timeline_provider.dart';
+import 'package:karamania/api/api_client.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,6 +43,7 @@ Future<void> bootstrap() async {
         ChangeNotifierProvider(create: (_) => TimelineProvider()),
         ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
         Provider<SocketClient>(create: (_) => SocketClient.instance),
+        Provider<ApiClient>(create: (_) => ApiClient(baseUrl: AppConfig.instance.serverUrl)),
       ],
       child: const KaramaniaApp(),
     ),

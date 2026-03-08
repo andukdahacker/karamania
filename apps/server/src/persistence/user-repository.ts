@@ -33,6 +33,20 @@ export async function upsertFromFirebase({ firebaseUid, displayName, avatarUrl }
     .executeTakeFirstOrThrow();
 }
 
+export async function createGuestUser(displayName: string): Promise<UsersTable> {
+  return db
+    .insertInto('users')
+    .values({
+      id: crypto.randomUUID(),
+      firebase_uid: null,
+      display_name: displayName,
+      avatar_url: null,
+      created_at: new Date(),
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+}
+
 export async function findById(id: string): Promise<UsersTable | undefined> {
   return db
     .selectFrom('users')

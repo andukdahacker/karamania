@@ -43,7 +43,7 @@ development_status:
   1-1-flutter-app-scaffold-and-design-token-system: done
   1-2-server-foundation-and-database-schema: done
   1-3-authentication-and-websocket-infrastructure: done
-  1-4-party-creation-and-qr-code-generation: backlog
+  1-4-party-creation-and-qr-code-generation: done
   1-5-web-landing-page-and-deep-linking: backlog
   1-6-party-join-flow-and-live-lobby: backlog
   1-7-party-start-and-mid-session-join: backlog

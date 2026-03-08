@@ -6,6 +6,7 @@ class AppConfig {
 
   final String flavor;
   final String serverUrl;
+  final String webLandingUrl;
 
   // Firebase keys — platform-specific
   final String firebaseIosApiKey;
@@ -23,6 +24,7 @@ class AppConfig {
   AppConfig._({
     required this.flavor,
     required this.serverUrl,
+    required this.webLandingUrl,
     required this.firebaseIosApiKey,
     required this.firebaseIosAppId,
     required this.firebaseAndroidApiKey,
@@ -54,6 +56,7 @@ class AppConfig {
     _instance = AppConfig._(
       flavor: flavor,
       serverUrl: const String.fromEnvironment('SERVER_URL'),
+      webLandingUrl: const String.fromEnvironment('WEB_LANDING_URL', defaultValue: 'https://karamania.app'),
       firebaseIosApiKey:
           const String.fromEnvironment('FIREBASE_IOS_API_KEY'),
       firebaseIosAppId:
@@ -80,6 +83,7 @@ class AppConfig {
     _instance = AppConfig._(
       flavor: flavor,
       serverUrl: '',
+      webLandingUrl: 'https://test.karamania.app',
       firebaseIosApiKey: '',
       firebaseIosAppId: '',
       firebaseAndroidApiKey: '',

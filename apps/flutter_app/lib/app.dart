@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:karamania/state/accessibility_provider.dart';
+import 'package:karamania/screens/home_screen.dart';
+import 'package:karamania/screens/lobby_screen.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
@@ -24,7 +26,11 @@ final GoRouter _router = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => const _PlaceholderScreen(title: 'Home'),
+      builder: (context, state) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: '/lobby',
+      builder: (context, state) => const LobbyScreen(),
     ),
     GoRoute(
       path: '/party',
@@ -108,37 +114,6 @@ class _AccessibilityMediaQueryUpdaterState
 
   @override
   Widget build(BuildContext context) => widget.child;
-}
-
-/// Placeholder home screen.
-class _PlaceholderScreen extends StatelessWidget {
-  const _PlaceholderScreen({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final scaleFactor = MediaQuery.textScalerOf(context).scale(1.0);
-    final horizontalPadding =
-        DJTokens.spaceMd * scaleFactor.clamp(1.0, 1.5);
-
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 428),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.displayLarge,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Party screen with animated background driven by PartyProvider.

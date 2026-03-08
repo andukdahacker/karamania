@@ -12,6 +12,7 @@ import { db } from './db/connection.js';
 import { initializeFirebaseAdmin } from './integrations/firebase-admin.js';
 import { authRoutes } from './routes/auth.js';
 import { healthRoutes } from './routes/health.js';
+import { sessionRoutes } from './routes/sessions.js';
 import { errorHandler } from './shared/errors.js';
 import { setupSocketHandlers } from './socket-handlers/connection-handler.js';
 
@@ -39,6 +40,7 @@ fastify.setErrorHandler(errorHandler);
 
 await fastify.register(healthRoutes);
 await fastify.register(authRoutes);
+await fastify.register(sessionRoutes);
 
 const io = new SocketIOServer(fastify.server, {
   cors: {

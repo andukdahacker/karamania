@@ -1,11 +1,14 @@
 import type { AuthenticatedSocket } from '../shared/socket-types.js';
+import { EVENTS } from '../shared/events.js';
+import { VALID_VIBES } from '../shared/constants.js';
+import { updateVibe } from '../persistence/session-repository.js';
 
 // Architecture pattern: registerXHandlers(socket, session)
-// session parameter is the in-memory SessionState — created in Story 1.6+
-// For now, accept socket only; add session param when session-manager exists
+// TODO: Add session: SessionState parameter when session-manager exists (Story 1.6+)
 export function registerPartyHandlers(socket: AuthenticatedSocket): void {
-  // TODO: Implement party events in Story 1.4+
-  // TODO: Add session: SessionState parameter when session-manager exists (Story 1.6+)
-  // Pattern: socket.on(EVENTS.PARTY_JOINED, async (data) => { ... });
-  void socket;
+  socket.on(EVENTS.PARTY_VIBE_CHANGED, async (data: { vibe: string }) => {
+    if (!(VALID_VIBES as readonly string[]).includes(data.vibe)) return;
+    await updateVibe(socket.data.sessionId, data.vibe);
+    socket.to(socket.data.sessionId).emit(EVENTS.PARTY_VIBE_CHANGED, { vibe: data.vibe });
+  });
 }

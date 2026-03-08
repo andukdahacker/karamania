@@ -46,6 +46,9 @@ vi.mock('../../src/db/connection.js', () => ({
               }),
             };
           },
+          returningAll: () => ({
+            executeTakeFirstOrThrow: mockExecuteTakeFirstOrThrow,
+          }),
         };
       },
     }),
@@ -105,6 +108,25 @@ describe('user-repository', () => {
       });
 
       expect(result).toEqual(updatedUser);
+    });
+  });
+
+  describe('createGuestUser', () => {
+    it('creates user with firebase_uid null', async () => {
+      const guestUser = { ...createTestUser({ display_name: 'Guest Host' }), firebase_uid: null };
+      mockExecuteTakeFirstOrThrow.mockResolvedValue(guestUser);
+
+      const { createGuestUser } = await import('../../src/persistence/user-repository.js');
+      const result = await createGuestUser('Guest Host');
+
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          display_name: 'Guest Host',
+          firebase_uid: null,
+        })
+      );
+      expect(result).toEqual(guestUser);
+      expect(result.firebase_uid).toBeNull();
     });
   });
 

@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createTestSession } from '../factories/session.js';
+import { createTestParticipant } from '../factories/participant.js';
+import { createTestUser } from '../factories/user.js';
 
 vi.mock('../../src/config.js', () => ({
   config: {
@@ -17,7 +19,11 @@ vi.mock('../../src/config.js', () => ({
 }));
 
 const mockExecuteTakeFirst = vi.fn();
+const mockExecuteTakeFirstOrThrow = vi.fn();
+const mockExecute = vi.fn();
 const mockWhere = vi.fn();
+const mockValues = vi.fn();
+const mockSet = vi.fn();
 
 vi.mock('../../src/db/connection.js', () => {
   const createWhereChain = () => ({
@@ -25,6 +31,7 @@ vi.mock('../../src/db/connection.js', () => {
       mockWhere(...args);
       return {
         executeTakeFirst: mockExecuteTakeFirst,
+        execute: mockExecute,
         where: (...innerArgs: unknown[]) => {
           mockWhere(...innerArgs);
           return { executeTakeFirst: mockExecuteTakeFirst };
@@ -34,11 +41,36 @@ vi.mock('../../src/db/connection.js', () => {
     executeTakeFirst: mockExecuteTakeFirst,
   });
 
+  const createInsertChain = () => ({
+    values: (...args: unknown[]) => {
+      mockValues(...args);
+      return {
+        returningAll: () => ({
+          executeTakeFirstOrThrow: mockExecuteTakeFirstOrThrow,
+        }),
+      };
+    },
+  });
+
+  const createUpdateChain = () => ({
+    set: (...args: unknown[]) => {
+      mockSet(...args);
+      return {
+        where: (...whereArgs: unknown[]) => {
+          mockWhere(...whereArgs);
+          return { execute: mockExecute };
+        },
+      };
+    },
+  });
+
   return {
     db: {
       selectFrom: vi.fn().mockReturnValue({
         selectAll: () => createWhereChain(),
       }),
+      insertInto: vi.fn().mockReturnValue(createInsertChain()),
+      updateTable: vi.fn().mockReturnValue(createUpdateChain()),
     },
   };
 });
@@ -68,6 +100,94 @@ describe('session-repository', () => {
       const result = await findByPartyCode('NOPE');
 
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe('create', () => {
+    it('inserts session and returns it with status lobby', async () => {
+      const testUser = createTestUser();
+      const testSession = createTestSession({
+        host_user_id: testUser.id,
+        party_code: 'ABCD',
+        vibe: 'general',
+        status: 'lobby',
+      });
+      mockExecuteTakeFirstOrThrow.mockResolvedValue(testSession);
+
+      const { create } = await import('../../src/persistence/session-repository.js');
+      const result = await create({
+        hostUserId: testUser.id,
+        partyCode: 'ABCD',
+        vibe: 'general',
+      });
+
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          host_user_id: testUser.id,
+          party_code: 'ABCD',
+          vibe: 'general',
+          status: 'lobby',
+        })
+      );
+      expect(result).toEqual(testSession);
+      expect(result.status).toBe('lobby');
+    });
+
+    it('creates session with vibe set', async () => {
+      const testUser = createTestUser();
+      const testSession = createTestSession({
+        host_user_id: testUser.id,
+        vibe: 'rock',
+      });
+      mockExecuteTakeFirstOrThrow.mockResolvedValue(testSession);
+
+      const { create } = await import('../../src/persistence/session-repository.js');
+      const result = await create({
+        hostUserId: testUser.id,
+        partyCode: 'ROCK',
+        vibe: 'rock',
+      });
+
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({ vibe: 'rock' })
+      );
+      expect(result.vibe).toBe('rock');
+    });
+  });
+
+  describe('addParticipant', () => {
+    it('inserts participant record', async () => {
+      const testParticipant = createTestParticipant({
+        session_id: 'session-1',
+        user_id: 'user-1',
+      });
+      mockExecuteTakeFirstOrThrow.mockResolvedValue(testParticipant);
+
+      const { addParticipant } = await import('../../src/persistence/session-repository.js');
+      const result = await addParticipant({
+        sessionId: 'session-1',
+        userId: 'user-1',
+      });
+
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          session_id: 'session-1',
+          user_id: 'user-1',
+        })
+      );
+      expect(result).toEqual(testParticipant);
+    });
+  });
+
+  describe('updateVibe', () => {
+    it('updates vibe column', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const { updateVibe } = await import('../../src/persistence/session-repository.js');
+      await updateVibe('session-1', 'kpop');
+
+      expect(mockSet).toHaveBeenCalledWith({ vibe: 'kpop' });
+      expect(mockWhere).toHaveBeenCalledWith('id', '=', 'session-1');
     });
   });
 
