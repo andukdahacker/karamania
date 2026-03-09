@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/state/loading_state.dart';
-import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo;
+import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus;
 import 'package:karamania/theme/dj_theme.dart';
 
 void main() {
@@ -275,6 +275,153 @@ void main() {
 
       expect(provider.pendingCatchUp, isFalse);
       expect(provider.isCatchingUp, isTrue);
+    });
+
+    // Story 1.8 tests
+
+    test('initial connectionStatus is connected', () {
+      expect(provider.connectionStatus, ConnectionStatus.connected);
+    });
+
+    test('onConnectionStatusChanged updates connectionStatus and notifies', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onConnectionStatusChanged(ConnectionStatus.reconnecting);
+      expect(provider.connectionStatus, ConnectionStatus.reconnecting);
+      expect(notifyCount, 1);
+
+      provider.onConnectionStatusChanged(ConnectionStatus.connected);
+      expect(provider.connectionStatus, ConnectionStatus.connected);
+      expect(notifyCount, 2);
+    });
+
+    test('onParticipantDisconnected marks participant as offline', () {
+      provider.onParticipantsSync([
+        ParticipantInfo(userId: 'u1', displayName: 'Host'),
+        ParticipantInfo(userId: 'u2', displayName: 'Alice'),
+      ]);
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onParticipantDisconnected('u2');
+
+      expect(provider.participants.length, 2);
+      expect(provider.participants.firstWhere((p) => p.userId == 'u2').isOnline, isFalse);
+      expect(provider.participants.firstWhere((p) => p.userId == 'u1').isOnline, isTrue);
+      expect(notifyCount, 1);
+    });
+
+    test('onParticipantReconnected marks participant back online', () {
+      provider.onParticipantsSync([
+        ParticipantInfo(userId: 'u1', displayName: 'Host'),
+        ParticipantInfo(userId: 'u2', displayName: 'Alice'),
+      ]);
+
+      provider.onParticipantDisconnected('u2');
+      expect(provider.participants.firstWhere((p) => p.userId == 'u2').isOnline, isFalse);
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onParticipantReconnected('u2');
+
+      expect(provider.participants.firstWhere((p) => p.userId == 'u2').isOnline, isTrue);
+      expect(notifyCount, 1);
+    });
+
+    test('onHostTransferred(true) sets isHost to true', () {
+      // Start as non-host
+      provider.onPartyJoined(
+        sessionId: 'session-1',
+        partyCode: 'CODE',
+        vibe: PartyVibe.general,
+      );
+      expect(provider.isHost, isFalse);
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onHostTransferred(true);
+
+      expect(provider.isHost, isTrue);
+      expect(notifyCount, 1);
+    });
+
+    test('onHostTransferred(false) sets isHost to false', () {
+      provider.onPartyCreated('session-1', 'CODE');
+      expect(provider.isHost, isTrue);
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onHostTransferred(false);
+
+      expect(provider.isHost, isFalse);
+      expect(notifyCount, 1);
+    });
+
+    test('onHostUpdate sets isHost and notifies', () {
+      expect(provider.isHost, isFalse);
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onHostUpdate(true);
+      expect(provider.isHost, isTrue);
+      expect(notifyCount, 1);
+
+      provider.onHostUpdate(false);
+      expect(provider.isHost, isFalse);
+      expect(notifyCount, 2);
+    });
+
+    test('initial hostTransferPending is false', () {
+      expect(provider.hostTransferPending, isFalse);
+    });
+
+    test('onHostTransferred(true) sets hostTransferPending to true', () {
+      provider.onHostTransferred(true);
+      expect(provider.hostTransferPending, isTrue);
+    });
+
+    test('onHostTransferred(false) does not set hostTransferPending', () {
+      provider.onHostTransferred(false);
+      expect(provider.hostTransferPending, isFalse);
+    });
+
+    test('clearHostTransferPending clears the flag and notifies', () {
+      provider.onHostTransferred(true);
+      expect(provider.hostTransferPending, isTrue);
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.clearHostTransferPending();
+      expect(provider.hostTransferPending, isFalse);
+      expect(notifyCount, 1);
+    });
+
+    test('clearHostTransferPending does not notify when already false', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.clearHostTransferPending();
+      expect(notifyCount, 0);
+    });
+
+    test('ParticipantInfo isOnline defaults to true', () {
+      const participant = ParticipantInfo(userId: 'u1', displayName: 'Test');
+      expect(participant.isOnline, isTrue);
+    });
+
+    test('ParticipantInfo supports explicit isOnline field', () {
+      const online = ParticipantInfo(userId: 'u1', displayName: 'Online', isOnline: true);
+      const offline = ParticipantInfo(userId: 'u2', displayName: 'Offline', isOnline: false);
+
+      expect(online.isOnline, isTrue);
+      expect(offline.isOnline, isFalse);
     });
   });
 }

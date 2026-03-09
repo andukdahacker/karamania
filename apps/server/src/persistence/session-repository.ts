@@ -107,6 +107,14 @@ export async function updateVibe(sessionId: string, vibe: string): Promise<void>
     .execute();
 }
 
+export async function updateHost(sessionId: string, newHostUserId: string) {
+  return db
+    .updateTable('sessions')
+    .set({ host_user_id: newHostUserId })
+    .where('id', '=', sessionId)
+    .executeTakeFirst();
+}
+
 export async function updateStatus(sessionId: string, status: string) {
   return db
     .updateTable('sessions')

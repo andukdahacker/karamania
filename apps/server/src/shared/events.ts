@@ -11,6 +11,11 @@ export const EVENTS = {
   PARTY_STARTED: 'party:started',
   PARTY_VIBE_CHANGED: 'party:vibeChanged',
 
+  // Connection lifecycle events
+  PARTY_PARTICIPANT_DISCONNECTED: 'party:participantDisconnected',
+  PARTY_PARTICIPANT_RECONNECTED: 'party:participantReconnected',
+  PARTY_HOST_TRANSFERRED: 'party:hostTransferred',
+
   // DJ events
   DJ_STATE_CHANGED: 'dj:stateChanged',
   DJ_PAUSE: 'dj:pause',

@@ -32,6 +32,7 @@ const mockAddParticipantIfNotExists = vi.fn();
 const mockGetParticipants = vi.fn();
 const mockFindById = vi.fn();
 const mockUpdateStatus = vi.fn();
+const mockUpdateHost = vi.fn();
 vi.mock('../../src/persistence/session-repository.js', () => ({
   create: mockSessionCreate,
   addParticipant: mockAddParticipant,
@@ -39,6 +40,7 @@ vi.mock('../../src/persistence/session-repository.js', () => ({
   getParticipants: mockGetParticipants,
   findById: mockFindById,
   updateStatus: mockUpdateStatus,
+  updateHost: mockUpdateHost,
 }));
 
 describe('session-manager', () => {
@@ -207,6 +209,7 @@ describe('session-manager', () => {
       expect(result.participantCount).toBe(2);
       expect(result.vibe).toBe('rock');
       expect(result.status).toBe('lobby');
+      expect(result.hostUserId).toBeDefined();
       expect(result.participants).toEqual([
         { userId: 'user-1', displayName: 'Host' },
         { userId: 'p2', displayName: 'Alice' },
@@ -267,6 +270,92 @@ describe('session-manager', () => {
       });
 
       expect(result.vibe).toBe('general');
+    });
+
+    it('returns hostUserId field', async () => {
+      mockAddParticipantIfNotExists.mockResolvedValue(undefined);
+      mockGetParticipants.mockResolvedValue([
+        { id: 'p1', user_id: 'host-user', guest_name: null, display_name: 'Host', joined_at: new Date() },
+      ]);
+      mockFindById.mockResolvedValue(createTestSession({ id: 'session-1', host_user_id: 'host-user' }));
+
+      const { handleParticipantJoin } = await import('../../src/services/session-manager.js');
+      const result = await handleParticipantJoin({
+        sessionId: 'session-1',
+        userId: 'guest-uuid',
+        role: 'guest',
+        displayName: 'Eve',
+      });
+
+      expect(result.hostUserId).toBe('host-user');
+    });
+  });
+
+  describe('transferHost', () => {
+    it('updates host_user_id in DB', async () => {
+      const testSession = createTestSession({ id: 'session-1', status: 'active', host_user_id: 'old-host' });
+      mockFindById.mockResolvedValue(testSession);
+      mockGetParticipants.mockResolvedValue([
+        { id: 'p1', user_id: 'old-host', guest_name: null, display_name: 'OldHost', joined_at: new Date() },
+        { id: 'p2', user_id: 'new-host', guest_name: null, display_name: 'NewHost', joined_at: new Date() },
+      ]);
+      mockUpdateHost.mockResolvedValue(undefined);
+
+      const { transferHost } = await import('../../src/services/session-manager.js');
+      await transferHost('session-1', 'new-host');
+
+      expect(mockUpdateHost).toHaveBeenCalledWith('session-1', 'new-host');
+    });
+
+    it('returns new host info', async () => {
+      const testSession = createTestSession({ id: 'session-1', status: 'active', host_user_id: 'old-host' });
+      mockFindById.mockResolvedValue(testSession);
+      mockGetParticipants.mockResolvedValue([
+        { id: 'p1', user_id: 'old-host', guest_name: null, display_name: 'OldHost', joined_at: new Date() },
+        { id: 'p2', user_id: 'new-host', guest_name: null, display_name: 'NewHost', joined_at: new Date() },
+      ]);
+      mockUpdateHost.mockResolvedValue(undefined);
+
+      const { transferHost } = await import('../../src/services/session-manager.js');
+      const result = await transferHost('session-1', 'new-host');
+
+      expect(result).toEqual({
+        newHostId: 'new-host',
+        newHostName: 'NewHost',
+      });
+    });
+
+    it('returns null for ended session', async () => {
+      const testSession = createTestSession({ id: 'session-1', status: 'ended', host_user_id: 'old-host' });
+      mockFindById.mockResolvedValue(testSession);
+
+      const { transferHost } = await import('../../src/services/session-manager.js');
+      const result = await transferHost('session-1', 'new-host');
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null for non-existent session', async () => {
+      mockFindById.mockResolvedValue(undefined);
+
+      const { transferHost } = await import('../../src/services/session-manager.js');
+      const result = await transferHost('nonexistent', 'new-host');
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null when new host not in participants', async () => {
+      const testSession = createTestSession({ id: 'session-1', status: 'active', host_user_id: 'old-host' });
+      mockFindById.mockResolvedValue(testSession);
+      mockGetParticipants.mockResolvedValue([
+        { id: 'p1', user_id: 'old-host', guest_name: null, display_name: 'OldHost', joined_at: new Date() },
+      ]);
+
+      const { transferHost } = await import('../../src/services/session-manager.js');
+      const result = await transferHost('session-1', 'not-a-participant');
+
+      expect(result).toBeNull();
+      expect(mockUpdateHost).not.toHaveBeenCalled();
     });
   });
 });

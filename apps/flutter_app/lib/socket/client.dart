@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:karamania/api/api_service.dart';
 import 'package:karamania/state/auth_provider.dart';
@@ -14,6 +16,9 @@ class SocketClient {
   io.Socket? _socket;
   bool _isConnected = false;
   String? _currentSessionId;
+  String? _userId;
+  Timer? _disconnectUiTimer;
+  Timer? _hostTransferBannerTimer;
 
   bool get isConnected => _isConnected;
   String? get currentSessionId => _currentSessionId;
@@ -23,8 +28,11 @@ class SocketClient {
     required String token,
     required String sessionId,
     String? displayName,
+    required String userId,
+    required PartyProvider partyProvider,
   }) async {
     _currentSessionId = sessionId;
+    _userId = userId;
 
     _socket = io.io(
       serverUrl,
@@ -47,10 +55,20 @@ class SocketClient {
 
     _socket!.onDisconnect((reason) {
       _isConnected = false;
+
       // If server kicked us (auth failure), don't auto-reconnect
       if (reason == 'io server disconnect') {
         _socket?.disconnect();
+        return;
       }
+
+      // Suppress brief interrupts — only show UI after 5s (AC #3)
+      _disconnectUiTimer?.cancel();
+      _disconnectUiTimer = Timer(const Duration(seconds: 5), () {
+        if (!_isConnected) {
+          partyProvider.onConnectionStatusChanged(ConnectionStatus.reconnecting);
+        }
+      });
     });
 
     _socket!.onConnectError((data) {
@@ -59,10 +77,23 @@ class SocketClient {
 
     _socket!.onReconnect((_) {
       _isConnected = true;
+      _disconnectUiTimer?.cancel();
+
+      // Only notify provider if we previously showed reconnecting state
+      if (partyProvider.connectionStatus == ConnectionStatus.reconnecting) {
+        partyProvider.onConnectionStatusChanged(ConnectionStatus.connected);
+      }
     });
+
+    _setupPartyListeners(partyProvider);
   }
 
   void disconnect() {
+    _disconnectUiTimer?.cancel();
+    _disconnectUiTimer = null;
+    _hostTransferBannerTimer?.cancel();
+    _hostTransferBannerTimer = null;
+    _userId = null;
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;
@@ -95,21 +126,60 @@ class SocketClient {
           .map((p) => ParticipantInfo(
                 userId: (p as Map<String, dynamic>)['userId'] as String,
                 displayName: p['displayName'] as String,
+                isOnline: p['isOnline'] as bool? ?? true,
               ))
           .toList();
       partyProvider.onParticipantsSync(participants);
 
       final status = payload['status'] as String?;
       if (status != null) {
+        // CRITICAL: Only trigger catch-up on FIRST join to active session, NOT on reconnection.
+        // On reconnection, sessionStatus is already 'active' — skip catch-up card.
+        final isFirstJoinToActive =
+            status == 'active' && partyProvider.sessionStatus != 'active';
         partyProvider.onSessionStatus(status);
-        if (status == 'active') {
+        if (isFirstJoinToActive) {
           partyProvider.onCatchUpStarted();
         }
+      }
+
+      // Update host status from server truth (AC #4)
+      final hostUserId = payload['hostUserId'] as String?;
+      if (hostUserId != null) {
+        partyProvider.onHostUpdate(hostUserId == _userId);
       }
     });
 
     on('party:started', (data) {
       partyProvider.onPartyStarted();
+    });
+
+    // Participant disconnect/reconnect events
+    on('party:participantDisconnected', (data) {
+      final payload = data as Map<String, dynamic>;
+      final userId = payload['userId'] as String;
+      partyProvider.onParticipantDisconnected(userId);
+    });
+
+    on('party:participantReconnected', (data) {
+      final payload = data as Map<String, dynamic>;
+      final userId = payload['userId'] as String;
+      partyProvider.onParticipantReconnected(userId);
+    });
+
+    // Host transfer event (AC #4)
+    on('party:hostTransferred', (data) {
+      final payload = data as Map<String, dynamic>;
+      final newHostId = payload['newHostId'] as String;
+      final iAmNewHost = newHostId == _userId;
+      partyProvider.onHostTransferred(iAmNewHost);
+      if (iAmNewHost) {
+        _hostTransferBannerTimer?.cancel();
+        _hostTransferBannerTimer = Timer(const Duration(seconds: 3), () {
+          partyProvider.clearHostTransferPending();
+          _hostTransferBannerTimer = null;
+        });
+      }
     });
   }
 
@@ -165,8 +235,9 @@ class SocketClient {
         token: connectToken,
         sessionId: sessionId,
         displayName: displayName ?? authProvider.displayName,
+        userId: guestId ?? authProvider.firebaseUser?.uid ?? '',
+        partyProvider: partyProvider,
       );
-      _setupPartyListeners(partyProvider);
     } catch (e) {
       partyProvider.onCreatePartyLoading(LoadingState.error);
       rethrow;
@@ -208,8 +279,9 @@ class SocketClient {
         token: token,
         sessionId: sessionId,
         displayName: displayName,
+        userId: guestId,
+        partyProvider: partyProvider,
       );
-      _setupPartyListeners(partyProvider);
     } catch (e) {
       partyProvider.onJoinPartyLoading(LoadingState.error);
       rethrow;

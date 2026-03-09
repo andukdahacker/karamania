@@ -11,6 +11,7 @@ import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
 import 'package:karamania/widgets/dj_tap_button.dart';
+import 'package:karamania/widgets/reconnecting_banner.dart';
 
 class PartyScreen extends StatefulWidget {
   const PartyScreen({super.key});
@@ -104,6 +105,10 @@ class _PartyScreenState extends State<PartyScreen>
               _buildLoadingSkeleton(context, displayVibe),
             if (partyProvider.isCatchingUp)
               _buildCatchUpCard(context, partyProvider, displayVibe),
+            if (partyProvider.connectionStatus == ConnectionStatus.reconnecting)
+              const ReconnectingBanner(),
+            if (partyProvider.hostTransferPending)
+              _buildHostTransferBanner(context, displayVibe),
           ],
         ),
       ),
@@ -235,6 +240,35 @@ class _PartyScreenState extends State<PartyScreen>
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHostTransferBanner(BuildContext context, PartyVibe displayVibe) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        key: const Key('host-transfer-banner'),
+        padding: const EdgeInsets.symmetric(
+          vertical: DJTokens.spaceSm,
+          horizontal: DJTokens.spaceMd,
+        ),
+        color: DJTokens.surfaceColor.withValues(alpha: 0.95),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.star, size: 16, color: displayVibe.accent),
+            const SizedBox(width: DJTokens.spaceSm),
+            Text(
+              Copy.hostTransferred,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DJTokens.textPrimary,
+                  ),
+            ),
+          ],
         ),
       ),
     );

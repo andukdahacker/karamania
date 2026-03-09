@@ -57,6 +57,9 @@ const io = new SocketIOServer(fastify.server, {
       ? [] // TODO: Configure allowed origins for production deployment
       : '*',
   },
+  pingInterval: 10000,  // 10s between pings (default 25s)
+  pingTimeout: 5000,    // 5s to respond (default 20s)
+  // Total disconnect detection: ~15s (vs default ~45s)
 });
 
 const shutdown = async () => {

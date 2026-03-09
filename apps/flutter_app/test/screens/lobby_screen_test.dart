@@ -264,5 +264,44 @@ void main() {
       expect(find.textContaining('Need'), findsOneWidget);
       expect(find.textContaining('more to start'), findsOneWidget);
     });
+
+    // Story 1.8 tests
+
+    testWidgets('shows reconnecting banner when connectionStatus is reconnecting',
+        (tester) async {
+      final provider = PartyProvider()..onPartyCreated('test-session', 'ABCD');
+      provider.onConnectionStatusChanged(ConnectionStatus.reconnecting);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const LobbyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('reconnecting-banner')), findsOneWidget);
+    });
+
+    testWidgets('shows host transfer banner when hostTransferPending is true',
+        (tester) async {
+      final provider = PartyProvider()..onPartyCreated('test-session', 'ABCD');
+      provider.onHostTransferred(true);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const LobbyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('host-transfer-banner')), findsOneWidget);
+      expect(find.text('You are now the host!'), findsOneWidget);
+    });
+
+    testWidgets('hides reconnecting banner when connectionStatus is connected',
+        (tester) async {
+      final provider = PartyProvider()..onPartyCreated('test-session', 'ABCD');
+      // Status is connected by default
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const LobbyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('reconnecting-banner')), findsNothing);
+    });
   });
 }

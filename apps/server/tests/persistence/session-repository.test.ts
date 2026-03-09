@@ -321,4 +321,28 @@ describe('session-repository', () => {
       expect(result).toBeUndefined();
     });
   });
+
+  describe('updateHost', () => {
+    it('updates host_user_id', async () => {
+      mockExecuteTakeFirst.mockResolvedValue({ id: 'session-1', host_user_id: 'new-host' });
+
+      const { updateHost } = await import('../../src/persistence/session-repository.js');
+      const result = await updateHost('session-1', 'new-host');
+
+      expect(mockSet).toHaveBeenCalledWith({ host_user_id: 'new-host' });
+      expect(mockWhere).toHaveBeenCalledWith('id', '=', 'session-1');
+      expect(result).toEqual({ id: 'session-1', host_user_id: 'new-host' });
+    });
+
+    it('on non-existent session returns no result', async () => {
+      mockExecuteTakeFirst.mockResolvedValue(undefined);
+
+      const { updateHost } = await import('../../src/persistence/session-repository.js');
+      const result = await updateHost('nonexistent-session', 'new-host');
+
+      expect(mockSet).toHaveBeenCalledWith({ host_user_id: 'new-host' });
+      expect(mockWhere).toHaveBeenCalledWith('id', '=', 'nonexistent-session');
+      expect(result).toBeUndefined();
+    });
+  });
 });

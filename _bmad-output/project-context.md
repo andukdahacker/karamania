@@ -78,7 +78,7 @@ All columns `snake_case`. Kysely types match DB exactly. Conversion to `camelCas
 
 | Namespace | Events | Direction |
 |-----------|--------|-----------|
-| `party` | `party:created`, `party:joined`, `party:ended` | Bidirectional |
+| `party` | `party:created`, `party:joined`, `party:ended`, `party:participantDisconnected`, `party:participantReconnected`, `party:hostTransferred` | Bidirectional |
 | `dj` | `dj:stateChanged`, `dj:pause`, `dj:resume` | Server -> Client |
 | `ceremony` | `ceremony:anticipation`, `ceremony:reveal`, `ceremony:quick` | Server -> Client |
 | `reaction` | `reaction:sent`, `reaction:broadcast`, `reaction:streak` | Bidirectional |

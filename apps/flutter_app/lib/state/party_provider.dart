@@ -4,10 +4,17 @@ import 'package:flutter/foundation.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/theme/dj_theme.dart';
 
+enum ConnectionStatus { connected, reconnecting }
+
 class ParticipantInfo {
-  const ParticipantInfo({required this.userId, required this.displayName});
+  const ParticipantInfo({
+    required this.userId,
+    required this.displayName,
+    this.isOnline = true,
+  });
   final String userId;
   final String displayName;
+  final bool isOnline;
 }
 
 /// Reactive state container only — no business logic.
@@ -25,6 +32,8 @@ class PartyProvider extends ChangeNotifier {
   String _sessionStatus = 'lobby';
   bool _isCatchingUp = false;
   bool _pendingCatchUp = false;
+  ConnectionStatus _connectionStatus = ConnectionStatus.connected;
+  bool _hostTransferPending = false;
 
   DJState get djState => _djState;
   PartyVibe get vibe => _vibe;
@@ -39,6 +48,8 @@ class PartyProvider extends ChangeNotifier {
   String get sessionStatus => _sessionStatus;
   bool get isCatchingUp => _isCatchingUp;
   bool get pendingCatchUp => _pendingCatchUp;
+  ConnectionStatus get connectionStatus => _connectionStatus;
+  bool get hostTransferPending => _hostTransferPending;
 
   /// Background color driven by current DJ state and vibe.
   Color get backgroundColor => djStateBackgroundColor(_djState, _vibe);
@@ -128,6 +139,57 @@ class PartyProvider extends ChangeNotifier {
   void onParticipantsSync(List<ParticipantInfo> participants) {
     _participants = participants;
     _participantCount = participants.length;
+    notifyListeners();
+  }
+
+  void onConnectionStatusChanged(ConnectionStatus status) {
+    _connectionStatus = status;
+    notifyListeners();
+  }
+
+  void onParticipantDisconnected(String userId) {
+    _participants = _participants
+        .map((p) => p.userId == userId
+            ? ParticipantInfo(
+                userId: p.userId,
+                displayName: p.displayName,
+                isOnline: false,
+              )
+            : p)
+        .toList();
+    notifyListeners();
+  }
+
+  void onParticipantReconnected(String userId) {
+    _participants = _participants
+        .map((p) => p.userId == userId
+            ? ParticipantInfo(
+                userId: p.userId,
+                displayName: p.displayName,
+                isOnline: true,
+              )
+            : p)
+        .toList();
+    notifyListeners();
+  }
+
+  void onHostTransferred(bool iAmNewHost) {
+    _isHost = iAmNewHost;
+    if (iAmNewHost) {
+      _hostTransferPending = true;
+    }
+    notifyListeners();
+  }
+
+  void clearHostTransferPending() {
+    if (_hostTransferPending) {
+      _hostTransferPending = false;
+      notifyListeners();
+    }
+  }
+
+  void onHostUpdate(bool isHost) {
+    _isHost = isHost;
     notifyListeners();
   }
 }

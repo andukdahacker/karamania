@@ -52,6 +52,30 @@ export async function startSession(params: {
   return { status: 'active' };
 }
 
+export async function transferHost(
+  sessionId: string,
+  newHostUserId: string,
+): Promise<{ newHostId: string; newHostName: string } | null> {
+  // 1. Verify session exists and is active
+  const session = await sessionRepo.findById(sessionId);
+  if (!session || session.status === 'ended') return null;
+
+  // 2. Get new host's display name from participants
+  const participants = await sessionRepo.getParticipants(sessionId);
+  const newHost = participants.find(
+    p => (p.user_id ?? p.id) === newHostUserId,
+  );
+  if (!newHost) return null;
+
+  // 3. Update host in DB
+  await sessionRepo.updateHost(sessionId, newHostUserId);
+
+  return {
+    newHostId: newHostUserId,
+    newHostName: newHost.guest_name ?? newHost.display_name ?? 'Unknown',
+  };
+}
+
 export async function handleParticipantJoin(params: {
   sessionId: string;
   userId: string;
@@ -62,6 +86,7 @@ export async function handleParticipantJoin(params: {
   participantCount: number;
   vibe: string;
   status: string;
+  hostUserId: string;
 }> {
   // 1. Add participant (idempotent — handles reconnection + host duplicate)
   await sessionRepo.addParticipantIfNotExists({
@@ -84,5 +109,6 @@ export async function handleParticipantJoin(params: {
     participantCount: participants.length,
     vibe: session?.vibe ?? 'general',
     status: session?.status ?? 'lobby',
+    hostUserId: session?.host_user_id ?? '',
   };
 }

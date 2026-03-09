@@ -79,6 +79,10 @@ class Copy {
   static const String tapToDismiss = 'Tap anywhere to continue';
   static const String vibeLabel = 'Vibe';
 
+  // Connection status
+  static const String reconnecting = 'Reconnecting...';
+  static const String hostTransferred = 'You are now the host!';
+
   // Invite sheet
   static const String inviteMoreFriends = 'Invite More Friends';
   static const String shareInvite = 'Share Invite';

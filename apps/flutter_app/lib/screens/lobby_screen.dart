@@ -13,6 +13,7 @@ import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
 import 'package:karamania/widgets/dj_tap_button.dart';
+import 'package:karamania/widgets/reconnecting_banner.dart';
 
 const double _qrSize = 280.0;
 const double _partyCodeLetterSpacing = 8.0;
@@ -84,13 +85,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
         duration: DJTokens.transitionFast,
         color: displayVibe.bg,
         child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 428),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                child: SingleChildScrollView(
-                  child: Column(
+          child: Stack(
+            children: [
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 428),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    child: SingleChildScrollView(
+                      child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const SizedBox(height: DJTokens.spaceMd),
@@ -299,6 +302,37 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ),
             ),
+          ),
+          if (partyProvider.connectionStatus == ConnectionStatus.reconnecting)
+            const ReconnectingBanner(),
+          if (partyProvider.hostTransferPending)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                key: const Key('host-transfer-banner'),
+                padding: const EdgeInsets.symmetric(
+                  vertical: DJTokens.spaceSm,
+                  horizontal: DJTokens.spaceMd,
+                ),
+                color: DJTokens.surfaceColor.withValues(alpha: 0.95),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.star, size: 16, color: displayVibe.accent),
+                    const SizedBox(width: DJTokens.spaceSm),
+                    Text(
+                      Copy.hostTransferred,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DJTokens.textPrimary,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            ],
           ),
         ),
       ),
