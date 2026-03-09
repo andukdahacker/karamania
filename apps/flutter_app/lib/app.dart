@@ -6,6 +6,7 @@ import 'package:karamania/state/accessibility_provider.dart';
 import 'package:karamania/screens/home_screen.dart';
 import 'package:karamania/screens/join_screen.dart';
 import 'package:karamania/screens/lobby_screen.dart';
+import 'package:karamania/screens/party_screen.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
@@ -50,7 +51,7 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/party',
-      builder: (context, state) => const _PartyScreen(),
+      builder: (context, state) => const PartyScreen(),
       // Back button during party shows confirm exit dialog (Task 1.8)
       onExit: (context, state) async {
         final shouldExit = await showDialog<bool>(
@@ -132,39 +133,3 @@ class _AccessibilityMediaQueryUpdaterState
   Widget build(BuildContext context) => widget.child;
 }
 
-/// Party screen with animated background driven by PartyProvider.
-class _PartyScreen extends StatelessWidget {
-  const _PartyScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    final party = context.watch<PartyProvider>();
-    final scaleFactor = MediaQuery.textScalerOf(context).scale(1.0);
-    final horizontalPadding =
-        DJTokens.spaceMd * scaleFactor.clamp(1.0, 1.5);
-
-    return Scaffold(
-      body: AnimatedContainer(
-        duration: DJTokens.transitionFast,
-        color: party.backgroundColor,
-        child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 428),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                child: Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    'Party',
-                    style: Theme.of(context).textTheme.displayLarge,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

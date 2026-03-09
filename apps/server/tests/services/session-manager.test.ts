@@ -31,12 +31,14 @@ const mockAddParticipant = vi.fn();
 const mockAddParticipantIfNotExists = vi.fn();
 const mockGetParticipants = vi.fn();
 const mockFindById = vi.fn();
+const mockUpdateStatus = vi.fn();
 vi.mock('../../src/persistence/session-repository.js', () => ({
   create: mockSessionCreate,
   addParticipant: mockAddParticipant,
   addParticipantIfNotExists: mockAddParticipantIfNotExists,
   getParticipants: mockGetParticipants,
   findById: mockFindById,
+  updateStatus: mockUpdateStatus,
 }));
 
 describe('session-manager', () => {
@@ -123,6 +125,68 @@ describe('session-manager', () => {
     });
   });
 
+  describe('startSession', () => {
+    it('updates status to active when valid', async () => {
+      const testSession = createTestSession({ id: 'session-1', status: 'lobby', host_user_id: 'host-user' });
+      mockFindById.mockResolvedValue(testSession);
+      mockGetParticipants.mockResolvedValue([
+        { id: 'p1', user_id: 'host-user', guest_name: null, display_name: 'Host', joined_at: new Date() },
+        { id: 'p2', user_id: null, guest_name: 'Alice', display_name: null, joined_at: new Date() },
+        { id: 'p3', user_id: null, guest_name: 'Bob', display_name: null, joined_at: new Date() },
+      ]);
+      mockUpdateStatus.mockResolvedValue(undefined);
+
+      const { startSession } = await import('../../src/services/session-manager.js');
+      const result = await startSession({ sessionId: 'session-1', hostUserId: 'host-user' });
+
+      expect(mockUpdateStatus).toHaveBeenCalledWith('session-1', 'active');
+      expect(result).toEqual({ status: 'active' });
+    });
+
+    it('throws when session not in lobby status', async () => {
+      const testSession = createTestSession({ id: 'session-1', status: 'active', host_user_id: 'host-user' });
+      mockFindById.mockResolvedValue(testSession);
+
+      const { startSession } = await import('../../src/services/session-manager.js');
+
+      await expect(startSession({ sessionId: 'session-1', hostUserId: 'host-user' }))
+        .rejects.toMatchObject({ code: 'INVALID_STATUS' });
+    });
+
+    it('throws when caller is not the host', async () => {
+      const testSession = createTestSession({ id: 'session-1', status: 'lobby', host_user_id: 'host-user' });
+      mockFindById.mockResolvedValue(testSession);
+
+      const { startSession } = await import('../../src/services/session-manager.js');
+
+      await expect(startSession({ sessionId: 'session-1', hostUserId: 'not-the-host' }))
+        .rejects.toMatchObject({ code: 'NOT_HOST' });
+    });
+
+    it('throws when fewer than 3 participants', async () => {
+      const testSession = createTestSession({ id: 'session-1', status: 'lobby', host_user_id: 'host-user' });
+      mockFindById.mockResolvedValue(testSession);
+      mockGetParticipants.mockResolvedValue([
+        { id: 'p1', user_id: 'host-user', guest_name: null, display_name: 'Host', joined_at: new Date() },
+        { id: 'p2', user_id: null, guest_name: 'Alice', display_name: null, joined_at: new Date() },
+      ]);
+
+      const { startSession } = await import('../../src/services/session-manager.js');
+
+      await expect(startSession({ sessionId: 'session-1', hostUserId: 'host-user' }))
+        .rejects.toMatchObject({ code: 'INSUFFICIENT_PLAYERS' });
+    });
+
+    it('throws when session does not exist', async () => {
+      mockFindById.mockResolvedValue(undefined);
+
+      const { startSession } = await import('../../src/services/session-manager.js');
+
+      await expect(startSession({ sessionId: 'nonexistent', hostUserId: 'host-user' }))
+        .rejects.toMatchObject({ code: 'SESSION_NOT_FOUND' });
+    });
+  });
+
   describe('handleParticipantJoin', () => {
     it('adds participant and returns participant list with count and vibe', async () => {
       mockAddParticipantIfNotExists.mockResolvedValue(undefined);
@@ -142,6 +206,7 @@ describe('session-manager', () => {
 
       expect(result.participantCount).toBe(2);
       expect(result.vibe).toBe('rock');
+      expect(result.status).toBe('lobby');
       expect(result.participants).toEqual([
         { userId: 'user-1', displayName: 'Host' },
         { userId: 'p2', displayName: 'Alice' },

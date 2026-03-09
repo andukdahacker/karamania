@@ -40,6 +40,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         guestId,
         sessionId: session.id,
         vibe: session.vibe ?? 'general',
+        status: session.status,
       },
     });
   });

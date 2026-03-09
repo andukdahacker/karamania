@@ -217,5 +217,52 @@ void main() {
       // Vibe should still be general (preview reverted)
       expect(partyProvider.vibe, PartyVibe.general);
     });
+
+    // Story 1.7 tests
+
+    testWidgets('START PARTY button has opacity 0.5 when participantCount < 3',
+        (tester) async {
+      // Default provider has 1 participant (host only)
+      await tester.pumpWidget(_wrapWithProviders(const LobbyScreen()));
+      await tester.pump();
+
+      final opacityFinder = find.ancestor(
+        of: find.byKey(const Key('start-party-btn')),
+        matching: find.byType(Opacity),
+      );
+      final opacity = tester.firstWidget<Opacity>(opacityFinder);
+      expect(opacity.opacity, 0.5);
+    });
+
+    testWidgets('START PARTY button has opacity 1.0 when isHost and participantCount >= 3',
+        (tester) async {
+      final provider = PartyProvider()..onPartyCreated('test-session', 'ABCD');
+      provider.onParticipantsSync([
+        ParticipantInfo(userId: 'u1', displayName: 'Host'),
+        ParticipantInfo(userId: 'u2', displayName: 'Alice'),
+        ParticipantInfo(userId: 'u3', displayName: 'Bob'),
+      ]);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const LobbyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      final opacityFinder = find.ancestor(
+        of: find.byKey(const Key('start-party-btn')),
+        matching: find.byType(Opacity),
+      );
+      final opacity = tester.firstWidget<Opacity>(opacityFinder);
+      expect(opacity.opacity, 1.0);
+    });
+
+    testWidgets('shows "Need X more to start" text when isHost and fewer than 3 participants',
+        (tester) async {
+      // Default provider has 1 participant (host only), needs 2 more
+      await tester.pumpWidget(_wrapWithProviders(const LobbyScreen()));
+      await tester.pump();
+
+      expect(find.textContaining('Need'), findsOneWidget);
+      expect(find.textContaining('more to start'), findsOneWidget);
+    });
   });
 }

@@ -145,4 +145,21 @@ describe('POST /api/auth/guest', () => {
     const data = body['data'] as Record<string, unknown>;
     expect(data['vibe']).toBe('general');
   });
+
+  it('returns status field in guest auth response', async () => {
+    const testSession = createTestSession({ party_code: 'STAT', status: 'lobby', vibe: 'pop' });
+    mockFindByPartyCode.mockResolvedValue(testSession);
+    mockGetParticipants.mockResolvedValue([]);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/guest',
+      payload: { displayName: 'TestUser', partyCode: 'STAT' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    const data = body['data'] as Record<string, unknown>;
+    expect(data['status']).toBe('lobby');
+  });
 });

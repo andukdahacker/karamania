@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:karamania/api/api_client.dart';
+import 'package:karamania/api/api_service.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/screens/home_screen.dart';
 import 'package:karamania/socket/client.dart';
@@ -16,7 +16,7 @@ Widget _wrapWithProviders(Widget child) {
       ChangeNotifierProvider(create: (_) => AuthProvider()),
       ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
       Provider<SocketClient>(create: (_) => SocketClient.instance),
-      Provider<ApiClient>(create: (_) => ApiClient(baseUrl: 'http://localhost')),
+      Provider<ApiService>(create: (_) => ApiService(baseUrl: 'http://localhost')),
     ],
     child: MediaQuery(
       data: const MediaQueryData(),

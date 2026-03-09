@@ -106,3 +106,11 @@ export async function updateVibe(sessionId: string, vibe: string): Promise<void>
     .where('id', '=', sessionId)
     .execute();
 }
+
+export async function updateStatus(sessionId: string, status: string) {
+  return db
+    .updateTable('sessions')
+    .set({ status })
+    .where('id', '=', sessionId)
+    .executeTakeFirst();
+}

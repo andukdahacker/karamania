@@ -74,7 +74,7 @@ vi.mock('../../src/db/connection.js', () => {
       return {
         where: (...whereArgs: unknown[]) => {
           mockWhere(...whereArgs);
-          return { execute: mockExecute };
+          return { execute: mockExecute, executeTakeFirst: mockExecuteTakeFirst };
         },
       };
     },
@@ -294,6 +294,30 @@ describe('session-repository', () => {
       const { findById } = await import('../../src/persistence/session-repository.js');
       const result = await findById('nonexistent');
 
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('updateStatus', () => {
+    it('updates session status in DB', async () => {
+      mockExecuteTakeFirst.mockResolvedValue({ id: 'session-1', status: 'active' });
+
+      const { updateStatus } = await import('../../src/persistence/session-repository.js');
+      const result = await updateStatus('session-1', 'active');
+
+      expect(mockSet).toHaveBeenCalledWith({ status: 'active' });
+      expect(mockWhere).toHaveBeenCalledWith('id', '=', 'session-1');
+      expect(result).toEqual({ id: 'session-1', status: 'active' });
+    });
+
+    it('on non-existent session returns no result', async () => {
+      mockExecuteTakeFirst.mockResolvedValue(undefined);
+
+      const { updateStatus } = await import('../../src/persistence/session-repository.js');
+      const result = await updateStatus('nonexistent-session', 'active');
+
+      expect(mockSet).toHaveBeenCalledWith({ status: 'active' });
+      expect(mockWhere).toHaveBeenCalledWith('id', '=', 'nonexistent-session');
       expect(result).toBeUndefined();
     });
   });

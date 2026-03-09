@@ -35,6 +35,7 @@ export function setupSocketHandlers(io: SocketIOServer, logger: FastifyBaseLogge
         participants: joinResult.participants,
         participantCount: joinResult.participantCount,
         vibe: joinResult.vibe,
+        status: joinResult.status,
       });
     } catch (error) {
       logger.error({ error, userId: s.data.userId, sessionId: s.data.sessionId }, 'Failed to handle participant join');

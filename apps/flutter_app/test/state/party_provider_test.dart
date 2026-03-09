@@ -136,5 +136,145 @@ void main() {
       expect(provider.participantCount, 3);
       expect(provider.participants[0].displayName, 'Host');
     });
+
+    // Story 1.7 tests
+
+    test('initial sessionStatus is lobby', () {
+      expect(provider.sessionStatus, 'lobby');
+    });
+
+    test('initial isCatchingUp is false', () {
+      expect(provider.isCatchingUp, isFalse);
+    });
+
+    test('onPartyStarted sets sessionStatus to active and startPartyLoading to success', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onPartyStarted();
+
+      expect(provider.sessionStatus, 'active');
+      expect(provider.startPartyLoading, LoadingState.success);
+      expect(notifyCount, 1);
+    });
+
+    test('onStartPartyLoading transitions loading states', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onStartPartyLoading(LoadingState.loading);
+      expect(provider.startPartyLoading, LoadingState.loading);
+      expect(notifyCount, 1);
+
+      provider.onStartPartyLoading(LoadingState.error);
+      expect(provider.startPartyLoading, LoadingState.error);
+      expect(notifyCount, 2);
+
+      provider.onStartPartyLoading(LoadingState.success);
+      expect(provider.startPartyLoading, LoadingState.success);
+      expect(notifyCount, 3);
+    });
+
+    test('onSessionStatus updates sessionStatus and notifies', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onSessionStatus('active');
+      expect(provider.sessionStatus, 'active');
+      expect(notifyCount, 1);
+
+      provider.onSessionStatus('lobby');
+      expect(provider.sessionStatus, 'lobby');
+      expect(notifyCount, 2);
+    });
+
+    test('onCatchUpStarted sets isCatchingUp to true', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onCatchUpStarted();
+
+      expect(provider.isCatchingUp, isTrue);
+      expect(notifyCount, 1);
+    });
+
+    test('onCatchUpComplete sets isCatchingUp to false', () {
+      provider.onCatchUpStarted();
+      expect(provider.isCatchingUp, isTrue);
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onCatchUpComplete();
+
+      expect(provider.isCatchingUp, isFalse);
+      expect(notifyCount, 1);
+    });
+
+    test('onPartyJoined accepts and stores status parameter', () {
+      provider.onPartyJoined(
+        sessionId: 'session-xyz',
+        partyCode: 'LIVE',
+        vibe: PartyVibe.kpop,
+        status: 'active',
+      );
+
+      expect(provider.sessionId, 'session-xyz');
+      expect(provider.partyCode, 'LIVE');
+      expect(provider.vibe, PartyVibe.kpop);
+      expect(provider.isHost, isFalse);
+      expect(provider.sessionStatus, 'active');
+      expect(provider.joinPartyLoading, LoadingState.success);
+    });
+
+    test('onPartyJoined defaults status to lobby when not provided', () {
+      provider.onPartyJoined(
+        sessionId: 'session-default',
+        partyCode: 'DFLT',
+        vibe: PartyVibe.general,
+      );
+
+      expect(provider.sessionStatus, 'lobby');
+    });
+
+    test('initial pendingCatchUp is false', () {
+      expect(provider.pendingCatchUp, isFalse);
+    });
+
+    test('onPartyJoined with status active sets pendingCatchUp true', () {
+      provider.onPartyJoined(
+        sessionId: 'session-1',
+        partyCode: 'LATE',
+        vibe: PartyVibe.general,
+        status: 'active',
+      );
+
+      expect(provider.pendingCatchUp, isTrue);
+    });
+
+    test('onPartyJoined with status lobby keeps pendingCatchUp false', () {
+      provider.onPartyJoined(
+        sessionId: 'session-1',
+        partyCode: 'NORM',
+        vibe: PartyVibe.general,
+      );
+
+      expect(provider.pendingCatchUp, isFalse);
+    });
+
+    test('onCatchUpStarted clears pendingCatchUp', () {
+      provider.onPartyJoined(
+        sessionId: 'session-1',
+        partyCode: 'LATE',
+        vibe: PartyVibe.general,
+        status: 'active',
+      );
+      expect(provider.pendingCatchUp, isTrue);
+
+      provider.onCatchUpStarted();
+
+      expect(provider.pendingCatchUp, isFalse);
+      expect(provider.isCatchingUp, isTrue);
+    });
   });
 }

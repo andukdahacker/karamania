@@ -67,6 +67,25 @@ class Copy {
   // Participant list
   static const String participants = 'Participants';
 
+  // Party start
+  static const String needMorePlayers = 'Need';
+  static const String more = 'more to start';
+  static const String partyInProgress = 'PARTY IN PROGRESS';
+  static const String djEngineComingSoon = 'DJ engine coming in the next update';
+
+  // Catch-up (mid-session join)
+  static const String welcomeToParty = 'Welcome to the party!';
+  static const String areHere = 'are here';
+  static const String tapToDismiss = 'Tap anywhere to continue';
+  static const String vibeLabel = 'Vibe';
+
+  // Invite sheet
+  static const String inviteMoreFriends = 'Invite More Friends';
+  static const String shareInvite = 'Share Invite';
+  static const String joinMyParty = 'Join my Karamania party!';
+
+  static String vibeEmoji(PartyVibe vibe) => vibeEmojiLabels[vibe] ?? '';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

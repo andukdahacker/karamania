@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -27,6 +28,7 @@ class LobbyScreen extends StatefulWidget {
 class _LobbyScreenState extends State<LobbyScreen> {
   PartyVibe? _previewVibe;
   Timer? _previewTimer;
+  bool _hasNavigatedToParty = false;
 
   @override
   void dispose() {
@@ -64,9 +66,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final currentVibe = partyProvider.vibe;
     final displayVibe = _previewVibe ?? currentVibe;
     final isHost = partyProvider.isHost;
+    final canStartParty = isHost && partyProvider.participantCount >= 3;
     final scaleFactor = MediaQuery.textScalerOf(context).scale(1.0);
     final horizontalPadding =
         DJTokens.spaceMd * scaleFactor.clamp(1.0, 1.5);
+
+    // Reactive navigation when party starts
+    if (partyProvider.sessionStatus == 'active' && !_hasNavigatedToParty) {
+      _hasNavigatedToParty = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.go('/party');
+      });
+    }
 
     return Scaffold(
       body: AnimatedContainer(
@@ -253,16 +264,28 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           style: Theme.of(context).textTheme.labelLarge,
                         ),
                       ),
+                      // "Need X more" hint
+                      if (isHost && partyProvider.participantCount < 3) ...[
+                        const SizedBox(height: DJTokens.spaceXs),
+                        Text(
+                          '${Copy.needMorePlayers} ${3 - partyProvider.participantCount} ${Copy.more}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
                       // Start party button — host only
                       if (isHost) ...[
                         const SizedBox(height: DJTokens.spaceMd),
                         Opacity(
-                          opacity: 0.5,
+                          opacity: canStartParty ? 1.0 : 0.5,
                           child: DJTapButton(
                             key: const Key('start-party-btn'),
                             tier: TapTier.consequential,
-                            // TODO: Enable when 3+ participants joined (Story 1.7)
-                            onTap: () {},
+                            onTap: canStartParty
+                                ? () {
+                                    final socketClient = context.read<SocketClient>();
+                                    socketClient.startParty(context.read<PartyProvider>());
+                                  }
+                                : () {},
                             child: Text(
                               Copy.startParty,
                               style: Theme.of(context).textTheme.labelLarge,

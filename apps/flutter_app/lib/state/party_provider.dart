@@ -19,8 +19,12 @@ class PartyProvider extends ChangeNotifier {
   bool _isHost = false;
   LoadingState _createPartyLoading = LoadingState.idle;
   LoadingState _joinPartyLoading = LoadingState.idle;
+  LoadingState _startPartyLoading = LoadingState.idle;
   int _participantCount = 0;
   List<ParticipantInfo> _participants = [];
+  String _sessionStatus = 'lobby';
+  bool _isCatchingUp = false;
+  bool _pendingCatchUp = false;
 
   DJState get djState => _djState;
   PartyVibe get vibe => _vibe;
@@ -29,8 +33,12 @@ class PartyProvider extends ChangeNotifier {
   bool get isHost => _isHost;
   LoadingState get createPartyLoading => _createPartyLoading;
   LoadingState get joinPartyLoading => _joinPartyLoading;
+  LoadingState get startPartyLoading => _startPartyLoading;
   int get participantCount => _participantCount;
   List<ParticipantInfo> get participants => _participants;
+  String get sessionStatus => _sessionStatus;
+  bool get isCatchingUp => _isCatchingUp;
+  bool get pendingCatchUp => _pendingCatchUp;
 
   /// Background color driven by current DJ state and vibe.
   Color get backgroundColor => djStateBackgroundColor(_djState, _vibe);
@@ -68,12 +76,42 @@ class PartyProvider extends ChangeNotifier {
     required String sessionId,
     required String partyCode,
     required PartyVibe vibe,
+    String status = 'lobby',
   }) {
     _sessionId = sessionId;
     _partyCode = partyCode;
     _vibe = vibe;
     _isHost = false;
+    _sessionStatus = status;
+    _pendingCatchUp = status == 'active';
     _joinPartyLoading = LoadingState.success;
+    notifyListeners();
+  }
+
+  void onStartPartyLoading(LoadingState state) {
+    _startPartyLoading = state;
+    notifyListeners();
+  }
+
+  void onPartyStarted() {
+    _sessionStatus = 'active';
+    _startPartyLoading = LoadingState.success;
+    notifyListeners();
+  }
+
+  void onSessionStatus(String status) {
+    _sessionStatus = status;
+    notifyListeners();
+  }
+
+  void onCatchUpStarted() {
+    _isCatchingUp = true;
+    _pendingCatchUp = false;
+    notifyListeners();
+  }
+
+  void onCatchUpComplete() {
+    _isCatchingUp = false;
     notifyListeners();
   }
 

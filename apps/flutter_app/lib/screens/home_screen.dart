@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:karamania/api/api_client.dart';
+import 'package:karamania/api/api_service.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/constants/copy.dart';
 import 'package:karamania/constants/tap_tiers.dart';
@@ -117,7 +117,7 @@ class HomeScreen extends StatelessWidget {
     final authProvider = context.read<AuthProvider>();
     final partyProvider = context.read<PartyProvider>();
     final socketClient = context.read<SocketClient>();
-    final apiClient = context.read<ApiClient>();
+    final apiService = context.read<ApiService>();
 
     String? displayName = authProvider.displayName;
 
@@ -130,7 +130,7 @@ class HomeScreen extends StatelessWidget {
 
     try {
       await socketClient.createParty(
-        apiClient: apiClient,
+        apiService: apiService,
         authProvider: authProvider,
         partyProvider: partyProvider,
         serverUrl: AppConfig.instance.serverUrl,

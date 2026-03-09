@@ -8,7 +8,7 @@ import 'package:karamania/screens/join_screen.dart';
 import 'package:karamania/state/accessibility_provider.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/party_provider.dart';
-import 'package:karamania/api/api_client.dart';
+import 'package:karamania/api/api_service.dart';
 import 'package:karamania/socket/client.dart';
 
 GoRouter _createTestRouter({String initialLocation = '/'}) {
@@ -44,7 +44,7 @@ Widget _wrapWithRouter(GoRouter router) {
       ChangeNotifierProvider(create: (_) => AuthProvider()),
       ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
       Provider<SocketClient>(create: (_) => SocketClient.instance),
-      Provider<ApiClient>(create: (_) => ApiClient(baseUrl: 'http://localhost')),
+      Provider<ApiService>(create: (_) => ApiService(baseUrl: 'http://localhost')),
     ],
     child: MediaQuery(
       data: const MediaQueryData(),

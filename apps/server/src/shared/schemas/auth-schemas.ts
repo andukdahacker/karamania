@@ -12,6 +12,7 @@ export const guestAuthDataSchema = z.object({
   guestId: z.string(),
   sessionId: z.string(),
   vibe: z.string(),
+  status: z.string(),
 });
 z.globalRegistry.add(guestAuthDataSchema, { id: 'GuestAuthData' });
 

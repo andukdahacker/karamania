@@ -7,6 +7,8 @@ export const EVENTS = {
   PARTY_JOINED: 'party:joined',
   PARTY_PARTICIPANTS: 'party:participants',
   PARTY_ENDED: 'party:ended',
+  PARTY_START: 'party:start',
+  PARTY_STARTED: 'party:started',
   PARTY_VIBE_CHANGED: 'party:vibeChanged',
 
   // DJ events

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:karamania/api/api_client.dart';
+import 'package:karamania/api/api_service.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/constants/copy.dart';
 import 'package:karamania/socket/client.dart';
@@ -57,14 +57,21 @@ class _JoinScreenState extends State<JoinScreen> {
     final socketClient = context.read<SocketClient>();
     try {
       await socketClient.joinParty(
-        apiClient: context.read<ApiClient>(),
+        apiService: context.read<ApiService>(),
         authProvider: context.read<AuthProvider>(),
         partyProvider: context.read<PartyProvider>(),
         serverUrl: AppConfig.instance.serverUrl,
         displayName: _nameController.text.trim(),
         partyCode: _codeController.text.toUpperCase(),
       );
-      if (mounted) context.go('/lobby');
+      if (mounted) {
+          final status = context.read<PartyProvider>().sessionStatus;
+          if (status == 'active') {
+            context.go('/party');
+          } else {
+            context.go('/lobby');
+          }
+        }
     } on ApiException catch (e) {
       if (mounted) {
         setState(() {

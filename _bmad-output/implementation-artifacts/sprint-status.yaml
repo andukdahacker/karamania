@@ -46,7 +46,7 @@ development_status:
   1-4-party-creation-and-qr-code-generation: done
   1-5-web-landing-page-and-deep-linking: done
   1-6-party-join-flow-and-live-lobby: done
-  1-7-party-start-and-mid-session-join: backlog
+  1-7-party-start-and-mid-session-join: done
   1-8-connection-resilience-and-disconnection-handling: backlog
   epic-1-retrospective: optional
 

@@ -101,6 +101,7 @@ describe('party-join (connection handler)', () => {
       ],
       participantCount: 2,
       vibe: 'rock',
+      status: 'lobby',
     };
     mockHandleParticipantJoin.mockResolvedValue(joinResult);
 
@@ -135,6 +136,7 @@ describe('party-join (connection handler)', () => {
       ],
       participantCount: 2,
       vibe: 'rock',
+      status: 'lobby',
     };
     mockHandleParticipantJoin.mockResolvedValue(joinResult);
 
@@ -155,7 +157,37 @@ describe('party-join (connection handler)', () => {
       participants: joinResult.participants,
       participantCount: 2,
       vibe: 'rock',
+      status: 'lobby',
     });
+  });
+
+  it('party:participants response includes status field', async () => {
+    const joinResult = {
+      participants: [
+        { userId: 'user-1', displayName: 'Host' },
+      ],
+      participantCount: 1,
+      vibe: 'general',
+      status: 'active',
+    };
+    mockHandleParticipantJoin.mockResolvedValue(joinResult);
+
+    const io = createMockIO();
+    const { setupSocketHandlers } = await import('../../src/socket-handlers/connection-handler.js');
+    setupSocketHandlers(io as never, mockLogger);
+
+    const socket = createMockSocket({
+      userId: 'user-1',
+      sessionId: 'session-1',
+      role: 'authenticated',
+      displayName: 'Host',
+    });
+
+    await io._simulateConnection(socket);
+
+    expect(socket.emit).toHaveBeenCalledWith(EVENTS.PARTY_PARTICIPANTS, expect.objectContaining({
+      status: 'active',
+    }));
   });
 
   it('calls handleParticipantJoin with correct params', async () => {
@@ -163,6 +195,7 @@ describe('party-join (connection handler)', () => {
       participants: [],
       participantCount: 0,
       vibe: 'general',
+      status: 'lobby',
     });
 
     const io = createMockIO();

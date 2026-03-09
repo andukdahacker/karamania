@@ -1,6 +1,7 @@
 import { generateUniquePartyCode } from '../services/party-code.js';
 import * as sessionRepo from '../persistence/session-repository.js';
 import { DEFAULT_VIBE } from '../shared/constants.js';
+import { createAppError } from '../shared/errors.js';
 
 // TODO: Add restoreSession(), endSession() in future stories
 // TODO: endSession() must set status='ended' to expire party codes (NFR21)
@@ -29,6 +30,28 @@ export async function createSession(params: {
   return { sessionId: session.id, partyCode: session.party_code };
 }
 
+export async function startSession(params: {
+  sessionId: string;
+  hostUserId: string;
+}): Promise<{ status: string }> {
+  const session = await sessionRepo.findById(params.sessionId);
+  if (!session) throw createAppError('SESSION_NOT_FOUND', 'Session not found', 404);
+  if (session.status !== 'lobby') throw createAppError('INVALID_STATUS', 'Party already started', 400);
+
+  if (session.host_user_id !== params.hostUserId) {
+    throw createAppError('NOT_HOST', 'Only the host can start the party', 403);
+  }
+
+  const participants = await sessionRepo.getParticipants(params.sessionId);
+  if (participants.length < 3) {
+    throw createAppError('INSUFFICIENT_PLAYERS', 'Need at least 3 participants to start', 400);
+  }
+
+  await sessionRepo.updateStatus(params.sessionId, 'active');
+
+  return { status: 'active' };
+}
+
 export async function handleParticipantJoin(params: {
   sessionId: string;
   userId: string;
@@ -38,6 +61,7 @@ export async function handleParticipantJoin(params: {
   participants: Array<{ userId: string; displayName: string }>;
   participantCount: number;
   vibe: string;
+  status: string;
 }> {
   // 1. Add participant (idempotent — handles reconnection + host duplicate)
   await sessionRepo.addParticipantIfNotExists({
@@ -59,5 +83,6 @@ export async function handleParticipantJoin(params: {
     })),
     participantCount: participants.length,
     vibe: session?.vibe ?? 'general',
+    status: session?.status ?? 'lobby',
   };
 }

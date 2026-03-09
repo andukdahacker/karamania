@@ -1,5 +1,5 @@
 import 'package:socket_io_client/socket_io_client.dart' as io;
-import 'package:karamania/api/api_client.dart';
+import 'package:karamania/api/api_service.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/party_provider.dart';
@@ -98,7 +98,24 @@ class SocketClient {
               ))
           .toList();
       partyProvider.onParticipantsSync(participants);
+
+      final status = payload['status'] as String?;
+      if (status != null) {
+        partyProvider.onSessionStatus(status);
+        if (status == 'active') {
+          partyProvider.onCatchUpStarted();
+        }
+      }
     });
+
+    on('party:started', (data) {
+      partyProvider.onPartyStarted();
+    });
+  }
+
+  void startParty(PartyProvider partyProvider) {
+    partyProvider.onStartPartyLoading(LoadingState.loading);
+    _socket?.emit('party:start');
   }
 
   void updateVibe({
@@ -110,7 +127,7 @@ class SocketClient {
   }
 
   Future<void> createParty({
-    required ApiClient apiClient,
+    required ApiService apiService,
     required AuthProvider authProvider,
     required PartyProvider partyProvider,
     required String serverUrl,
@@ -120,15 +137,15 @@ class SocketClient {
     partyProvider.onCreatePartyLoading(LoadingState.loading);
     try {
       final token = await authProvider.currentToken;
-      final result = await apiClient.createSession(
+      final result = await apiService.createSession(
         displayName: displayName,
         vibe: vibe,
         firebaseToken: token,
       );
-      final sessionId = result['sessionId'] as String;
-      final partyCode = result['partyCode'] as String;
-      final guestToken = result['token'] as String?;
-      final guestId = result['guestId'] as String?;
+      final sessionId = result.sessionId;
+      final partyCode = result.partyCode;
+      final guestToken = result.token;
+      final guestId = result.guestId;
 
       if (guestToken != null && guestId != null) {
         authProvider.onGuestAuthenticated(
@@ -157,7 +174,7 @@ class SocketClient {
   }
 
   Future<void> joinParty({
-    required ApiClient apiClient,
+    required ApiService apiService,
     required AuthProvider authProvider,
     required PartyProvider partyProvider,
     required String serverUrl,
@@ -166,22 +183,24 @@ class SocketClient {
   }) async {
     partyProvider.onJoinPartyLoading(LoadingState.loading);
     try {
-      final result = await apiClient.guestAuth(
+      final result = await apiService.guestAuth(
         displayName: displayName,
         partyCode: partyCode,
       );
-      final token = result['token'] as String;
-      final guestId = result['guestId'] as String;
-      final sessionId = result['sessionId'] as String;
-      final vibeString = result['vibe'] as String? ?? 'general';
+      final token = result.token;
+      final guestId = result.guestId;
+      final sessionId = result.sessionId;
+      final vibeString = result.vibe;
 
       authProvider.onGuestAuthenticated(token, guestId, displayName);
 
+      final status = result.status;
       final parsedVibe = PartyVibe.values.byName(vibeString);
       partyProvider.onPartyJoined(
         sessionId: sessionId,
         partyCode: partyCode,
         vibe: parsedVibe,
+        status: status,
       );
 
       await connect(

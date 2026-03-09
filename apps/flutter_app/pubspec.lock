@@ -78,10 +78,10 @@ packages:
     description:
       path: "packages/dart_open_fetch_runtime"
       ref: HEAD
-      resolved-ref: a1b9aed591f41e063d21f556dbdb3a1c004935ca
+      resolved-ref: eb31567c8d7cbef1666a7c18d70f9bb681d44cee
       url: "https://github.com/andukdahacker/dart-open-fetch.git"
     source: git
-    version: "0.1.0"
+    version: "0.2.0"
   fake_async:
     dependency: transitive
     description:
