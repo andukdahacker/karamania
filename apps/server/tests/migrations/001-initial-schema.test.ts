@@ -40,6 +40,8 @@ describe('001-initial-schema migration', () => {
     });
 
     it('up() creates all 5 MVP tables', async () => {
+      // Ensure clean state in case tables already exist from a previous run
+      try { await down(db); } catch { /* tables may not exist yet */ }
       await up(db);
 
       const result = await sql<{ table_name: string }>`
