@@ -33,6 +33,7 @@ const mockGetParticipants = vi.fn();
 const mockFindById = vi.fn();
 const mockUpdateStatus = vi.fn();
 const mockUpdateHost = vi.fn();
+const mockUpdateDjState = vi.fn();
 vi.mock('../../src/persistence/session-repository.js', () => ({
   create: mockSessionCreate,
   addParticipant: mockAddParticipant,
@@ -41,6 +42,40 @@ vi.mock('../../src/persistence/session-repository.js', () => ({
   findById: mockFindById,
   updateStatus: mockUpdateStatus,
   updateHost: mockUpdateHost,
+  updateDjState: mockUpdateDjState,
+}));
+
+const mockDjContext = {
+  state: 'lobby',
+  sessionId: 'session-1',
+  participantCount: 3,
+  songCount: 0,
+  sessionStartedAt: null,
+  currentPerformer: null,
+  timerStartedAt: null,
+  timerDurationMs: null,
+  cycleHistory: ['lobby'],
+  metadata: {},
+};
+const mockTransitionResult = {
+  newContext: {
+    ...mockDjContext,
+    state: 'songSelection',
+    cycleHistory: ['lobby', 'songSelection'],
+  },
+  sideEffects: [
+    { type: 'cancelTimer', data: {} },
+    { type: 'broadcast', data: { from: 'lobby', to: 'songSelection' } },
+    { type: 'persist', data: { context: { state: 'songSelection' } } },
+  ],
+};
+vi.mock('../../src/dj-engine/machine.js', () => ({
+  createDJContext: vi.fn().mockReturnValue(mockDjContext),
+  processTransition: vi.fn().mockReturnValue(mockTransitionResult),
+}));
+
+vi.mock('../../src/dj-engine/serializer.js', () => ({
+  deserializeDJContext: vi.fn(),
 }));
 
 describe('session-manager', () => {
@@ -142,7 +177,9 @@ describe('session-manager', () => {
       const result = await startSession({ sessionId: 'session-1', hostUserId: 'host-user' });
 
       expect(mockUpdateStatus).toHaveBeenCalledWith('session-1', 'active');
-      expect(result).toEqual({ status: 'active' });
+      expect(result).toMatchObject({ status: 'active' });
+      expect(result.djContext).toEqual(mockTransitionResult.newContext);
+      expect(result.sideEffects).toEqual(mockTransitionResult.sideEffects);
     });
 
     it('throws when session not in lobby status', async () => {

@@ -2,6 +2,9 @@ import { generateUniquePartyCode } from '../services/party-code.js';
 import * as sessionRepo from '../persistence/session-repository.js';
 import { DEFAULT_VIBE } from '../shared/constants.js';
 import { createAppError } from '../shared/errors.js';
+import { createDJContext, processTransition } from '../dj-engine/machine.js';
+import { deserializeDJContext } from '../dj-engine/serializer.js';
+import type { DJContext, DJTransition, DJSideEffect } from '../dj-engine/types.js';
 
 // TODO: Add restoreSession(), endSession() in future stories
 // TODO: endSession() must set status='ended' to expire party codes (NFR21)
@@ -30,10 +33,62 @@ export async function createSession(params: {
   return { sessionId: session.id, partyCode: session.party_code };
 }
 
+export async function persistDjState(sessionId: string, serializedState: unknown): Promise<void> {
+  try {
+    await sessionRepo.updateDjState(sessionId, serializedState);
+  } catch (error) {
+    console.warn(`[session-manager] Failed to persist DJ state for session ${sessionId}:`, error);
+  }
+}
+
+export async function initializeDjState(
+  sessionId: string,
+  participantCount: number,
+): Promise<{ djContext: DJContext; sideEffects: DJSideEffect[] }> {
+  const context = createDJContext(sessionId, participantCount);
+  const { newContext, sideEffects } = processTransition(context, { type: 'SESSION_STARTED' }, Date.now());
+
+  const persistEffect = sideEffects.find((e): e is Extract<DJSideEffect, { type: 'persist' }> => e.type === 'persist');
+  if (persistEffect) {
+    void persistDjState(sessionId, persistEffect.data.context);
+  }
+
+  return { djContext: newContext, sideEffects };
+}
+
+export async function loadDjState(sessionId: string): Promise<DJContext | null> {
+  const session = await sessionRepo.findById(sessionId);
+  if (!session || session.dj_state === null || session.dj_state === undefined) {
+    return null;
+  }
+
+  try {
+    return deserializeDJContext(session.dj_state);
+  } catch (error) {
+    console.error(`[session-manager] Failed to deserialize DJ state for session ${sessionId}:`, error);
+    return null;
+  }
+}
+
+export async function processDjTransition(
+  sessionId: string,
+  context: DJContext,
+  event: DJTransition,
+): Promise<{ newContext: DJContext; sideEffects: DJSideEffect[] }> {
+  const { newContext, sideEffects } = processTransition(context, event, Date.now());
+
+  const persistEffect = sideEffects.find((e): e is Extract<DJSideEffect, { type: 'persist' }> => e.type === 'persist');
+  if (persistEffect) {
+    void persistDjState(sessionId, persistEffect.data.context);
+  }
+
+  return { newContext, sideEffects };
+}
+
 export async function startSession(params: {
   sessionId: string;
   hostUserId: string;
-}): Promise<{ status: string }> {
+}): Promise<{ status: string; djContext: DJContext; sideEffects: DJSideEffect[] }> {
   const session = await sessionRepo.findById(params.sessionId);
   if (!session) throw createAppError('SESSION_NOT_FOUND', 'Session not found', 404);
   if (session.status !== 'lobby') throw createAppError('INVALID_STATUS', 'Party already started', 400);
@@ -49,7 +104,9 @@ export async function startSession(params: {
 
   await sessionRepo.updateStatus(params.sessionId, 'active');
 
-  return { status: 'active' };
+  const { djContext, sideEffects } = await initializeDjState(params.sessionId, participants.length);
+
+  return { status: 'active', djContext, sideEffects };
 }
 
 export async function transferHost(

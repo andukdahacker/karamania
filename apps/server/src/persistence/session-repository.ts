@@ -115,6 +115,14 @@ export async function updateHost(sessionId: string, newHostUserId: string) {
     .executeTakeFirst();
 }
 
+export async function updateDjState(sessionId: string, djState: unknown): Promise<void> {
+  await db
+    .updateTable('sessions')
+    .set({ dj_state: djState })
+    .where('id', '=', sessionId)
+    .execute();
+}
+
 export async function updateStatus(sessionId: string, status: string) {
   return db
     .updateTable('sessions')

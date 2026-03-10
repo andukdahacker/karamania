@@ -322,6 +322,37 @@ describe('session-repository', () => {
     });
   });
 
+  describe('updateDjState', () => {
+    it('updates dj_state column with serialized context', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const { updateDjState } = await import('../../src/persistence/session-repository.js');
+      const djState = { state: 'songSelection', sessionId: 'session-1' };
+      await updateDjState('session-1', djState);
+
+      expect(mockSet).toHaveBeenCalledWith({ dj_state: djState });
+      expect(mockWhere).toHaveBeenCalledWith('id', '=', 'session-1');
+    });
+
+    it('passes null to set() when djState is null', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const { updateDjState } = await import('../../src/persistence/session-repository.js');
+      await updateDjState('session-1', null);
+
+      expect(mockSet).toHaveBeenCalledWith({ dj_state: null });
+      expect(mockWhere).toHaveBeenCalledWith('id', '=', 'session-1');
+    });
+
+    it('does not throw when execute() resolves', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const { updateDjState } = await import('../../src/persistence/session-repository.js');
+
+      await expect(updateDjState('session-1', { state: 'lobby' })).resolves.toBeUndefined();
+    });
+  });
+
   describe('updateHost', () => {
     it('updates host_user_id', async () => {
       mockExecuteTakeFirst.mockResolvedValue({ id: 'session-1', host_user_id: 'new-host' });
