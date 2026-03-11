@@ -2,7 +2,8 @@ import type { Server as SocketIOServer } from 'socket.io';
 import type { FastifyBaseLogger } from 'fastify';
 import { createAuthMiddleware } from './auth-middleware.js';
 import { registerPartyHandlers } from './party-handlers.js';
-import { handleParticipantJoin, transferHost } from '../services/session-manager.js';
+import { handleParticipantJoin, transferHost, isRecoveryFailed, clearRecoveryFailed } from '../services/session-manager.js';
+import { getSessionDjState } from '../services/dj-state-store.js';
 import {
   trackConnection,
   trackDisconnection,
@@ -25,6 +26,14 @@ export function setupSocketHandlers(io: SocketIOServer, logger: FastifyBaseLogge
     const s = socket as AuthenticatedSocket;
     const { sessionId, userId, displayName, role } = s.data;
     logger.info({ userId, sessionId }, 'Socket connected');
+
+    // Task 7: Check if session failed recovery — notify and disconnect
+    if (isRecoveryFailed(sessionId)) {
+      s.emit(EVENTS.PARTY_ENDED, { reason: 'session_recovery_failed' });
+      clearRecoveryFailed(sessionId);
+      s.disconnect(true);
+      return;
+    }
 
     registerPartyHandlers(s);
 
@@ -94,6 +103,20 @@ export function setupSocketHandlers(io: SocketIOServer, logger: FastifyBaseLogge
         status: joinResult.status,
         hostUserId: joinResult.hostUserId,
       });
+
+      // Task 6: Send recovered DJ state if session has active DJ context
+      const djState = getSessionDjState(sessionId);
+      if (djState) {
+        s.emit(EVENTS.DJ_STATE_CHANGED, {
+          state: djState.state,
+          sessionId: djState.sessionId,
+          songCount: djState.songCount,
+          participantCount: djState.participantCount,
+          currentPerformer: djState.currentPerformer,
+          timerStartedAt: djState.timerStartedAt,
+          timerDurationMs: djState.timerDurationMs,
+        });
+      }
     } catch (error) {
       logger.error({ userId, sessionId, error }, 'Failed to handle participant join');
     }

@@ -22,9 +22,13 @@ vi.mock('../../src/db/connection.js', () => ({
 
 const mockHandleParticipantJoin = vi.fn();
 const mockTransferHost = vi.fn();
+const mockIsRecoveryFailed = vi.fn().mockReturnValue(false);
+const mockClearRecoveryFailed = vi.fn();
 vi.mock('../../src/services/session-manager.js', () => ({
   handleParticipantJoin: mockHandleParticipantJoin,
   transferHost: mockTransferHost,
+  isRecoveryFailed: (...args: unknown[]) => mockIsRecoveryFailed(...args),
+  clearRecoveryFailed: (...args: unknown[]) => mockClearRecoveryFailed(...args),
 }));
 
 vi.mock('./../../src/socket-handlers/auth-middleware.js', () => ({
@@ -33,6 +37,10 @@ vi.mock('./../../src/socket-handlers/auth-middleware.js', () => ({
 
 vi.mock('../../src/socket-handlers/party-handlers.js', () => ({
   registerPartyHandlers: vi.fn(),
+}));
+
+vi.mock('../../src/services/dj-state-store.js', () => ({
+  getSessionDjState: vi.fn().mockReturnValue(undefined),
 }));
 
 const mockTrackConnection = vi.fn().mockReturnValue({ isReconnection: false });

@@ -78,6 +78,17 @@ vi.mock('../../src/dj-engine/serializer.js', () => ({
   deserializeDJContext: vi.fn(),
 }));
 
+vi.mock('../../src/services/dj-state-store.js', () => ({
+  getSessionDjState: vi.fn(),
+  setSessionDjState: vi.fn(),
+  removeSessionDjState: vi.fn(),
+}));
+
+vi.mock('../../src/services/timer-scheduler.js', () => ({
+  scheduleSessionTimer: vi.fn(),
+  cancelSessionTimer: vi.fn(),
+}));
+
 describe('session-manager', () => {
   beforeEach(() => {
     vi.clearAllMocks();

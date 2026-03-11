@@ -4,10 +4,98 @@ import { DEFAULT_VIBE } from '../shared/constants.js';
 import { createAppError } from '../shared/errors.js';
 import { createDJContext, processTransition } from '../dj-engine/machine.js';
 import { deserializeDJContext } from '../dj-engine/serializer.js';
+import { calculateRemainingMs } from '../dj-engine/timers.js';
 import type { DJContext, DJTransition, DJSideEffect } from '../dj-engine/types.js';
+import { getSessionDjState, setSessionDjState, removeSessionDjState } from '../services/dj-state-store.js';
+import { scheduleSessionTimer, cancelSessionTimer } from '../services/timer-scheduler.js';
 
-// TODO: Add restoreSession(), endSession() in future stories
+// TODO: Add endSession() in future stories
 // TODO: endSession() must set status='ended' to expire party codes (NFR21)
+
+// Set of session IDs that failed recovery — checked during client reconnection
+const failedRecoverySessionIds = new Set<string>();
+
+export function isRecoveryFailed(sessionId: string): boolean {
+  return failedRecoverySessionIds.has(sessionId);
+}
+
+export function clearRecoveryFailed(sessionId: string): void {
+  failedRecoverySessionIds.delete(sessionId);
+}
+
+export async function recoverActiveSessions(
+  now: number = Date.now(),
+): Promise<{ recovered: string[]; failed: string[] }> {
+  const recovered: string[] = [];
+  const failed: string[] = [];
+
+  const activeSessions = await sessionRepo.findActiveSessions();
+
+  for (const session of activeSessions) {
+    // Skip sessions with no DJ state (lobby state — no recovery needed)
+    if (session.dj_state === null || session.dj_state === undefined) {
+      continue;
+    }
+
+    try {
+      // Deserialize and validate DJ state
+      const context = deserializeDJContext(session.dj_state);
+
+      // Reconcile timers
+      const remaining = calculateRemainingMs(context, now);
+
+      if (remaining > 0) {
+        // Timer still active — store state and reschedule with remaining duration
+        setSessionDjState(session.id, context);
+        scheduleSessionTimer(session.id, remaining, () => {
+          void handleRecoveryTimeout(session.id);
+        });
+      } else if (context.timerStartedAt !== null && context.timerDurationMs !== null) {
+        // Timer expired during downtime — trigger TIMEOUT to advance state
+        const { newContext, sideEffects } = processTransition(context, { type: 'TIMEOUT' }, now);
+        setSessionDjState(session.id, newContext);
+
+        // Persist the new state
+        const persistEffect = sideEffects.find(
+          (e): e is Extract<DJSideEffect, { type: 'persist' }> => e.type === 'persist',
+        );
+        if (persistEffect) {
+          void persistDjState(session.id, persistEffect.data.context);
+        }
+
+        // Check if new state also has a timer — schedule it fresh from now
+        const scheduleEffect = sideEffects.find(
+          (e): e is Extract<DJSideEffect, { type: 'scheduleTimer' }> => e.type === 'scheduleTimer',
+        );
+        if (scheduleEffect) {
+          scheduleSessionTimer(session.id, scheduleEffect.data.durationMs, () => {
+            void handleRecoveryTimeout(session.id);
+          });
+        }
+      } else {
+        // No timer to reconcile (paused or no-timeout state) — just store
+        setSessionDjState(session.id, context);
+      }
+
+      recovered.push(session.id);
+    } catch (error) {
+      // Deserialization failed — gracefully end session
+      console.error(`[session-manager] Recovery failed for session ${session.id}:`, error);
+      failed.push(session.id);
+      failedRecoverySessionIds.add(session.id);
+      await sessionRepo.updateStatus(session.id, 'ended');
+    }
+  }
+
+  return { recovered, failed };
+}
+
+async function handleRecoveryTimeout(sessionId: string): Promise<void> {
+  const context = getSessionDjState(sessionId);
+  if (!context) return;
+
+  await processDjTransition(sessionId, context, { type: 'TIMEOUT' });
+}
 
 export async function createSession(params: {
   hostUserId: string;
@@ -48,6 +136,8 @@ export async function initializeDjState(
   const context = createDJContext(sessionId, participantCount);
   const { newContext, sideEffects } = processTransition(context, { type: 'SESSION_STARTED' }, Date.now());
 
+  setSessionDjState(sessionId, newContext);
+
   const persistEffect = sideEffects.find((e): e is Extract<DJSideEffect, { type: 'persist' }> => e.type === 'persist');
   if (persistEffect) {
     void persistDjState(sessionId, persistEffect.data.context);
@@ -77,9 +167,22 @@ export async function processDjTransition(
 ): Promise<{ newContext: DJContext; sideEffects: DJSideEffect[] }> {
   const { newContext, sideEffects } = processTransition(context, event, Date.now());
 
-  const persistEffect = sideEffects.find((e): e is Extract<DJSideEffect, { type: 'persist' }> => e.type === 'persist');
-  if (persistEffect) {
-    void persistDjState(sessionId, persistEffect.data.context);
+  setSessionDjState(sessionId, newContext);
+
+  for (const effect of sideEffects) {
+    switch (effect.type) {
+      case 'persist':
+        void persistDjState(sessionId, effect.data.context);
+        break;
+      case 'scheduleTimer':
+        scheduleSessionTimer(sessionId, effect.data.durationMs, () => {
+          void handleRecoveryTimeout(sessionId);
+        });
+        break;
+      case 'cancelTimer':
+        cancelSessionTimer(sessionId);
+        break;
+    }
   }
 
   return { newContext, sideEffects };

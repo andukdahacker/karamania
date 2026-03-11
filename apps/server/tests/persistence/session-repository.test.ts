@@ -353,6 +353,31 @@ describe('session-repository', () => {
     });
   });
 
+  describe('findActiveSessions', () => {
+    it('returns all sessions with status active', async () => {
+      const activeSessions = [
+        createTestSession({ id: 'session-1', status: 'active', dj_state: { state: 'songSelection' } }),
+        createTestSession({ id: 'session-2', status: 'active', dj_state: { state: 'song' } }),
+      ];
+      mockExecute.mockResolvedValue(activeSessions);
+
+      const { findActiveSessions } = await import('../../src/persistence/session-repository.js');
+      const result = await findActiveSessions();
+
+      expect(mockWhere).toHaveBeenCalledWith('status', '=', 'active');
+      expect(result).toEqual(activeSessions);
+    });
+
+    it('returns empty array when no active sessions exist', async () => {
+      mockExecute.mockResolvedValue([]);
+
+      const { findActiveSessions } = await import('../../src/persistence/session-repository.js');
+      const result = await findActiveSessions();
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('updateHost', () => {
     it('updates host_user_id', async () => {
       mockExecuteTakeFirst.mockResolvedValue({ id: 'session-1', host_user_id: 'new-host' });

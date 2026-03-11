@@ -18,6 +18,14 @@ export async function findById(id: string): Promise<SessionsTable | undefined> {
     .executeTakeFirst();
 }
 
+export async function findActiveSessions(): Promise<SessionsTable[]> {
+  return db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('status', '=', 'active')
+    .execute();
+}
+
 export async function create(params: {
   hostUserId: string;
   partyCode: string;

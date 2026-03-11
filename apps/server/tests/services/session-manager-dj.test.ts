@@ -53,6 +53,22 @@ vi.mock('../../src/dj-engine/serializer.js', () => ({
   deserializeDJContext: mockDeserializeDJContext,
 }));
 
+const mockSetSessionDjState = vi.fn();
+const mockGetSessionDjState = vi.fn();
+const mockRemoveSessionDjState = vi.fn();
+vi.mock('../../src/services/dj-state-store.js', () => ({
+  getSessionDjState: (...args: unknown[]) => mockGetSessionDjState(...args),
+  setSessionDjState: (...args: unknown[]) => mockSetSessionDjState(...args),
+  removeSessionDjState: (...args: unknown[]) => mockRemoveSessionDjState(...args),
+}));
+
+const mockScheduleSessionTimer = vi.fn();
+const mockCancelSessionTimer = vi.fn();
+vi.mock('../../src/services/timer-scheduler.js', () => ({
+  scheduleSessionTimer: (...args: unknown[]) => mockScheduleSessionTimer(...args),
+  cancelSessionTimer: (...args: unknown[]) => mockCancelSessionTimer(...args),
+}));
+
 describe('session-manager DJ functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -110,6 +126,26 @@ describe('session-manager DJ functions', () => {
       expect(mockUpdateDjState).toHaveBeenCalledWith('session-1', { state: 'songSelection' });
       expect(result.djContext).toEqual(songSelectionContext);
       expect(result.sideEffects).toEqual(sideEffects);
+    });
+
+    it('stores context in dj-state-store', async () => {
+      const lobbyContext = createTestDJContext({ sessionId: 'session-1', participantCount: 5 });
+      const songSelectionContext = createTestDJContext({
+        sessionId: 'session-1',
+        participantCount: 5,
+        state: 'songSelection' as const,
+      });
+
+      mockCreateDJContext.mockReturnValue(lobbyContext);
+      mockProcessTransition.mockReturnValue({
+        newContext: songSelectionContext,
+        sideEffects: [],
+      });
+
+      const { initializeDjState } = await import('../../src/services/session-manager.js');
+      await initializeDjState('session-1', 5);
+
+      expect(mockSetSessionDjState).toHaveBeenCalledWith('session-1', songSelectionContext);
     });
 
     it('does not call persistDjState when no persist side effect is returned', async () => {
@@ -227,6 +263,59 @@ describe('session-manager DJ functions', () => {
       await processDjTransition('session-1', context, { type: 'SONG_SELECTED' });
 
       expect(mockUpdateDjState).not.toHaveBeenCalled();
+    });
+
+    it('handles scheduleTimer side effect by calling scheduleSessionTimer', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'songSelection' as const });
+      const newContext = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
+
+      mockProcessTransition.mockReturnValue({
+        newContext,
+        sideEffects: [
+          { type: 'scheduleTimer', data: { durationMs: 180_000 } },
+        ],
+      });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_SELECTED' });
+
+      expect(mockScheduleSessionTimer).toHaveBeenCalledWith(
+        'session-1',
+        180_000,
+        expect.any(Function),
+      );
+    });
+
+    it('handles cancelTimer side effect by calling cancelSessionTimer', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
+      const newContext = createTestDJContext({ sessionId: 'session-1', state: 'songSelection' as const });
+
+      mockProcessTransition.mockReturnValue({
+        newContext,
+        sideEffects: [
+          { type: 'cancelTimer', data: {} },
+        ],
+      });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'TIMEOUT' });
+
+      expect(mockCancelSessionTimer).toHaveBeenCalledWith('session-1');
+    });
+
+    it('stores new context in dj-state-store', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'songSelection' as const });
+      const newContext = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
+
+      mockProcessTransition.mockReturnValue({
+        newContext,
+        sideEffects: [],
+      });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_SELECTED' });
+
+      expect(mockSetSessionDjState).toHaveBeenCalledWith('session-1', newContext);
     });
 
     it('persist is fire-and-forget (not awaited in the response path)', async () => {

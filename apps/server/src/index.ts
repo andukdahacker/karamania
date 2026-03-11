@@ -17,6 +17,7 @@ import { sessionRoutes } from './routes/sessions.js';
 import { webLandingRoutes } from './routes/web-landing.js';
 import { errorHandler } from './shared/errors.js';
 import { setupSocketHandlers } from './socket-handlers/connection-handler.js';
+import { recoverActiveSessions } from './services/session-manager.js';
 
 const fastify = Fastify({
   logger: {
@@ -79,6 +80,14 @@ fastify.get('/openapi.json', { schema: { hide: true } }, async (_request, reply)
 
 try {
   initializeFirebaseAdmin();
+
+  // Recover active sessions AFTER DB is available but BEFORE socket handlers
+  const recoveryResult = await recoverActiveSessions();
+  fastify.log.info(
+    { recovered: recoveryResult.recovered.length, failed: recoveryResult.failed.length },
+    'Session recovery complete',
+  );
+
   setupSocketHandlers(io, fastify.log);
   await fastify.listen({ port: config.PORT, host: '0.0.0.0' });
 } catch (err) {
