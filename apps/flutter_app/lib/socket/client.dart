@@ -19,6 +19,7 @@ class SocketClient {
   String? _userId;
   Timer? _disconnectUiTimer;
   Timer? _hostTransferBannerTimer;
+  PartyProvider? _partyProvider;
 
   bool get isConnected => _isConnected;
   String? get currentSessionId => _currentSessionId;
@@ -33,6 +34,7 @@ class SocketClient {
   }) async {
     _currentSessionId = sessionId;
     _userId = userId;
+    _partyProvider = partyProvider;
 
     _socket = io.io(
       serverUrl,
@@ -93,6 +95,8 @@ class SocketClient {
     _disconnectUiTimer = null;
     _hostTransferBannerTimer?.cancel();
     _hostTransferBannerTimer = null;
+    _partyProvider?.onSessionEnd();
+    _partyProvider = null;
     _userId = null;
     _socket?.disconnect();
     _socket?.dispose();
@@ -165,6 +169,27 @@ class SocketClient {
       final payload = data as Map<String, dynamic>;
       final userId = payload['userId'] as String;
       partyProvider.onParticipantReconnected(userId);
+    });
+
+    // DJ state change event
+    on('dj:stateChanged', (data) {
+      final payload = data as Map<String, dynamic>;
+      final stateString = payload['state'] as String;
+      final DJState djState;
+      try {
+        djState = DJState.values.byName(stateString);
+      } catch (_) {
+        // Unrecognized state from server — ignore to avoid crash
+        return;
+      }
+      partyProvider.onDjStateUpdate(
+        state: djState,
+        songCount: payload['songCount'] as int?,
+        participantCount: payload['participantCount'] as int?,
+        currentPerformer: payload['currentPerformer'] as String?,
+        timerStartedAt: payload['timerStartedAt'] as int?,
+        timerDurationMs: payload['timerDurationMs'] as int?,
+      );
     });
 
     // Host transfer event (AC #4)

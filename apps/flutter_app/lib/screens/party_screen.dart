@@ -24,6 +24,10 @@ class _PartyScreenState extends State<PartyScreen>
     with SingleTickerProviderStateMixin {
   Timer? _catchUpTimer;
   Timer? _skeletonTimer;
+  Timer? _countdownTimer;
+  int? _remainingSeconds;
+  int? _lastTimerStartedAt;
+  int? _lastTimerDurationMs;
   bool _showLoadingSkeleton = false;
   bool _catchUpTimerStarted = false;
   late final AnimationController _pulseController;
@@ -70,6 +74,48 @@ class _PartyScreenState extends State<PartyScreen>
       }
       _startCatchUpTimer();
     }
+
+    // Update countdown timer when DJ state changes
+    _updateCountdown(provider);
+  }
+
+  void _updateCountdown(PartyProvider provider) {
+    final timerStartedAt = provider.timerStartedAt;
+    final timerDurationMs = provider.timerDurationMs;
+
+    // Skip if timer values haven't changed
+    if (timerStartedAt == _lastTimerStartedAt &&
+        timerDurationMs == _lastTimerDurationMs) {
+      return;
+    }
+    _lastTimerStartedAt = timerStartedAt;
+    _lastTimerDurationMs = timerDurationMs;
+
+    if (timerStartedAt != null && timerDurationMs != null) {
+      _countdownTimer?.cancel();
+      _tickCountdown(timerStartedAt, timerDurationMs);
+      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        _tickCountdown(timerStartedAt, timerDurationMs);
+      });
+    } else {
+      _countdownTimer?.cancel();
+      _countdownTimer = null;
+      if (_remainingSeconds != null) {
+        setState(() => _remainingSeconds = null);
+      }
+    }
+  }
+
+  void _tickCountdown(int timerStartedAt, int timerDurationMs) {
+    final elapsed = DateTime.now().millisecondsSinceEpoch - timerStartedAt;
+    final remaining = ((timerDurationMs - elapsed) / 1000).ceil();
+    if (remaining <= 0) {
+      _countdownTimer?.cancel();
+      _countdownTimer = null;
+      if (mounted) setState(() => _remainingSeconds = 0);
+    } else {
+      if (mounted) setState(() => _remainingSeconds = remaining);
+    }
   }
 
   void _startCatchUpTimer() {
@@ -86,6 +132,7 @@ class _PartyScreenState extends State<PartyScreen>
     _partyProvider?.removeListener(_onProviderChanged);
     _catchUpTimer?.cancel();
     _skeletonTimer?.cancel();
+    _countdownTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
   }
@@ -160,7 +207,8 @@ class _PartyScreenState extends State<PartyScreen>
             ),
             const SizedBox(height: DJTokens.spaceLg),
             Text(
-              Copy.partyInProgress,
+              Copy.djStateLabel(partyProvider.djState),
+              key: const Key('dj-state-label'),
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: DJTokens.textPrimary,
                   ),
@@ -172,17 +220,36 @@ class _PartyScreenState extends State<PartyScreen>
                     color: DJTokens.textSecondary,
                   ),
             ),
-            const SizedBox(height: DJTokens.spaceXl),
-            Text(
-              Copy.djEngineComingSoon,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DJTokens.textSecondary.withValues(alpha: 0.5),
-                  ),
-            ),
+            if (partyProvider.currentPerformer != null) ...[
+              const SizedBox(height: DJTokens.spaceMd),
+              Text(
+                partyProvider.currentPerformer!,
+                key: const Key('current-performer'),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: displayVibe.accent,
+                    ),
+              ),
+            ],
+            if (_remainingSeconds != null) ...[
+              const SizedBox(height: DJTokens.spaceMd),
+              Text(
+                _formatCountdown(_remainingSeconds!),
+                key: const Key('countdown-timer'),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: DJTokens.textSecondary,
+                    ),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  String _formatCountdown(int seconds) {
+    final minutes = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
   Widget _buildCatchUpCard(

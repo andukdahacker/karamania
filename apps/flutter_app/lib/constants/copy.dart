@@ -71,7 +71,34 @@ class Copy {
   static const String needMorePlayers = 'Need';
   static const String more = 'more to start';
   static const String partyInProgress = 'PARTY IN PROGRESS';
-  static const String djEngineComingSoon = 'DJ engine coming in the next update';
+
+  // DJ state labels
+  static const String djStateLobby = 'Lobby';
+  static const String djStateSongSelection = 'Song Selection';
+  static const String djStatePartyCardDeal = 'Party Card Deal';
+  static const String djStateSong = 'Song';
+  static const String djStateCeremony = 'Ceremony';
+  static const String djStateInterlude = 'Interlude';
+  static const String djStateFinale = 'Finale';
+
+  static String djStateLabel(DJState state) {
+    switch (state) {
+      case DJState.lobby:
+        return djStateLobby;
+      case DJState.songSelection:
+        return djStateSongSelection;
+      case DJState.partyCardDeal:
+        return djStatePartyCardDeal;
+      case DJState.song:
+        return djStateSong;
+      case DJState.ceremony:
+        return djStateCeremony;
+      case DJState.interlude:
+        return djStateInterlude;
+      case DJState.finale:
+        return djStateFinale;
+    }
+  }
 
   // Catch-up (mid-session join)
   static const String welcomeToParty = 'Welcome to the party!';

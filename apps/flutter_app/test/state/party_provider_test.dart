@@ -11,9 +11,11 @@ void main() {
 
   group('PartyProvider', () {
     late PartyProvider provider;
+    late List<bool> wakelockCalls;
 
     setUp(() {
-      provider = PartyProvider();
+      wakelockCalls = [];
+      provider = PartyProvider(wakelockToggle: (enable) => wakelockCalls.add(enable));
     });
 
     test('initial state: sessionId null, partyCode null, isHost false, createPartyLoading idle', () {
@@ -422,6 +424,155 @@ void main() {
 
       expect(online.isOnline, isTrue);
       expect(offline.isOnline, isFalse);
+    });
+
+    // Story 2.4 tests — onDjStateUpdate
+
+    test('initial DJ state fields have correct defaults', () {
+      expect(provider.djState, DJState.lobby);
+      expect(provider.songCount, 0);
+      expect(provider.currentPerformer, isNull);
+      expect(provider.timerStartedAt, isNull);
+      expect(provider.timerDurationMs, isNull);
+    });
+
+    test('onDjStateUpdate updates all DJ state fields', () {
+      provider.onDjStateUpdate(
+        state: DJState.song,
+        songCount: 3,
+        participantCount: 5,
+        currentPerformer: 'Alice',
+        timerStartedAt: 1000,
+        timerDurationMs: 180000,
+      );
+
+      expect(provider.djState, DJState.song);
+      expect(provider.songCount, 3);
+      expect(provider.currentPerformer, 'Alice');
+      expect(provider.timerStartedAt, 1000);
+      expect(provider.timerDurationMs, 180000);
+    });
+
+    test('onDjStateUpdate calls notifyListeners exactly once', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onDjStateUpdate(
+        state: DJState.songSelection,
+        songCount: 1,
+        participantCount: 4,
+        currentPerformer: 'Bob',
+        timerStartedAt: 2000,
+        timerDurationMs: 30000,
+      );
+
+      expect(notifyCount, 1);
+    });
+
+    test('onDjStateUpdate clears nullable fields when null is passed', () {
+      provider.onDjStateUpdate(
+        state: DJState.song,
+        currentPerformer: 'Alice',
+        timerStartedAt: 1000,
+        timerDurationMs: 180000,
+      );
+      expect(provider.currentPerformer, 'Alice');
+
+      provider.onDjStateUpdate(
+        state: DJState.songSelection,
+        currentPerformer: null,
+        timerStartedAt: null,
+        timerDurationMs: null,
+      );
+
+      expect(provider.currentPerformer, isNull);
+      expect(provider.timerStartedAt, isNull);
+      expect(provider.timerDurationMs, isNull);
+    });
+
+    test('onDjStateUpdate updates participantCount only when non-null and session is active', () {
+      // Session not active yet — participantCount should not update
+      provider.onDjStateUpdate(
+        state: DJState.songSelection,
+        participantCount: 10,
+      );
+      expect(provider.participantCount, 0); // Unchanged — session not active
+
+      // Make session active
+      provider.onSessionStatus('active');
+
+      provider.onDjStateUpdate(
+        state: DJState.song,
+        participantCount: 5,
+      );
+      expect(provider.participantCount, 5); // Updated — session is active
+
+      // Null participantCount doesn't overwrite
+      provider.onDjStateUpdate(
+        state: DJState.ceremony,
+        participantCount: null,
+      );
+      expect(provider.participantCount, 5); // Unchanged — null passed
+    });
+
+    test('onDjStateUpdate preserves songCount when null is passed', () {
+      provider.onDjStateUpdate(
+        state: DJState.song,
+        songCount: 5,
+      );
+      expect(provider.songCount, 5);
+
+      provider.onDjStateUpdate(
+        state: DJState.songSelection,
+        songCount: null,
+      );
+      expect(provider.songCount, 5); // Preserved
+    });
+
+    // Wakelock tests
+
+    test('wakelock enabled for active DJ states (not lobby/finale)', () {
+      provider.onDjStateUpdate(state: DJState.songSelection);
+      expect(wakelockCalls, [true]);
+
+      provider.onDjStateUpdate(state: DJState.song);
+      // No redundant enable call
+      expect(wakelockCalls, [true]);
+    });
+
+    test('wakelock disabled for lobby and finale states', () {
+      // First enable
+      provider.onDjStateUpdate(state: DJState.song);
+      expect(wakelockCalls, [true]);
+
+      // Then disable when returning to lobby
+      provider.onDjStateUpdate(state: DJState.lobby);
+      expect(wakelockCalls, [true, false]);
+    });
+
+    test('wakelock disabled for finale', () {
+      provider.onDjStateUpdate(state: DJState.song);
+      provider.onDjStateUpdate(state: DJState.finale);
+      expect(wakelockCalls, [true, false]);
+    });
+
+    test('wakelock avoids redundant disable calls', () {
+      // Start in lobby (default) — no wakelock calls
+      provider.onDjStateUpdate(state: DJState.lobby);
+      expect(wakelockCalls, isEmpty);
+    });
+
+    test('onSessionEnd disables wakelock if enabled', () {
+      provider.onDjStateUpdate(state: DJState.song);
+      expect(wakelockCalls, [true]);
+
+      provider.onSessionEnd();
+      expect(wakelockCalls, [true, false]);
+    });
+
+    test('onSessionEnd does nothing if wakelock not enabled', () {
+      provider.onSessionEnd();
+      expect(wakelockCalls, isEmpty);
     });
   });
 }

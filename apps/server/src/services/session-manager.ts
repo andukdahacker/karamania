@@ -6,8 +6,9 @@ import { createDJContext, processTransition } from '../dj-engine/machine.js';
 import { deserializeDJContext } from '../dj-engine/serializer.js';
 import { calculateRemainingMs } from '../dj-engine/timers.js';
 import type { DJContext, DJTransition, DJSideEffect } from '../dj-engine/types.js';
-import { getSessionDjState, setSessionDjState, removeSessionDjState } from '../services/dj-state-store.js';
+import { getSessionDjState, setSessionDjState } from '../services/dj-state-store.js';
 import { scheduleSessionTimer, cancelSessionTimer } from '../services/timer-scheduler.js';
+import { broadcastDjState } from '../services/dj-broadcaster.js';
 
 // TODO: Add endSession() in future stories
 // TODO: endSession() must set status='ended' to expire party codes (NFR21)
@@ -181,6 +182,9 @@ export async function processDjTransition(
         break;
       case 'cancelTimer':
         cancelSessionTimer(sessionId);
+        break;
+      case 'broadcast':
+        broadcastDjState(sessionId, newContext);
         break;
     }
   }

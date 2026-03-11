@@ -24,9 +24,20 @@ vi.mock('../../src/persistence/session-repository.js', () => ({
   updateVibe: mockUpdateVibe,
 }));
 
+const mockStartSession = vi.fn();
+vi.mock('../../src/services/session-manager.js', () => ({
+  startSession: mockStartSession,
+}));
+
+const mockBroadcastDjState = vi.fn();
+vi.mock('../../src/services/dj-broadcaster.js', () => ({
+  broadcastDjState: mockBroadcastDjState,
+}));
+
 function createMockSocket(sessionId = 'test-session-id') {
   const handlers = new Map<string, (data: unknown) => void>();
   const emittedToRoom: Array<{ event: string; data: unknown }> = [];
+  const emittedToSelf: Array<{ event: string; data: unknown }> = [];
 
   return {
     socket: {
@@ -39,7 +50,10 @@ function createMockSocket(sessionId = 'test-session-id') {
       on: (event: string, handler: (data: unknown) => void) => {
         handlers.set(event, handler);
       },
-      to: (roomId: string) => ({
+      emit: (event: string, data: unknown) => {
+        emittedToSelf.push({ event, data });
+      },
+      to: (_roomId: string) => ({
         emit: (event: string, data: unknown) => {
           emittedToRoom.push({ event, data });
         },
@@ -47,6 +61,7 @@ function createMockSocket(sessionId = 'test-session-id') {
     },
     handlers,
     emittedToRoom,
+    emittedToSelf,
   };
 }
 
@@ -111,6 +126,74 @@ describe('party-handlers', () => {
       await handler({ vibe: 'kpop' });
 
       expect(toSpy).toHaveBeenCalledWith('s1');
+    });
+  });
+
+  describe('party:start', () => {
+    it('emits party:started AND dj:stateChanged on successful start', async () => {
+      const djContext = {
+        state: 'songSelection',
+        sessionId: 'session-1',
+        participantCount: 5,
+        songCount: 0,
+        currentPerformer: null,
+        timerStartedAt: null,
+        timerDurationMs: null,
+        sessionStartedAt: Date.now(),
+        cycleHistory: ['lobby', 'songSelection'],
+        metadata: {},
+      };
+      mockStartSession.mockResolvedValue({
+        status: 'active',
+        djContext,
+        sideEffects: [],
+      });
+
+      const { socket, handlers, emittedToRoom, emittedToSelf } = createMockSocket('session-1');
+
+      const { registerPartyHandlers } = await import('../../src/socket-handlers/party-handlers.js');
+      registerPartyHandlers(socket as never);
+
+      const handler = handlers.get('party:start');
+      expect(handler).toBeDefined();
+
+      await handler!(undefined);
+
+      expect(mockStartSession).toHaveBeenCalledWith({
+        sessionId: 'session-1',
+        hostUserId: 'test-user-id',
+      });
+
+      // party:started emitted to self
+      expect(emittedToSelf).toContainEqual({
+        event: 'party:started',
+        data: { status: 'active' },
+      });
+
+      // party:started emitted to room
+      expect(emittedToRoom).toContainEqual({
+        event: 'party:started',
+        data: { status: 'active' },
+      });
+
+      // dj:stateChanged broadcast via broadcastDjState
+      expect(mockBroadcastDjState).toHaveBeenCalledWith('session-1', djContext);
+    });
+
+    it('silently fails when startSession throws', async () => {
+      mockStartSession.mockRejectedValue(new Error('Not host'));
+
+      const { socket, handlers, emittedToSelf, emittedToRoom } = createMockSocket('session-1');
+
+      const { registerPartyHandlers } = await import('../../src/socket-handlers/party-handlers.js');
+      registerPartyHandlers(socket as never);
+
+      const handler = handlers.get('party:start');
+      await handler!(undefined);
+
+      expect(emittedToSelf).toHaveLength(0);
+      expect(emittedToRoom).toHaveLength(0);
+      expect(mockBroadcastDjState).not.toHaveBeenCalled();
     });
   });
 });

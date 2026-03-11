@@ -14,12 +14,14 @@ import {
 } from '../services/connection-tracker.js';
 import { EVENTS } from '../shared/events.js';
 import type { AuthenticatedSocket } from '../shared/socket-types.js';
+import { initDjBroadcaster, buildDjStatePayload } from '../services/dj-broadcaster.js';
 
 // Module-level timer maps for cleanup
 const hostTransferTimers = new Map<string, NodeJS.Timeout>();
 const cleanupTimers = new Map<string, Map<string, NodeJS.Timeout>>();
 
 export function setupSocketHandlers(io: SocketIOServer, logger: FastifyBaseLogger): void {
+  initDjBroadcaster(io);
   io.use(createAuthMiddleware(logger));
 
   io.on('connection', async (socket) => {
@@ -107,15 +109,7 @@ export function setupSocketHandlers(io: SocketIOServer, logger: FastifyBaseLogge
       // Task 6: Send recovered DJ state if session has active DJ context
       const djState = getSessionDjState(sessionId);
       if (djState) {
-        s.emit(EVENTS.DJ_STATE_CHANGED, {
-          state: djState.state,
-          sessionId: djState.sessionId,
-          songCount: djState.songCount,
-          participantCount: djState.participantCount,
-          currentPerformer: djState.currentPerformer,
-          timerStartedAt: djState.timerStartedAt,
-          timerDurationMs: djState.timerDurationMs,
-        });
+        s.emit(EVENTS.DJ_STATE_CHANGED, buildDjStatePayload(djState));
       }
     } catch (error) {
       logger.error({ userId, sessionId, error }, 'Failed to handle participant join');

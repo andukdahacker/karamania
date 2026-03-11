@@ -55,7 +55,7 @@ development_status:
   2-1-dj-engine-state-machine-server: done
   2-2-dj-state-persistence: done
   2-3-server-restart-recovery: done
-  2-4-dj-state-broadcasting-and-flutter-state-display: backlog
+  2-4-dj-state-broadcasting-and-flutter-state-display: done
   2-5-host-controls-overlay: backlog
   2-6-pause-resume-and-bridge-moments: backlog
   2-7-audio-cues-and-state-transition-sounds: backlog

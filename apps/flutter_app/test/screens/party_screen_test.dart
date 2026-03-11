@@ -9,9 +9,13 @@ import 'package:karamania/state/accessibility_provider.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 
+PartyProvider _createTestProvider() {
+  return PartyProvider(wakelockToggle: (_) {})
+    ..onPartyCreated('test-session', 'ABCD');
+}
+
 Widget _wrapWithProviders(Widget child, {PartyProvider? partyProvider}) {
-  final provider = partyProvider ??
-      (PartyProvider()..onPartyCreated('test-session', 'ABCD'));
+  final provider = partyProvider ?? _createTestProvider();
 
   return MultiProvider(
     providers: [
@@ -38,15 +42,15 @@ void main() {
   });
 
   group('PartyScreen', () {
-    testWidgets('shows "PARTY IN PROGRESS" text', (tester) async {
+    testWidgets('shows DJ state label for lobby by default', (tester) async {
       await tester.pumpWidget(_wrapWithProviders(const PartyScreen()));
       await tester.pump();
 
-      expect(find.text(Copy.partyInProgress), findsOneWidget);
+      expect(find.text(Copy.djStateLobby), findsOneWidget);
     });
 
     testWidgets('shows participant count', (tester) async {
-      final provider = PartyProvider()..onPartyCreated('test-session', 'ABCD');
+      final provider = _createTestProvider();
       provider.onParticipantsSync([
         ParticipantInfo(userId: 'u1', displayName: 'Host'),
         ParticipantInfo(userId: 'u2', displayName: 'Alice'),
@@ -65,7 +69,7 @@ void main() {
 
     testWidgets('shows host invite FAB when isHost', (tester) async {
       // onPartyCreated sets isHost = true
-      final provider = PartyProvider()..onPartyCreated('test-session', 'ABCD');
+      final provider = _createTestProvider();
 
       await tester.pumpWidget(
           _wrapWithProviders(const PartyScreen(), partyProvider: provider));
@@ -76,7 +80,7 @@ void main() {
 
     testWidgets('hides host invite FAB when NOT isHost', (tester) async {
       // onPartyJoined sets isHost = false
-      final provider = PartyProvider()
+      final provider = PartyProvider(wakelockToggle: (_) {})
         ..onPartyJoined(
           sessionId: 'session-1',
           partyCode: 'ROCK',
@@ -92,7 +96,7 @@ void main() {
     });
 
     testWidgets('shows catch-up card when isCatchingUp is true', (tester) async {
-      final provider = PartyProvider()
+      final provider = PartyProvider(wakelockToggle: (_) {})
         ..onPartyJoined(
           sessionId: 'session-1',
           partyCode: 'LATE',
@@ -109,7 +113,7 @@ void main() {
     });
 
     testWidgets('catch-up card shows participant count and vibe', (tester) async {
-      final provider = PartyProvider()
+      final provider = PartyProvider(wakelockToggle: (_) {})
         ..onPartyJoined(
           sessionId: 'session-1',
           partyCode: 'LATE',
@@ -145,7 +149,7 @@ void main() {
     });
 
     testWidgets('catch-up card dismisses on tap', (tester) async {
-      final provider = PartyProvider()
+      final provider = PartyProvider(wakelockToggle: (_) {})
         ..onPartyJoined(
           sessionId: 'session-1',
           partyCode: 'LATE',
@@ -171,7 +175,7 @@ void main() {
     });
 
     testWidgets('catch-up card auto-dismisses after 3 seconds', (tester) async {
-      final provider = PartyProvider()
+      final provider = PartyProvider(wakelockToggle: (_) {})
         ..onPartyJoined(
           sessionId: 'session-1',
           partyCode: 'LATE',
@@ -200,7 +204,7 @@ void main() {
         (tester) async {
       // Simulates mid-session join: provider has pendingCatchUp=true but
       // isCatchingUp=false at mount time. Timer must start reactively.
-      final provider = PartyProvider()
+      final provider = PartyProvider(wakelockToggle: (_) {})
         ..onPartyJoined(
           sessionId: 'session-1',
           partyCode: 'LATE',
@@ -234,7 +238,7 @@ void main() {
     });
 
     testWidgets('shows loading skeleton for mid-session join', (tester) async {
-      final provider = PartyProvider()
+      final provider = PartyProvider(wakelockToggle: (_) {})
         ..onPartyJoined(
           sessionId: 'session-1',
           partyCode: 'LATE',
@@ -254,7 +258,7 @@ void main() {
     testWidgets('loading skeleton not shown for lobby-to-party transition',
         (tester) async {
       // Host creates party (status defaults to lobby) → no loading skeleton
-      final provider = PartyProvider()..onPartyCreated('test-session', 'ABCD');
+      final provider = _createTestProvider();
 
       await tester.pumpWidget(
           _wrapWithProviders(const PartyScreen(), partyProvider: provider));
@@ -267,7 +271,7 @@ void main() {
 
     testWidgets('shows reconnecting banner when connectionStatus is reconnecting',
         (tester) async {
-      final provider = PartyProvider()..onPartyCreated('test-session', 'ABCD');
+      final provider = _createTestProvider();
       provider.onConnectionStatusChanged(ConnectionStatus.reconnecting);
 
       await tester.pumpWidget(
@@ -279,7 +283,7 @@ void main() {
 
     testWidgets('hides reconnecting banner when connectionStatus is connected',
         (tester) async {
-      final provider = PartyProvider()..onPartyCreated('test-session', 'ABCD');
+      final provider = _createTestProvider();
       // Status is connected by default
 
       await tester.pumpWidget(
@@ -291,7 +295,7 @@ void main() {
 
     testWidgets('shows host transfer banner when hostTransferPending is true',
         (tester) async {
-      final provider = PartyProvider()..onPartyCreated('test-session', 'ABCD');
+      final provider = _createTestProvider();
       provider.onHostTransferred(true);
 
       await tester.pumpWidget(
@@ -304,7 +308,7 @@ void main() {
 
     testWidgets('hides host transfer banner when hostTransferPending is false',
         (tester) async {
-      final provider = PartyProvider()..onPartyCreated('test-session', 'ABCD');
+      final provider = _createTestProvider();
 
       await tester.pumpWidget(
           _wrapWithProviders(const PartyScreen(), partyProvider: provider));
@@ -315,7 +319,7 @@ void main() {
 
     testWidgets('reconnecting banner contains progress indicator and text',
         (tester) async {
-      final provider = PartyProvider()..onPartyCreated('test-session', 'ABCD');
+      final provider = _createTestProvider();
       provider.onConnectionStatusChanged(ConnectionStatus.reconnecting);
 
       await tester.pumpWidget(
@@ -325,6 +329,95 @@ void main() {
       expect(find.byKey(const Key('reconnecting-banner')), findsOneWidget);
       expect(find.text(Copy.reconnecting), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    // Story 2.4 tests — DJ state display
+
+    testWidgets('shows correct state label for each DJState', (tester) async {
+      final provider = _createTestProvider();
+      provider.onSessionStatus('active');
+
+      for (final state in DJState.values) {
+        provider.onDjStateUpdate(state: state);
+        await tester.pumpWidget(
+            _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+        await tester.pump();
+
+        expect(
+          find.byKey(const Key('dj-state-label')),
+          findsOneWidget,
+          reason: 'dj-state-label should be present for ${state.name}',
+        );
+        expect(
+          find.text(Copy.djStateLabel(state)),
+          findsOneWidget,
+          reason: 'Label for ${state.name} should be displayed',
+        );
+      }
+    });
+
+    testWidgets('shows performer name when available', (tester) async {
+      final provider = _createTestProvider();
+      provider.onSessionStatus('active');
+      provider.onDjStateUpdate(
+        state: DJState.song,
+        currentPerformer: 'Alice',
+      );
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('current-performer')), findsOneWidget);
+      expect(find.text('Alice'), findsOneWidget);
+    });
+
+    testWidgets('hides performer name when null', (tester) async {
+      final provider = _createTestProvider();
+      provider.onDjStateUpdate(
+        state: DJState.songSelection,
+        currentPerformer: null,
+      );
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('current-performer')), findsNothing);
+    });
+
+    testWidgets('shows countdown timer when timer metadata present', (tester) async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final provider = _createTestProvider();
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      // Update state AFTER mount so the provider listener fires
+      provider.onDjStateUpdate(
+        state: DJState.song,
+        timerStartedAt: now,
+        timerDurationMs: 120000, // 2 minutes
+      );
+      await tester.pump();
+
+      expect(find.byKey(const Key('countdown-timer')), findsOneWidget);
+    });
+
+    testWidgets('hides countdown timer when timer metadata is null', (tester) async {
+      final provider = _createTestProvider();
+      provider.onDjStateUpdate(
+        state: DJState.songSelection,
+        timerStartedAt: null,
+        timerDurationMs: null,
+      );
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('countdown-timer')), findsNothing);
     });
   });
 }

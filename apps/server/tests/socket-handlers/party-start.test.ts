@@ -26,6 +26,11 @@ vi.mock('../../src/services/session-manager.js', () => ({
   handleParticipantJoin: vi.fn(),
 }));
 
+const mockBroadcastDjState = vi.fn();
+vi.mock('../../src/services/dj-broadcaster.js', () => ({
+  broadcastDjState: mockBroadcastDjState,
+}));
+
 const mockUpdateVibe = vi.fn();
 vi.mock('../../src/persistence/session-repository.js', () => ({
   updateVibe: mockUpdateVibe,
@@ -71,7 +76,11 @@ describe('party:start handler', () => {
   });
 
   it('when host emits party:start, party:started is broadcast to all sockets in room', async () => {
-    mockStartSession.mockResolvedValue({ status: 'active' });
+    mockStartSession.mockResolvedValue({
+      status: 'active',
+      djContext: { state: 'songSelection', sessionId: 'session-1', songCount: 0, participantCount: 3, currentPerformer: null, timerStartedAt: null, timerDurationMs: null },
+      sideEffects: [],
+    });
 
     const { socket, handlers } = createMockSocket({ userId: 'host-user', sessionId: 'session-1' });
 
@@ -88,7 +97,11 @@ describe('party:start handler', () => {
   });
 
   it('party:started payload contains { status: "active" }', async () => {
-    mockStartSession.mockResolvedValue({ status: 'active' });
+    mockStartSession.mockResolvedValue({
+      status: 'active',
+      djContext: { state: 'songSelection', sessionId: 'session-1', songCount: 0, participantCount: 3, currentPerformer: null, timerStartedAt: null, timerDurationMs: null },
+      sideEffects: [],
+    });
 
     const { socket, handlers, directEmits } = createMockSocket({ userId: 'host-user', sessionId: 'session-1' });
 

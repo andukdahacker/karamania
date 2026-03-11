@@ -3,6 +3,7 @@ import 'dart:ui' show Color;
 import 'package:flutter/foundation.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/theme/dj_theme.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 enum ConnectionStatus { connected, reconnecting }
 
@@ -19,6 +20,12 @@ class ParticipantInfo {
 
 /// Reactive state container only — no business logic.
 class PartyProvider extends ChangeNotifier {
+  PartyProvider({void Function(bool enable)? wakelockToggle})
+      : _wakelockToggle = wakelockToggle ??
+            ((enable) => enable ? WakelockPlus.enable() : WakelockPlus.disable());
+
+  final void Function(bool enable) _wakelockToggle;
+
   DJState _djState = DJState.lobby;
   PartyVibe _vibe = PartyVibe.general;
   String? _sessionId;
@@ -28,6 +35,11 @@ class PartyProvider extends ChangeNotifier {
   LoadingState _joinPartyLoading = LoadingState.idle;
   LoadingState _startPartyLoading = LoadingState.idle;
   int _participantCount = 0;
+  int _songCount = 0;
+  String? _currentPerformer;
+  int? _timerStartedAt;
+  int? _timerDurationMs;
+  bool _wakelockEnabled = false;
   List<ParticipantInfo> _participants = [];
   String _sessionStatus = 'lobby';
   bool _isCatchingUp = false;
@@ -44,6 +56,10 @@ class PartyProvider extends ChangeNotifier {
   LoadingState get joinPartyLoading => _joinPartyLoading;
   LoadingState get startPartyLoading => _startPartyLoading;
   int get participantCount => _participantCount;
+  int get songCount => _songCount;
+  String? get currentPerformer => _currentPerformer;
+  int? get timerStartedAt => _timerStartedAt;
+  int? get timerDurationMs => _timerDurationMs;
   List<ParticipantInfo> get participants => _participants;
   String get sessionStatus => _sessionStatus;
   bool get isCatchingUp => _isCatchingUp;
@@ -54,8 +70,35 @@ class PartyProvider extends ChangeNotifier {
   /// Background color driven by current DJ state and vibe.
   Color get backgroundColor => djStateBackgroundColor(_djState, _vibe);
 
-  void onDJStateChanged(DJState value) {
-    _djState = value;
+  void onDjStateUpdate({
+    required DJState state,
+    int? songCount,
+    int? participantCount,
+    String? currentPerformer,
+    int? timerStartedAt,
+    int? timerDurationMs,
+  }) {
+    _djState = state;
+    _songCount = songCount ?? _songCount;
+    _currentPerformer = currentPerformer;
+    _timerStartedAt = timerStartedAt;
+    _timerDurationMs = timerDurationMs;
+
+    // Update participant count from DJ state only if non-null AND session is active
+    if (participantCount != null && _sessionStatus == 'active') {
+      _participantCount = participantCount;
+    }
+
+    // Wakelock management — active during non-lobby/non-finale states
+    final shouldEnable = state != DJState.lobby && state != DJState.finale;
+    if (shouldEnable && !_wakelockEnabled) {
+      _wakelockEnabled = true;
+      _wakelockToggle(true);
+    } else if (!shouldEnable && _wakelockEnabled) {
+      _wakelockEnabled = false;
+      _wakelockToggle(false);
+    }
+
     notifyListeners();
   }
 
@@ -191,5 +234,13 @@ class PartyProvider extends ChangeNotifier {
   void onHostUpdate(bool isHost) {
     _isHost = isHost;
     notifyListeners();
+  }
+
+  /// Disable wakelock when leaving the session.
+  void onSessionEnd() {
+    if (_wakelockEnabled) {
+      _wakelockEnabled = false;
+      _wakelockToggle(false);
+    }
   }
 }

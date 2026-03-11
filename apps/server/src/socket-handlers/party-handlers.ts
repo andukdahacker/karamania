@@ -3,6 +3,7 @@ import { EVENTS } from '../shared/events.js';
 import { VALID_VIBES } from '../shared/constants.js';
 import { updateVibe } from '../persistence/session-repository.js';
 import { startSession } from '../services/session-manager.js';
+import { broadcastDjState } from '../services/dj-broadcaster.js';
 
 export function registerPartyHandlers(socket: AuthenticatedSocket): void {
   socket.on(EVENTS.PARTY_VIBE_CHANGED, async (data: { vibe: string }) => {
@@ -13,7 +14,7 @@ export function registerPartyHandlers(socket: AuthenticatedSocket): void {
 
   socket.on(EVENTS.PARTY_START, async () => {
     try {
-      await startSession({
+      const { djContext } = await startSession({
         sessionId: socket.data.sessionId,
         hostUserId: socket.data.userId,
       });
@@ -21,6 +22,8 @@ export function registerPartyHandlers(socket: AuthenticatedSocket): void {
       const payload = { status: 'active' };
       socket.emit(EVENTS.PARTY_STARTED, payload);
       socket.to(socket.data.sessionId).emit(EVENTS.PARTY_STARTED, payload);
+
+      broadcastDjState(socket.data.sessionId, djContext);
     } catch {
       // Silently fail — button is disabled when conditions aren't met
     }

@@ -69,6 +69,11 @@ vi.mock('../../src/services/timer-scheduler.js', () => ({
   cancelSessionTimer: (...args: unknown[]) => mockCancelSessionTimer(...args),
 }));
 
+const mockBroadcastDjState = vi.fn();
+vi.mock('../../src/services/dj-broadcaster.js', () => ({
+  broadcastDjState: (...args: unknown[]) => mockBroadcastDjState(...args),
+}));
+
 describe('session-manager DJ functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -301,6 +306,23 @@ describe('session-manager DJ functions', () => {
       await processDjTransition('session-1', context, { type: 'TIMEOUT' });
 
       expect(mockCancelSessionTimer).toHaveBeenCalledWith('session-1');
+    });
+
+    it('handles broadcast side effect by calling broadcastDjState', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'songSelection' as const });
+      const newContext = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
+
+      mockProcessTransition.mockReturnValue({
+        newContext,
+        sideEffects: [
+          { type: 'broadcast', data: { from: 'songSelection', to: 'song' } },
+        ],
+      });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_SELECTED' });
+
+      expect(mockBroadcastDjState).toHaveBeenCalledWith('session-1', newContext);
     });
 
     it('stores new context in dj-state-store', async () => {
