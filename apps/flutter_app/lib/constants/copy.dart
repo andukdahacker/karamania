@@ -117,6 +117,23 @@ class Copy {
 
   static String vibeEmoji(PartyVibe vibe) => vibeEmojiLabels[vibe] ?? '';
 
+  // Host controls
+  static const String hostControlInvite = 'Invite';
+  static const String hostControlSkip = 'Skip';
+  static const String hostControlOverride = 'Override Next';
+  static const String hostControlPause = 'Pause';
+  static const String hostControlPauseComingSoon = 'Coming soon';
+  static const String hostControlEndParty = 'End Party';
+  static const String hostControlKickPlayer = 'Kick Player';
+  static const String hostControlEndPartyConfirmTitle = 'End Party?';
+  static const String hostControlEndPartyConfirmBody =
+      'This will end the party for everyone. Are you sure?';
+  static const String hostControlEndPartyConfirmYes = 'END PARTY';
+  static const String hostControlEndPartyConfirmNo = 'CANCEL';
+  static const String hostKickedMessage = 'You have been removed from the party';
+  static const String hostSongOverLabel = 'Song Over!';
+  static const String hostSongOverHint = 'Hold to end song';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

@@ -131,10 +131,22 @@ export async function updateDjState(sessionId: string, djState: unknown): Promis
     .execute();
 }
 
+export async function removeParticipant(sessionId: string, userId: string): Promise<void> {
+  await db
+    .deleteFrom('session_participants')
+    .where('session_id', '=', sessionId)
+    .where('user_id', '=', userId)
+    .execute();
+}
+
 export async function updateStatus(sessionId: string, status: string) {
+  const values: Record<string, unknown> = { status };
+  if (status === 'ended') {
+    values.ended_at = new Date();
+  }
   return db
     .updateTable('sessions')
-    .set({ status })
+    .set(values)
     .where('id', '=', sessionId)
     .executeTakeFirst();
 }

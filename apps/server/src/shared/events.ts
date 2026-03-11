@@ -55,6 +55,11 @@ export const EVENTS = {
   HOST_SKIP: 'host:skip',
   HOST_OVERRIDE: 'host:override',
   HOST_SONG_OVER: 'host:songOver',
+  HOST_END_PARTY: 'host:endParty',
+  HOST_KICK_PLAYER: 'host:kickPlayer',
+
+  // Party participant removal
+  PARTY_PARTICIPANT_REMOVED: 'party:participantRemoved',
 
   // Session events (auth-related errors)
   SESSION_NOT_FOUND: 'session:notFound',

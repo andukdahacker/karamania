@@ -11,7 +11,10 @@ import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
 import 'package:karamania/widgets/dj_tap_button.dart';
+import 'package:karamania/widgets/host_controls_overlay.dart';
 import 'package:karamania/widgets/reconnecting_banner.dart';
+import 'package:karamania/widgets/song_over_button.dart';
+import 'package:go_router/go_router.dart';
 
 class PartyScreen extends StatefulWidget {
   const PartyScreen({super.key});
@@ -142,6 +145,17 @@ class _PartyScreenState extends State<PartyScreen>
     final partyProvider = context.watch<PartyProvider>();
     final displayVibe = partyProvider.vibe;
 
+    // Navigate home when session ends or kicked
+    if (partyProvider.sessionStatus == 'ended') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.go('/');
+      });
+    }
+
+    final isActiveHost = partyProvider.isHost &&
+        partyProvider.djState != DJState.lobby &&
+        partyProvider.djState != DJState.finale;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
@@ -156,17 +170,20 @@ class _PartyScreenState extends State<PartyScreen>
               const ReconnectingBanner(),
             if (partyProvider.hostTransferPending)
               _buildHostTransferBanner(context, displayVibe),
+            if (partyProvider.isHost && partyProvider.djState == DJState.song)
+              Positioned(
+                bottom: DJTokens.spaceLg,
+                left: 0,
+                right: 0,
+                child: Center(child: const SongOverButton()),
+              ),
+            if (isActiveHost)
+              HostControlsOverlay(
+                onInvite: () => _showInviteSheet(context, partyProvider),
+              ),
           ],
         ),
       ),
-      floatingActionButton: partyProvider.isHost
-          ? FloatingActionButton(
-              key: const Key('host-invite-fab'),
-              backgroundColor: displayVibe.accent,
-              onPressed: () => _showInviteSheet(context, partyProvider),
-              child: const Icon(Icons.qr_code, color: Colors.white),
-            )
-          : null,
     );
   }
 

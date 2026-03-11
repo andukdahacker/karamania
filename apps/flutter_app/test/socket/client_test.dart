@@ -127,4 +127,62 @@ void main() {
       expect(parsed, isNull);
     });
   });
+
+  group('SocketClient host emitter methods', () {
+    test('emitHostSkip does not throw when not connected', () {
+      expect(() => SocketClient.instance.emitHostSkip(), returnsNormally);
+    });
+
+    test('emitHostOverride does not throw when not connected', () {
+      expect(() => SocketClient.instance.emitHostOverride('ceremony'), returnsNormally);
+    });
+
+    test('emitHostSongOver does not throw when not connected', () {
+      expect(() => SocketClient.instance.emitHostSongOver(), returnsNormally);
+    });
+
+    test('emitHostEndParty does not throw when not connected', () {
+      expect(() => SocketClient.instance.emitHostEndParty(), returnsNormally);
+    });
+
+    test('emitHostKickPlayer does not throw when not connected', () {
+      expect(() => SocketClient.instance.emitHostKickPlayer('user-1'), returnsNormally);
+    });
+  });
+
+  group('SocketClient party:ended and party:participantRemoved parsing', () {
+    test('onSessionEnded sets provider status to ended', () {
+      final provider = PartyProvider(wakelockToggle: (_) {});
+      provider.onSessionEnded();
+      expect(provider.sessionStatus, 'ended');
+      expect(provider.djState, DJState.lobby);
+    });
+
+    test('onKicked sets provider status to ended and sets kickedMessage', () {
+      final provider = PartyProvider(wakelockToggle: (_) {});
+      provider.onKicked();
+      expect(provider.sessionStatus, 'ended');
+      expect(provider.kickedMessage, isNotNull);
+    });
+
+    test('onParticipantRemoved removes participant from list', () {
+      final provider = PartyProvider(wakelockToggle: (_) {});
+      provider.onParticipantsSync([
+        const ParticipantInfo(userId: 'u1', displayName: 'Alice'),
+        const ParticipantInfo(userId: 'u2', displayName: 'Bob'),
+        const ParticipantInfo(userId: 'u3', displayName: 'Carol'),
+      ]);
+      expect(provider.participants.length, 3);
+
+      provider.onParticipantRemoved('u2');
+      expect(provider.participants.length, 2);
+      expect(provider.participants.any((p) => p.userId == 'u2'), isFalse);
+    });
+  });
+
+  group('currentUserId getter', () {
+    test('initial currentUserId is null', () {
+      expect(SocketClient.instance.currentUserId, isNull);
+    });
+  });
 }

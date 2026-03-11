@@ -23,6 +23,7 @@ class SocketClient {
 
   bool get isConnected => _isConnected;
   String? get currentSessionId => _currentSessionId;
+  String? get currentUserId => _userId;
 
   Future<void> connect({
     required String serverUrl,
@@ -192,6 +193,23 @@ class SocketClient {
       );
     });
 
+    // Party ended event
+    on('party:ended', (_) {
+      partyProvider.onSessionEnded();
+    });
+
+    // Participant removed (kicked)
+    on('party:participantRemoved', (data) {
+      final payload = data as Map<String, dynamic>;
+      final userId = payload['userId'] as String;
+      if (userId == _userId) {
+        partyProvider.onKicked();
+        disconnect();
+      } else {
+        partyProvider.onParticipantRemoved(userId);
+      }
+    });
+
     // Host transfer event (AC #4)
     on('party:hostTransferred', (data) {
       final payload = data as Map<String, dynamic>;
@@ -206,6 +224,27 @@ class SocketClient {
         });
       }
     });
+  }
+
+  // Host action emitters
+  void emitHostSkip() {
+    _socket?.emit('host:skip');
+  }
+
+  void emitHostOverride(String targetState) {
+    _socket?.emit('host:override', {'targetState': targetState});
+  }
+
+  void emitHostSongOver() {
+    _socket?.emit('host:songOver');
+  }
+
+  void emitHostEndParty() {
+    _socket?.emit('host:endParty');
+  }
+
+  void emitHostKickPlayer(String userId) {
+    _socket?.emit('host:kickPlayer', {'userId': userId});
   }
 
   void startParty(PartyProvider partyProvider) {

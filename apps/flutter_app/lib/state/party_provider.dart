@@ -46,6 +46,7 @@ class PartyProvider extends ChangeNotifier {
   bool _pendingCatchUp = false;
   ConnectionStatus _connectionStatus = ConnectionStatus.connected;
   bool _hostTransferPending = false;
+  String? _kickedMessage;
 
   DJState get djState => _djState;
   PartyVibe get vibe => _vibe;
@@ -66,6 +67,7 @@ class PartyProvider extends ChangeNotifier {
   bool get pendingCatchUp => _pendingCatchUp;
   ConnectionStatus get connectionStatus => _connectionStatus;
   bool get hostTransferPending => _hostTransferPending;
+  String? get kickedMessage => _kickedMessage;
 
   /// Background color driven by current DJ state and vibe.
   Color get backgroundColor => djStateBackgroundColor(_djState, _vibe);
@@ -233,6 +235,39 @@ class PartyProvider extends ChangeNotifier {
 
   void onHostUpdate(bool isHost) {
     _isHost = isHost;
+    notifyListeners();
+  }
+
+  void onSessionEnded() {
+    _sessionStatus = 'ended';
+    _djState = DJState.lobby;
+    _currentPerformer = null;
+    _timerStartedAt = null;
+    _timerDurationMs = null;
+    if (_wakelockEnabled) {
+      _wakelockEnabled = false;
+      _wakelockToggle(false);
+    }
+    notifyListeners();
+  }
+
+  void onKicked() {
+    _sessionStatus = 'ended';
+    _kickedMessage = 'You have been removed from the party';
+    _djState = DJState.lobby;
+    _currentPerformer = null;
+    _timerStartedAt = null;
+    _timerDurationMs = null;
+    if (_wakelockEnabled) {
+      _wakelockEnabled = false;
+      _wakelockToggle(false);
+    }
+    notifyListeners();
+  }
+
+  void onParticipantRemoved(String userId) {
+    _participants = _participants.where((p) => p.userId != userId).toList();
+    _participantCount = _participants.length;
     notifyListeners();
   }
 

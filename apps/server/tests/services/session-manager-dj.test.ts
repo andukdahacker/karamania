@@ -30,6 +30,7 @@ const mockFindById = vi.fn();
 const mockUpdateDjState = vi.fn();
 const mockGetParticipants = vi.fn();
 const mockUpdateStatus = vi.fn();
+const mockRemoveParticipant = vi.fn();
 vi.mock('../../src/persistence/session-repository.js', () => ({
   create: vi.fn(),
   addParticipant: vi.fn(),
@@ -39,6 +40,7 @@ vi.mock('../../src/persistence/session-repository.js', () => ({
   updateStatus: mockUpdateStatus,
   updateHost: vi.fn(),
   updateDjState: mockUpdateDjState,
+  removeParticipant: (...args: unknown[]) => mockRemoveParticipant(...args),
 }));
 
 const mockCreateDJContext = vi.fn();
@@ -51,6 +53,7 @@ vi.mock('../../src/dj-engine/machine.js', () => ({
 const mockDeserializeDJContext = vi.fn();
 vi.mock('../../src/dj-engine/serializer.js', () => ({
   deserializeDJContext: mockDeserializeDJContext,
+  serializeDJContext: (ctx: unknown) => ctx,
 }));
 
 const mockSetSessionDjState = vi.fn();
@@ -72,6 +75,19 @@ vi.mock('../../src/services/timer-scheduler.js', () => ({
 const mockBroadcastDjState = vi.fn();
 vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastDjState: (...args: unknown[]) => mockBroadcastDjState(...args),
+}));
+
+const mockRemoveSession = vi.fn();
+vi.mock('../../src/services/connection-tracker.js', () => ({
+  removeSession: (...args: unknown[]) => mockRemoveSession(...args),
+  getActiveConnections: vi.fn(),
+  trackConnection: vi.fn(),
+  trackDisconnection: vi.fn(),
+  isUserConnected: vi.fn(),
+  getLongestConnected: vi.fn(),
+  removeDisconnectedEntry: vi.fn(),
+  updateHostStatus: vi.fn(),
+  getActiveCount: vi.fn(),
 }));
 
 describe('session-manager DJ functions', () => {
@@ -366,6 +382,90 @@ describe('session-manager DJ functions', () => {
       // Result should return immediately without waiting for persist
       expect(result.newContext).toEqual(newContext);
       expect(persistResolved).toBe(false); // persist hasn't resolved yet -- fire-and-forget
+    });
+  });
+
+  describe('endSession', () => {
+    it('transitions to finale, updates DB, and cleans up in-memory state', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
+      const finaleContext = createTestDJContext({ sessionId: 'session-1', state: 'finale' as const });
+
+      mockFindById.mockResolvedValue(session);
+      mockGetSessionDjState.mockReturnValue(context);
+      mockProcessTransition.mockReturnValue({
+        newContext: finaleContext,
+        sideEffects: [
+          { type: 'cancelTimer', data: {} },
+          { type: 'broadcast', data: { from: 'song', to: 'finale' } },
+          { type: 'persist', data: { context: { state: 'finale' } } },
+        ],
+      });
+      mockUpdateStatus.mockResolvedValue(undefined);
+
+      const { endSession } = await import('../../src/services/session-manager.js');
+      const result = await endSession('session-1', 'host-user-1');
+
+      expect(result).toEqual(finaleContext);
+      expect(mockProcessTransition).toHaveBeenCalledWith(context, { type: 'END_PARTY' }, expect.any(Number));
+      expect(mockUpdateStatus).toHaveBeenCalledWith('session-1', 'ended');
+      expect(mockRemoveSessionDjState).toHaveBeenCalledWith('session-1');
+      expect(mockCancelSessionTimer).toHaveBeenCalledWith('session-1');
+      expect(mockRemoveSession).toHaveBeenCalledWith('session-1');
+    });
+
+    it('throws when no active DJ state exists', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      mockFindById.mockResolvedValue(session);
+      mockGetSessionDjState.mockReturnValue(undefined);
+
+      const { endSession } = await import('../../src/services/session-manager.js');
+      await expect(endSession('session-1', 'host-user-1')).rejects.toThrow();
+    });
+
+    it('rejects non-host callers', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      mockFindById.mockResolvedValue(session);
+
+      const { endSession } = await import('../../src/services/session-manager.js');
+      await expect(endSession('session-1', 'not-host')).rejects.toThrow();
+    });
+  });
+
+  describe('kickPlayer', () => {
+    it('removes participant and decrements DJ context participantCount', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      const context = createTestDJContext({ sessionId: 'session-1', participantCount: 5 });
+
+      mockFindById.mockResolvedValue(session);
+      mockRemoveParticipant.mockResolvedValue(undefined);
+      mockGetSessionDjState.mockReturnValue(context);
+      mockUpdateDjState.mockResolvedValue(undefined);
+
+      const { kickPlayer } = await import('../../src/services/session-manager.js');
+      const result = await kickPlayer('session-1', 'host-user-1', 'target-user-1');
+
+      expect(result).toEqual({ kickedUserId: 'target-user-1' });
+      expect(mockRemoveParticipant).toHaveBeenCalledWith('session-1', 'target-user-1');
+      expect(mockSetSessionDjState).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        participantCount: 4,
+      }));
+    });
+
+    it('rejects non-host callers', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      mockFindById.mockResolvedValue(session);
+
+      const { kickPlayer } = await import('../../src/services/session-manager.js');
+      await expect(kickPlayer('session-1', 'not-host', 'target-user-1')).rejects.toThrow();
+    });
+
+    it('rejects kicking yourself', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      mockFindById.mockResolvedValue(session);
+
+      const { kickPlayer } = await import('../../src/services/session-manager.js');
+      await expect(kickPlayer('session-1', 'host-user-1', 'host-user-1')).rejects.toThrow();
     });
   });
 });

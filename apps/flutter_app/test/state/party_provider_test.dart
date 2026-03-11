@@ -574,5 +574,60 @@ void main() {
       provider.onSessionEnd();
       expect(wakelockCalls, isEmpty);
     });
+
+    // Story 2.5 tests — onSessionEnded, onKicked, onParticipantRemoved
+
+    test('onSessionEnded sets status to ended, clears DJ state, disables wakelock', () {
+      // Set up active session
+      provider.onDjStateUpdate(state: DJState.song, currentPerformer: 'Alice', timerStartedAt: 1000, timerDurationMs: 180000);
+      wakelockCalls.clear();
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onSessionEnded();
+
+      expect(provider.sessionStatus, 'ended');
+      expect(provider.djState, DJState.lobby);
+      expect(provider.currentPerformer, isNull);
+      expect(provider.timerStartedAt, isNull);
+      expect(provider.timerDurationMs, isNull);
+      expect(wakelockCalls, [false]);
+      expect(notifyCount, 1);
+    });
+
+    test('onKicked sets status to ended and sets kickedMessage', () {
+      provider.onDjStateUpdate(state: DJState.song);
+      wakelockCalls.clear();
+
+      provider.onKicked();
+
+      expect(provider.sessionStatus, 'ended');
+      expect(provider.kickedMessage, isNotNull);
+      expect(provider.djState, DJState.lobby);
+      expect(wakelockCalls, [false]);
+    });
+
+    test('onParticipantRemoved removes participant from list', () {
+      provider.onParticipantsSync([
+        ParticipantInfo(userId: 'u1', displayName: 'Host'),
+        ParticipantInfo(userId: 'u2', displayName: 'Alice'),
+        ParticipantInfo(userId: 'u3', displayName: 'Bob'),
+      ]);
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onParticipantRemoved('u2');
+
+      expect(provider.participants.length, 2);
+      expect(provider.participantCount, 2);
+      expect(provider.participants.any((p) => p.userId == 'u2'), isFalse);
+      expect(notifyCount, 1);
+    });
+
+    test('initial kickedMessage is null', () {
+      expect(provider.kickedMessage, isNull);
+    });
   });
 }

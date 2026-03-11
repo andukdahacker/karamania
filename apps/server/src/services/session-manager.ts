@@ -3,15 +3,13 @@ import * as sessionRepo from '../persistence/session-repository.js';
 import { DEFAULT_VIBE } from '../shared/constants.js';
 import { createAppError } from '../shared/errors.js';
 import { createDJContext, processTransition } from '../dj-engine/machine.js';
-import { deserializeDJContext } from '../dj-engine/serializer.js';
+import { deserializeDJContext, serializeDJContext } from '../dj-engine/serializer.js';
 import { calculateRemainingMs } from '../dj-engine/timers.js';
 import type { DJContext, DJTransition, DJSideEffect } from '../dj-engine/types.js';
-import { getSessionDjState, setSessionDjState } from '../services/dj-state-store.js';
+import { getSessionDjState, setSessionDjState, removeSessionDjState } from '../services/dj-state-store.js';
 import { scheduleSessionTimer, cancelSessionTimer } from '../services/timer-scheduler.js';
 import { broadcastDjState } from '../services/dj-broadcaster.js';
-
-// TODO: Add endSession() in future stories
-// TODO: endSession() must set status='ended' to expire party codes (NFR21)
+import { removeSession } from '../services/connection-tracker.js';
 
 // Set of session IDs that failed recovery — checked during client reconnection
 const failedRecoverySessionIds = new Set<string>();
@@ -275,4 +273,66 @@ export async function handleParticipantJoin(params: {
     status: session?.status ?? 'lobby',
     hostUserId: session?.host_user_id ?? '',
   };
+}
+
+export async function endSession(
+  sessionId: string,
+  hostUserId: string,
+): Promise<DJContext> {
+  // Verify host authorization
+  const session = await sessionRepo.findById(sessionId);
+  if (!session || session.host_user_id !== hostUserId) {
+    throw createAppError('NOT_HOST', 'Only the host can end the party', 403);
+  }
+
+  const context = getSessionDjState(sessionId);
+  if (!context) {
+    throw createAppError('SESSION_NOT_FOUND', 'No active DJ state for session', 404);
+  }
+
+  // Transition to finale — automatically broadcasts, persists, cancels timers
+  const { newContext } = await processDjTransition(sessionId, context, { type: 'END_PARTY' });
+
+  // Update DB status + ended_at
+  await sessionRepo.updateStatus(sessionId, 'ended');
+
+  // Clean up in-memory state
+  removeSessionDjState(sessionId);
+  cancelSessionTimer(sessionId);
+  removeSession(sessionId);
+
+  return newContext;
+}
+
+export async function kickPlayer(
+  sessionId: string,
+  hostUserId: string,
+  targetUserId: string,
+): Promise<{ kickedUserId: string }> {
+  // Verify host
+  const session = await sessionRepo.findById(sessionId);
+  if (!session || session.host_user_id !== hostUserId) {
+    throw createAppError('NOT_HOST', 'Only the host can kick players', 403);
+  }
+
+  // Can't kick yourself
+  if (targetUserId === hostUserId) {
+    throw createAppError('INVALID_ACTION', 'Cannot kick yourself', 400);
+  }
+
+  // Remove from DB
+  await sessionRepo.removeParticipant(sessionId, targetUserId);
+
+  // Update DJ context participant count
+  const context = getSessionDjState(sessionId);
+  if (context) {
+    const updatedContext: DJContext = {
+      ...context,
+      participantCount: Math.max(0, context.participantCount - 1),
+    };
+    setSessionDjState(sessionId, updatedContext);
+    void persistDjState(sessionId, serializeDJContext(updatedContext));
+  }
+
+  return { kickedUserId: targetUserId };
 }

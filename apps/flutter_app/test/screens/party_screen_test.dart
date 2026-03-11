@@ -67,19 +67,19 @@ void main() {
       );
     });
 
-    testWidgets('shows host invite FAB when isHost', (tester) async {
-      // onPartyCreated sets isHost = true
+    testWidgets('shows host controls overlay for host in active state', (tester) async {
       final provider = _createTestProvider();
+      provider.onSessionStatus('active');
+      provider.onDjStateUpdate(state: DJState.songSelection);
 
       await tester.pumpWidget(
           _wrapWithProviders(const PartyScreen(), partyProvider: provider));
       await tester.pump();
 
-      expect(find.byKey(const Key('host-invite-fab')), findsOneWidget);
+      expect(find.byKey(const Key('host-controls-fab')), findsOneWidget);
     });
 
-    testWidgets('hides host invite FAB when NOT isHost', (tester) async {
-      // onPartyJoined sets isHost = false
+    testWidgets('hides host controls overlay for non-host', (tester) async {
       final provider = PartyProvider(wakelockToggle: (_) {})
         ..onPartyJoined(
           sessionId: 'session-1',
@@ -92,7 +92,71 @@ void main() {
           _wrapWithProviders(const PartyScreen(), partyProvider: provider));
       await tester.pump();
 
-      expect(find.byKey(const Key('host-invite-fab')), findsNothing);
+      expect(find.byKey(const Key('host-controls-fab')), findsNothing);
+    });
+
+    testWidgets('hides host controls overlay in lobby state', (tester) async {
+      final provider = _createTestProvider();
+      // Default state is lobby — overlay should not show
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('host-controls-fab')), findsNothing);
+    });
+
+    testWidgets('hides host controls overlay in finale state', (tester) async {
+      final provider = _createTestProvider();
+      provider.onSessionStatus('active');
+      provider.onDjStateUpdate(state: DJState.finale);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('host-controls-fab')), findsNothing);
+    });
+
+    testWidgets('shows Song Over button for host during song state', (tester) async {
+      final provider = _createTestProvider();
+      provider.onSessionStatus('active');
+      provider.onDjStateUpdate(state: DJState.song);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('song-over-button')), findsOneWidget);
+    });
+
+    testWidgets('hides Song Over button for non-host', (tester) async {
+      final provider = PartyProvider(wakelockToggle: (_) {})
+        ..onPartyJoined(
+          sessionId: 'session-1',
+          partyCode: 'ROCK',
+          vibe: PartyVibe.rock,
+          status: 'active',
+        );
+      provider.onDjStateUpdate(state: DJState.song);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('song-over-button')), findsNothing);
+    });
+
+    testWidgets('hides Song Over button when not in song state', (tester) async {
+      final provider = _createTestProvider();
+      provider.onSessionStatus('active');
+      provider.onDjStateUpdate(state: DJState.ceremony);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('song-over-button')), findsNothing);
     });
 
     testWidgets('shows catch-up card when isCatchingUp is true', (tester) async {
