@@ -67,14 +67,22 @@ vi.mock('../../src/services/dj-state-store.js', () => ({
 
 const mockScheduleSessionTimer = vi.fn();
 const mockCancelSessionTimer = vi.fn();
+const mockPauseSessionTimer = vi.fn();
+const mockResumeSessionTimer = vi.fn();
 vi.mock('../../src/services/timer-scheduler.js', () => ({
   scheduleSessionTimer: (...args: unknown[]) => mockScheduleSessionTimer(...args),
   cancelSessionTimer: (...args: unknown[]) => mockCancelSessionTimer(...args),
+  pauseSessionTimer: (...args: unknown[]) => mockPauseSessionTimer(...args),
+  resumeSessionTimer: (...args: unknown[]) => mockResumeSessionTimer(...args),
 }));
 
 const mockBroadcastDjState = vi.fn();
+const mockBroadcastDjPause = vi.fn();
+const mockBroadcastDjResume = vi.fn();
 vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastDjState: (...args: unknown[]) => mockBroadcastDjState(...args),
+  broadcastDjPause: (...args: unknown[]) => mockBroadcastDjPause(...args),
+  broadcastDjResume: (...args: unknown[]) => mockBroadcastDjResume(...args),
 }));
 
 const mockRemoveSession = vi.fn();
@@ -468,4 +476,225 @@ describe('session-manager DJ functions', () => {
       await expect(kickPlayer('session-1', 'host-user-1', 'host-user-1')).rejects.toThrow();
     });
   });
+
+  describe('pauseSession', () => {
+    it('pauses session, stores remaining timer, persists, and broadcasts', async () => {
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'song' as const,
+        isPaused: false,
+      });
+
+      mockGetSessionDjState.mockReturnValue(context);
+      mockPauseSessionTimer.mockReturnValue(15000);
+      mockUpdateDjState.mockResolvedValue(undefined);
+
+      const { pauseSession } = await import('../../src/services/session-manager.js');
+      const result = await pauseSession('session-1');
+
+      expect(result.isPaused).toBe(true);
+      expect(result.pausedFromState).toBe('song');
+      expect(result.timerRemainingMs).toBe(15000);
+      expect(result.pausedAt).toEqual(expect.any(Number));
+
+      expect(mockSetSessionDjState).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        isPaused: true,
+        pausedFromState: 'song',
+        timerRemainingMs: 15000,
+      }));
+      expect(mockBroadcastDjPause).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        isPaused: true,
+      }));
+    });
+
+    it('stores null timerRemainingMs when no timer was active', async () => {
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'song' as const,
+        isPaused: false,
+      });
+
+      mockGetSessionDjState.mockReturnValue(context);
+      mockPauseSessionTimer.mockReturnValue(null);
+      mockUpdateDjState.mockResolvedValue(undefined);
+
+      const { pauseSession } = await import('../../src/services/session-manager.js');
+      const result = await pauseSession('session-1');
+
+      expect(result.timerRemainingMs).toBeNull();
+    });
+
+    it('rejects if already paused', async () => {
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'song' as const,
+        isPaused: true,
+      });
+
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { pauseSession } = await import('../../src/services/session-manager.js');
+      await expect(pauseSession('session-1')).rejects.toMatchObject({
+        code: 'ALREADY_PAUSED',
+      });
+    });
+
+    it('rejects if in lobby', async () => {
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'lobby' as const,
+      });
+
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { pauseSession } = await import('../../src/services/session-manager.js');
+      await expect(pauseSession('session-1')).rejects.toMatchObject({
+        code: 'INVALID_STATE',
+      });
+    });
+
+    it('rejects if in finale', async () => {
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'finale' as const,
+      });
+
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { pauseSession } = await import('../../src/services/session-manager.js');
+      await expect(pauseSession('session-1')).rejects.toMatchObject({
+        code: 'INVALID_STATE',
+      });
+    });
+
+    it('rejects if no DJ state exists', async () => {
+      mockGetSessionDjState.mockReturnValue(undefined);
+
+      const { pauseSession } = await import('../../src/services/session-manager.js');
+      await expect(pauseSession('nonexistent')).rejects.toMatchObject({
+        code: 'SESSION_NOT_FOUND',
+      });
+    });
+  });
+
+  describe('resumeSession', () => {
+    it('resumes session, reschedules timer, clears pause state, persists, broadcasts', async () => {
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'song' as const,
+        isPaused: true,
+        pausedAt: 1000,
+        pausedFromState: 'song' as const,
+        timerRemainingMs: 15000,
+      });
+
+      mockGetSessionDjState.mockReturnValue(context);
+      mockUpdateDjState.mockResolvedValue(undefined);
+
+      const { resumeSession } = await import('../../src/services/session-manager.js');
+      const result = await resumeSession('session-1');
+
+      expect(result.isPaused).toBe(false);
+      expect(result.pausedAt).toBeNull();
+      expect(result.pausedFromState).toBeNull();
+      expect(result.timerRemainingMs).toBeNull();
+      expect(result.timerStartedAt).toEqual(expect.any(Number));
+      expect(result.timerDurationMs).toBe(15000);
+
+      expect(mockResumeSessionTimer).toHaveBeenCalledWith(
+        'session-1',
+        15000,
+        expect.any(Function),
+      );
+      expect(mockBroadcastDjResume).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        isPaused: false,
+      }));
+    });
+
+    it('does not schedule timer if timerRemainingMs is null', async () => {
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'song' as const,
+        isPaused: true,
+        pausedAt: 1000,
+        pausedFromState: 'song' as const,
+        timerRemainingMs: null,
+      });
+
+      mockGetSessionDjState.mockReturnValue(context);
+      mockUpdateDjState.mockResolvedValue(undefined);
+
+      const { resumeSession } = await import('../../src/services/session-manager.js');
+      await resumeSession('session-1');
+
+      expect(mockResumeSessionTimer).not.toHaveBeenCalled();
+    });
+
+    it('rejects if not paused', async () => {
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'song' as const,
+        isPaused: false,
+      });
+
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { resumeSession } = await import('../../src/services/session-manager.js');
+      await expect(resumeSession('session-1')).rejects.toMatchObject({
+        code: 'NOT_PAUSED',
+      });
+    });
+
+    it('rejects if no DJ state exists', async () => {
+      mockGetSessionDjState.mockReturnValue(undefined);
+
+      const { resumeSession } = await import('../../src/services/session-manager.js');
+      await expect(resumeSession('nonexistent')).rejects.toMatchObject({
+        code: 'SESSION_NOT_FOUND',
+      });
+    });
+  });
+
+  describe('endSession while paused', () => {
+    it('clears isPaused before transitioning to finale', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'song' as const,
+        isPaused: true,
+        pausedAt: 1000,
+        pausedFromState: 'song' as const,
+        timerRemainingMs: 15000,
+      });
+      const finaleContext = createTestDJContext({ sessionId: 'session-1', state: 'finale' as const });
+
+      mockFindById.mockResolvedValue(session);
+      mockGetSessionDjState.mockReturnValue(context);
+      mockProcessTransition.mockReturnValue({
+        newContext: finaleContext,
+        sideEffects: [
+          { type: 'cancelTimer', data: {} },
+          { type: 'broadcast', data: { from: 'song', to: 'finale' } },
+          { type: 'persist', data: { context: { state: 'finale' } } },
+        ],
+      });
+      mockUpdateStatus.mockResolvedValue(undefined);
+
+      const { endSession } = await import('../../src/services/session-manager.js');
+      await endSession('session-1', 'host-user-1');
+
+      // Verify processTransition was called with isPaused: false
+      expect(mockProcessTransition).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isPaused: false,
+          pausedAt: null,
+          pausedFromState: null,
+          timerRemainingMs: null,
+        }),
+        { type: 'END_PARTY' },
+        expect.any(Number),
+      );
+    });
+  });
+
 });

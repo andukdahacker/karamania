@@ -37,6 +37,61 @@ describe('deserializeDJContext', () => {
   });
 });
 
+describe('pause fields serialization', () => {
+  it('round-trips with isPaused=true and all pause fields set', () => {
+    const ctx = createTestDJContext({
+      state: DJState.song,
+      isPaused: true,
+      pausedAt: 1234567890,
+      pausedFromState: DJState.song,
+      timerRemainingMs: 15000,
+    });
+    const roundTripped = deserializeDJContext(serializeDJContext(ctx));
+    expect(roundTripped).toEqual(ctx);
+    expect(roundTripped.isPaused).toBe(true);
+    expect(roundTripped.pausedAt).toBe(1234567890);
+    expect(roundTripped.pausedFromState).toBe(DJState.song);
+    expect(roundTripped.timerRemainingMs).toBe(15000);
+  });
+
+  it('serializes isPaused=false with null pause fields', () => {
+    const ctx = createTestDJContext();
+    const result = serializeDJContext(ctx) as Record<string, unknown>;
+    expect(result.isPaused).toBe(false);
+    expect(result.pausedAt).toBeNull();
+    expect(result.pausedFromState).toBeNull();
+    expect(result.timerRemainingMs).toBeNull();
+  });
+});
+
+describe('pause fields deserialization errors', () => {
+  it('throws on non-boolean isPaused', () => {
+    const json = serializeDJContext(createTestDJContext());
+    (json as Record<string, unknown>).isPaused = 'true';
+    expect(() => deserializeDJContext(json)).toThrow(DJEngineError);
+    expect(() => deserializeDJContext(json)).toThrow('isPaused must be a boolean');
+  });
+
+  it('throws on invalid pausedFromState', () => {
+    const json = serializeDJContext(createTestDJContext());
+    (json as Record<string, unknown>).pausedFromState = 'invalidState';
+    expect(() => deserializeDJContext(json)).toThrow(DJEngineError);
+    expect(() => deserializeDJContext(json)).toThrow('pausedFromState must be a valid DJState or null');
+  });
+
+  it('throws on non-number pausedAt', () => {
+    const json = serializeDJContext(createTestDJContext());
+    (json as Record<string, unknown>).pausedAt = 'not-a-number';
+    expect(() => deserializeDJContext(json)).toThrow(DJEngineError);
+  });
+
+  it('throws on non-number timerRemainingMs', () => {
+    const json = serializeDJContext(createTestDJContext());
+    (json as Record<string, unknown>).timerRemainingMs = 'not-a-number';
+    expect(() => deserializeDJContext(json)).toThrow(DJEngineError);
+  });
+});
+
 describe('round-trip guarantee', () => {
   it('round-trips for every DJState', () => {
     for (const state of Object.values(DJState)) {

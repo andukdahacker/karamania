@@ -7,9 +7,11 @@ import { deserializeDJContext, serializeDJContext } from '../dj-engine/serialize
 import { calculateRemainingMs } from '../dj-engine/timers.js';
 import type { DJContext, DJTransition, DJSideEffect } from '../dj-engine/types.js';
 import { getSessionDjState, setSessionDjState, removeSessionDjState } from '../services/dj-state-store.js';
-import { scheduleSessionTimer, cancelSessionTimer } from '../services/timer-scheduler.js';
-import { broadcastDjState } from '../services/dj-broadcaster.js';
+import { scheduleSessionTimer, cancelSessionTimer, pauseSessionTimer, resumeSessionTimer } from '../services/timer-scheduler.js';
+import { broadcastDjState, broadcastDjPause, broadcastDjResume } from '../services/dj-broadcaster.js';
 import { removeSession } from '../services/connection-tracker.js';
+import { removeSession as removeActivitySession } from '../services/activity-tracker.js';
+import { DJState } from '../dj-engine/types.js';
 
 // Set of session IDs that failed recovery — checked during client reconnection
 const failedRecoverySessionIds = new Set<string>();
@@ -39,6 +41,14 @@ export async function recoverActiveSessions(
     try {
       // Deserialize and validate DJ state
       const context = deserializeDJContext(session.dj_state);
+
+      // If paused, skip all timer reconciliation — store as-is
+      if (context.isPaused) {
+        setSessionDjState(session.id, context);
+        console.log(`[session-manager] Session ${session.id} recovered in paused state`);
+        recovered.push(session.id);
+        continue;
+      }
 
       // Reconcile timers
       const remaining = calculateRemainingMs(context, now);
@@ -290,8 +300,13 @@ export async function endSession(
     throw createAppError('SESSION_NOT_FOUND', 'No active DJ state for session', 404);
   }
 
+  // Clear pause state if paused — ending party while paused is valid
+  const contextForTransition: DJContext = context.isPaused
+    ? { ...context, isPaused: false, pausedAt: null, pausedFromState: null, timerRemainingMs: null }
+    : context;
+
   // Transition to finale — automatically broadcasts, persists, cancels timers
-  const { newContext } = await processDjTransition(sessionId, context, { type: 'END_PARTY' });
+  const { newContext } = await processDjTransition(sessionId, contextForTransition, { type: 'END_PARTY' });
 
   // Update DB status + ended_at
   await sessionRepo.updateStatus(sessionId, 'ended');
@@ -300,8 +315,77 @@ export async function endSession(
   removeSessionDjState(sessionId);
   cancelSessionTimer(sessionId);
   removeSession(sessionId);
+  removeActivitySession(sessionId);
 
   return newContext;
+}
+
+export async function pauseSession(sessionId: string): Promise<DJContext> {
+  const context = getSessionDjState(sessionId);
+  if (!context) {
+    throw createAppError('SESSION_NOT_FOUND', 'No active DJ state for session', 404);
+  }
+
+  if (context.state === DJState.lobby || context.state === DJState.finale) {
+    throw createAppError('INVALID_STATE', 'Cannot pause in lobby or finale', 400);
+  }
+
+  if (context.isPaused) {
+    throw createAppError('ALREADY_PAUSED', 'Session is already paused', 400);
+  }
+
+  const remainingMs = pauseSessionTimer(sessionId);
+
+  const updatedContext: DJContext = {
+    ...context,
+    isPaused: true,
+    pausedAt: Date.now(),
+    pausedFromState: context.state,
+    timerRemainingMs: remainingMs,
+  };
+
+  setSessionDjState(sessionId, updatedContext);
+  void persistDjState(sessionId, serializeDJContext(updatedContext));
+  broadcastDjPause(sessionId, updatedContext);
+
+  return updatedContext;
+}
+
+export async function resumeSession(sessionId: string): Promise<DJContext> {
+  const context = getSessionDjState(sessionId);
+  if (!context) {
+    throw createAppError('SESSION_NOT_FOUND', 'No active DJ state for session', 404);
+  }
+
+  if (!context.isPaused) {
+    throw createAppError('NOT_PAUSED', 'Session is not paused', 400);
+  }
+
+  if (context.timerRemainingMs !== null && context.timerRemainingMs > 0) {
+    resumeSessionTimer(sessionId, context.timerRemainingMs, () => {
+      const ctx = getSessionDjState(sessionId);
+      if (ctx) {
+        void processDjTransition(sessionId, ctx, { type: 'TIMEOUT' });
+      }
+    });
+  }
+
+  const now = Date.now();
+  const updatedContext: DJContext = {
+    ...context,
+    isPaused: false,
+    pausedAt: null,
+    pausedFromState: null,
+    timerStartedAt: context.timerRemainingMs !== null ? now : context.timerStartedAt,
+    timerDurationMs: context.timerRemainingMs !== null ? context.timerRemainingMs : context.timerDurationMs,
+    timerRemainingMs: null,
+  };
+
+  setSessionDjState(sessionId, updatedContext);
+  void persistDjState(sessionId, serializeDJContext(updatedContext));
+  broadcastDjResume(sessionId, updatedContext);
+
+  return updatedContext;
 }
 
 export async function kickPlayer(

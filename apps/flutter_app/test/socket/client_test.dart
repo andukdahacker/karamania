@@ -180,6 +180,75 @@ void main() {
     });
   });
 
+  group('SocketClient dj:pause parsing', () {
+    test('onDjPause sets isPaused and pausedFromState on provider', () {
+      final provider = PartyProvider(wakelockToggle: (_) {});
+
+      provider.onDjPause(pausedFromState: 'song', timerRemainingMs: 15000);
+
+      expect(provider.isPaused, isTrue);
+      expect(provider.pausedFromState, 'song');
+      expect(provider.timerStartedAt, isNull);
+      expect(provider.timerDurationMs, isNull);
+    });
+
+    test('onDjPause with empty pausedFromState still sets paused', () {
+      final provider = PartyProvider(wakelockToggle: (_) {});
+
+      provider.onDjPause(pausedFromState: '', timerRemainingMs: null);
+
+      expect(provider.isPaused, isTrue);
+      expect(provider.pausedFromState, '');
+    });
+  });
+
+  group('SocketClient dj:resume parsing', () {
+    test('onDjStateUpdate with isPaused false clears pause state', () {
+      final provider = PartyProvider(wakelockToggle: (_) {});
+      // First pause
+      provider.onDjPause(pausedFromState: 'song');
+      expect(provider.isPaused, isTrue);
+
+      // Resume via full state update (same as dj:resume handler)
+      provider.onDjStateUpdate(
+        state: DJState.song,
+        songCount: 3,
+        participantCount: 5,
+        currentPerformer: 'Alice',
+        timerStartedAt: 1000,
+        timerDurationMs: 15000,
+        isPaused: false,
+      );
+
+      expect(provider.isPaused, isFalse);
+      expect(provider.pausedFromState, isNull);
+      expect(provider.djState, DJState.song);
+      expect(provider.timerStartedAt, 1000);
+      expect(provider.timerDurationMs, 15000);
+    });
+
+    test('onDjResume explicitly clears pause state', () {
+      final provider = PartyProvider(wakelockToggle: (_) {});
+      provider.onDjPause(pausedFromState: 'ceremony');
+      expect(provider.isPaused, isTrue);
+
+      provider.onDjResume();
+
+      expect(provider.isPaused, isFalse);
+      expect(provider.pausedFromState, isNull);
+    });
+  });
+
+  group('SocketClient host pause/resume emitters', () {
+    test('emitHostPause does not throw when not connected', () {
+      expect(() => SocketClient.instance.emitHostPause(), returnsNormally);
+    });
+
+    test('emitHostResume does not throw when not connected', () {
+      expect(() => SocketClient.instance.emitHostResume(), returnsNormally);
+    });
+  });
+
   group('currentUserId getter', () {
     test('initial currentUserId is null', () {
       expect(SocketClient.instance.currentUserId, isNull);

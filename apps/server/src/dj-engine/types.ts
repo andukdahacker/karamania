@@ -47,6 +47,10 @@ export interface DJContext {
   currentPerformer: string | null;
   timerStartedAt: number | null;
   timerDurationMs: number | null;
+  isPaused: boolean;
+  pausedAt: number | null;
+  pausedFromState: DJState | null;
+  timerRemainingMs: number | null;
   cycleHistory: DJState[];
   metadata: Record<string, unknown>;
 }

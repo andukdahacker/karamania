@@ -31,6 +31,14 @@ describe('createDJContext', () => {
     expect(ctx.timerDurationMs).toBeNull();
   });
 
+  it('initializes pause fields with defaults', () => {
+    const ctx = createDJContext('session-1', 3);
+    expect(ctx.isPaused).toBe(false);
+    expect(ctx.pausedAt).toBeNull();
+    expect(ctx.pausedFromState).toBeNull();
+    expect(ctx.timerRemainingMs).toBeNull();
+  });
+
   it('initializes cycleHistory with lobby', () => {
     const ctx = createDJContext('session-1', 3);
     expect(ctx.cycleHistory).toEqual([DJState.lobby]);

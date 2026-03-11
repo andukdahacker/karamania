@@ -64,6 +64,10 @@ const io = new SocketIOServer(fastify.server, {
 });
 
 const shutdown = async () => {
+  const { stopInactivityMonitor } = await import('./services/inactivity-monitor.js');
+  const { clearAllTimers } = await import('./services/timer-scheduler.js');
+  stopInactivityMonitor();
+  clearAllTimers();
   io.close();
   await fastify.close();
   await db.destroy();
@@ -89,6 +93,10 @@ try {
   );
 
   setupSocketHandlers(io, fastify.log);
+
+  const { startInactivityMonitor } = await import('./services/inactivity-monitor.js');
+  startInactivityMonitor();
+
   await fastify.listen({ port: config.PORT, host: '0.0.0.0' });
 } catch (err) {
   fastify.log.error(err);

@@ -16,6 +16,9 @@ export function buildDjStatePayload(context: DJContext): {
   currentPerformer: string | null;
   timerStartedAt: number | null;
   timerDurationMs: number | null;
+  isPaused: boolean;
+  pausedFromState: string | null;
+  timerRemainingMs: number | null;
 } {
   return {
     state: context.state,
@@ -25,6 +28,9 @@ export function buildDjStatePayload(context: DJContext): {
     currentPerformer: context.currentPerformer,
     timerStartedAt: context.timerStartedAt,
     timerDurationMs: context.timerDurationMs,
+    isPaused: context.isPaused,
+    pausedFromState: context.pausedFromState,
+    timerRemainingMs: context.timerRemainingMs,
   };
 }
 
@@ -35,4 +41,25 @@ export function broadcastDjState(sessionId: string, context: DJContext): void {
   }
   const payload = buildDjStatePayload(context);
   io.to(sessionId).emit(EVENTS.DJ_STATE_CHANGED, payload);
+}
+
+export function broadcastDjPause(sessionId: string, context: DJContext): void {
+  if (!io) {
+    console.warn('[dj-broadcaster] Cannot broadcast — io not initialized');
+    return;
+  }
+  io.to(sessionId).emit(EVENTS.DJ_PAUSE, {
+    isPaused: true,
+    pausedFromState: context.pausedFromState,
+    timerRemainingMs: context.timerRemainingMs,
+  });
+}
+
+export function broadcastDjResume(sessionId: string, context: DJContext): void {
+  if (!io) {
+    console.warn('[dj-broadcaster] Cannot broadcast — io not initialized');
+    return;
+  }
+  const payload = buildDjStatePayload(context);
+  io.to(sessionId).emit(EVENTS.DJ_RESUME, payload);
 }

@@ -629,5 +629,76 @@ void main() {
     test('initial kickedMessage is null', () {
       expect(provider.kickedMessage, isNull);
     });
+
+    // Story 2.6 tests — pause/resume
+
+    test('initial isPaused is false and pausedFromState is null', () {
+      expect(provider.isPaused, isFalse);
+      expect(provider.pausedFromState, isNull);
+    });
+
+    test('onDjPause sets isPaused and pausedFromState, clears timer fields', () {
+      provider.onDjStateUpdate(
+        state: DJState.song,
+        timerStartedAt: 1000,
+        timerDurationMs: 180000,
+      );
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onDjPause(pausedFromState: 'song', timerRemainingMs: 90000);
+
+      expect(provider.isPaused, isTrue);
+      expect(provider.pausedFromState, 'song');
+      expect(provider.timerStartedAt, isNull);
+      expect(provider.timerDurationMs, isNull);
+      expect(notifyCount, 1);
+    });
+
+    test('onDjResume clears pause state', () {
+      provider.onDjPause(pausedFromState: 'song');
+      expect(provider.isPaused, isTrue);
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onDjResume();
+
+      expect(provider.isPaused, isFalse);
+      expect(provider.pausedFromState, isNull);
+      expect(notifyCount, 1);
+    });
+
+    test('onDjStateUpdate with isPaused flag sets pause state (mid-session join)', () {
+      provider.onDjStateUpdate(
+        state: DJState.song,
+        isPaused: true,
+      );
+
+      expect(provider.isPaused, isTrue);
+    });
+
+    test('onDjStateUpdate with isPaused=false clears pause state', () {
+      provider.onDjPause(pausedFromState: 'song');
+      expect(provider.isPaused, isTrue);
+
+      provider.onDjStateUpdate(
+        state: DJState.song,
+        isPaused: false,
+      );
+
+      expect(provider.isPaused, isFalse);
+      expect(provider.pausedFromState, isNull);
+    });
+
+    test('onDjStateUpdate without isPaused leaves pause state unchanged', () {
+      provider.onDjPause(pausedFromState: 'song');
+      expect(provider.isPaused, isTrue);
+
+      provider.onDjStateUpdate(state: DJState.ceremony);
+
+      expect(provider.isPaused, isTrue); // Unchanged
+    });
   });
 }

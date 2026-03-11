@@ -88,15 +88,23 @@ class _HostControlsOverlayState extends State<HostControlsOverlay> {
                   },
                 ),
                 const SizedBox(height: DJTokens.spaceSm),
-                const Tooltip(
-                  message: Copy.hostControlPauseComingSoon,
-                  child: _ControlButton(
-                    key: Key('host-control-pause'),
-                    label: Copy.hostControlPause,
-                    icon: Icons.pause,
-                    color: DJTokens.textSecondary,
-                    onTap: null,
-                  ),
+                _ControlButton(
+                  key: const Key('host-control-pause'),
+                  label: partyProvider.isPaused
+                      ? Copy.hostControlResume
+                      : Copy.hostControlPause,
+                  icon: partyProvider.isPaused ? Icons.play_arrow : Icons.pause,
+                  color: partyProvider.isPaused
+                      ? DJTokens.actionConfirm
+                      : vibe.accent,
+                  onTap: () {
+                    _collapse();
+                    if (partyProvider.isPaused) {
+                      SocketClient.instance.emitHostResume();
+                    } else {
+                      SocketClient.instance.emitHostPause();
+                    }
+                  },
                 ),
                 const SizedBox(height: DJTokens.spaceSm),
                 _ControlButton(

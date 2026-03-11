@@ -23,6 +23,10 @@ export function createDJContext(sessionId: string, participantCount: number): DJ
     currentPerformer: null,
     timerStartedAt: null,
     timerDurationMs: null,
+    isPaused: false,
+    pausedAt: null,
+    pausedFromState: null,
+    timerRemainingMs: null,
     cycleHistory: [DJState.lobby],
     metadata: {},
   };

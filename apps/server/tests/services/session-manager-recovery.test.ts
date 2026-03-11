@@ -42,9 +42,35 @@ vi.mock('../../src/services/dj-state-store.js', () => ({
 
 const mockScheduleSessionTimer = vi.fn();
 const mockCancelSessionTimer = vi.fn();
+const mockPauseSessionTimer = vi.fn();
+const mockResumeSessionTimer = vi.fn();
 vi.mock('../../src/services/timer-scheduler.js', () => ({
   scheduleSessionTimer: (...args: unknown[]) => mockScheduleSessionTimer(...args),
   cancelSessionTimer: (...args: unknown[]) => mockCancelSessionTimer(...args),
+  pauseSessionTimer: (...args: unknown[]) => mockPauseSessionTimer(...args),
+  resumeSessionTimer: (...args: unknown[]) => mockResumeSessionTimer(...args),
+}));
+
+vi.mock('../../src/services/dj-broadcaster.js', () => ({
+  broadcastDjState: vi.fn(),
+  broadcastDjPause: vi.fn(),
+  broadcastDjResume: vi.fn(),
+}));
+
+vi.mock('../../src/services/connection-tracker.js', () => ({
+  removeSession: vi.fn(),
+  getActiveConnections: vi.fn(),
+  trackConnection: vi.fn(),
+  trackDisconnection: vi.fn(),
+  isUserConnected: vi.fn(),
+  getLongestConnected: vi.fn(),
+  removeDisconnectedEntry: vi.fn(),
+  updateHostStatus: vi.fn(),
+  getActiveCount: vi.fn(),
+}));
+
+vi.mock('../../src/services/party-code.js', () => ({
+  generateUniquePartyCode: vi.fn(),
 }));
 
 describe('session-manager recovery', () => {
@@ -307,6 +333,45 @@ describe('session-manager recovery', () => {
         expect.any(Number),
         expect.any(Function),
       );
+    });
+
+    it('recovers paused session without scheduling timer', async () => {
+      const now = Date.now();
+      const djContext = createTestDJContextInState(DJState.song, {
+        sessionId: 'session-paused',
+        isPaused: true,
+        pausedAt: now - 30_000,
+        pausedFromState: DJState.song,
+        timerRemainingMs: 15000,
+        timerStartedAt: now - 60_000,
+        timerDurationMs: 180_000,
+      });
+
+      const session = createTestSession({
+        id: 'session-paused',
+        status: 'active',
+        dj_state: serializeDJContext(djContext),
+      });
+      mockFindActiveSessions.mockResolvedValue([session]);
+
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const { recoverActiveSessions } = await import('../../src/services/session-manager.js');
+      const result = await recoverActiveSessions(now);
+
+      expect(result.recovered).toContain('session-paused');
+      expect(result.failed).toHaveLength(0);
+      expect(mockSetSessionDjState).toHaveBeenCalledWith('session-paused', expect.objectContaining({
+        isPaused: true,
+        pausedFromState: DJState.song,
+        timerRemainingMs: 15000,
+      }));
+      // No timer should be scheduled for paused session
+      expect(mockScheduleSessionTimer).not.toHaveBeenCalled();
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('recovered in paused state'),
+      );
+      logSpy.mockRestore();
     });
 
     it('recovers session in songSelection state with active timer', async () => {

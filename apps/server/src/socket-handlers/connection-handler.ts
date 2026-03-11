@@ -16,6 +16,7 @@ import {
 import { EVENTS } from '../shared/events.js';
 import type { AuthenticatedSocket } from '../shared/socket-types.js';
 import { initDjBroadcaster, buildDjStatePayload } from '../services/dj-broadcaster.js';
+import { recordActivity } from '../services/activity-tracker.js';
 
 // Module-level timer maps for cleanup
 const hostTransferTimers = new Map<string, NodeJS.Timeout>();
@@ -38,6 +39,7 @@ export function setupSocketHandlers(io: SocketIOServer, logger: FastifyBaseLogge
       return;
     }
 
+    recordActivity(sessionId);
     registerPartyHandlers(s);
     registerHostHandlers(s, io);
 

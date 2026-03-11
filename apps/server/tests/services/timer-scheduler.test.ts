@@ -4,6 +4,8 @@ import {
   cancelSessionTimer,
   getActiveTimer,
   clearAllTimers,
+  pauseSessionTimer,
+  resumeSessionTimer,
 } from '../../src/services/timer-scheduler.js';
 
 describe('timer-scheduler', () => {
@@ -100,6 +102,73 @@ describe('timer-scheduler', () => {
 
     it('returns false for unknown session', () => {
       expect(getActiveTimer('nonexistent')).toBe(false);
+    });
+  });
+
+  describe('pauseSessionTimer', () => {
+    it('returns remaining ms when timer is active', () => {
+      scheduleSessionTimer('session-1', 10000, vi.fn());
+
+      vi.advanceTimersByTime(3000);
+
+      const remaining = pauseSessionTimer('session-1');
+      expect(remaining).toBe(7000);
+    });
+
+    it('returns null when no timer exists', () => {
+      const remaining = pauseSessionTimer('nonexistent');
+      expect(remaining).toBeNull();
+    });
+
+    it('cancels the timer after pausing', () => {
+      const onTimeout = vi.fn();
+      scheduleSessionTimer('session-1', 5000, onTimeout);
+
+      pauseSessionTimer('session-1');
+      vi.advanceTimersByTime(10000);
+
+      expect(onTimeout).not.toHaveBeenCalled();
+      expect(getActiveTimer('session-1')).toBe(false);
+    });
+
+    it('clears metadata after pausing', () => {
+      scheduleSessionTimer('session-1', 5000, vi.fn());
+      pauseSessionTimer('session-1');
+
+      // Second pause should return null since metadata was cleared
+      const remaining = pauseSessionTimer('session-1');
+      expect(remaining).toBeNull();
+    });
+  });
+
+  describe('resumeSessionTimer', () => {
+    it('reschedules timer with remaining ms', () => {
+      const onTimeout = vi.fn();
+      resumeSessionTimer('session-1', 3000, onTimeout);
+
+      expect(getActiveTimer('session-1')).toBe(true);
+
+      vi.advanceTimersByTime(3000);
+      expect(onTimeout).toHaveBeenCalledOnce();
+    });
+
+    it('does not fire before remaining ms elapses', () => {
+      const onTimeout = vi.fn();
+      resumeSessionTimer('session-1', 5000, onTimeout);
+
+      vi.advanceTimersByTime(4999);
+      expect(onTimeout).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cancelSessionTimer clears metadata', () => {
+    it('clears timer metadata on cancel', () => {
+      scheduleSessionTimer('session-1', 10000, vi.fn());
+      cancelSessionTimer('session-1');
+
+      // pauseSessionTimer should return null since metadata was cleared
+      const remaining = pauseSessionTimer('session-1');
+      expect(remaining).toBeNull();
     });
   });
 

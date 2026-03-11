@@ -56,6 +56,8 @@ export const EVENTS = {
   HOST_OVERRIDE: 'host:override',
   HOST_SONG_OVER: 'host:songOver',
   HOST_END_PARTY: 'host:endParty',
+  HOST_PAUSE: 'host:pause',
+  HOST_RESUME: 'host:resume',
   HOST_KICK_PLAYER: 'host:kickPlayer',
 
   // Party participant removal

@@ -19,6 +19,10 @@ export function serializeDJContext(context: DJContext): unknown {
     currentPerformer: context.currentPerformer,
     timerStartedAt: context.timerStartedAt,
     timerDurationMs: context.timerDurationMs,
+    isPaused: context.isPaused,
+    pausedAt: context.pausedAt,
+    pausedFromState: context.pausedFromState,
+    timerRemainingMs: context.timerRemainingMs,
     cycleHistory: [...context.cycleHistory],
     metadata: { ...context.metadata },
   };
@@ -59,6 +63,18 @@ export function deserializeDJContext(json: unknown): DJContext {
   validateNullableNumber(obj.sessionStartedAt, 'sessionStartedAt');
   validateNullableNumber(obj.timerStartedAt, 'timerStartedAt');
   validateNullableNumber(obj.timerDurationMs, 'timerDurationMs');
+  validateNullableNumber(obj.pausedAt, 'pausedAt');
+  validateNullableNumber(obj.timerRemainingMs, 'timerRemainingMs');
+
+  // Validate isPaused
+  if (typeof obj.isPaused !== 'boolean') {
+    throw new DJEngineError('INVALID_ISPAUSED', 'isPaused must be a boolean');
+  }
+
+  // Validate pausedFromState
+  if (obj.pausedFromState !== null && (typeof obj.pausedFromState !== 'string' || !VALID_STATES.has(obj.pausedFromState))) {
+    throw new DJEngineError('INVALID_PAUSEDFROMSTATE', 'pausedFromState must be a valid DJState or null');
+  }
 
   // Validate nullable string fields
   if (obj.currentPerformer !== null && typeof obj.currentPerformer !== 'string') {
@@ -89,6 +105,10 @@ export function deserializeDJContext(json: unknown): DJContext {
     currentPerformer: (obj.currentPerformer as string | null) ?? null,
     timerStartedAt: (obj.timerStartedAt as number | null) ?? null,
     timerDurationMs: (obj.timerDurationMs as number | null) ?? null,
+    isPaused: obj.isPaused as boolean,
+    pausedAt: (obj.pausedAt as number | null) ?? null,
+    pausedFromState: (obj.pausedFromState as DJState | null) ?? null,
+    timerRemainingMs: (obj.timerRemainingMs as number | null) ?? null,
     cycleHistory: [...(obj.cycleHistory as DJState[])],
     metadata: { ...(obj.metadata as Record<string, unknown>) },
   };

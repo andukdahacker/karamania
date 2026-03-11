@@ -483,5 +483,142 @@ void main() {
 
       expect(find.byKey(const Key('countdown-timer')), findsNothing);
     });
+
+    // Story 2.6 tests — Pause overlay
+
+    testWidgets('shows pause overlay when isPaused is true', (tester) async {
+      final provider = _createTestProvider();
+      provider.onSessionStatus('active');
+      provider.onDjStateUpdate(state: DJState.song);
+      provider.onDjPause(pausedFromState: 'song');
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('pause-overlay')), findsOneWidget);
+      expect(find.text(Copy.pausedLabel), findsOneWidget);
+    });
+
+    testWidgets('pause overlay shows "Paused during X" text', (tester) async {
+      final provider = _createTestProvider();
+      provider.onSessionStatus('active');
+      provider.onDjStateUpdate(state: DJState.song);
+      provider.onDjPause(pausedFromState: 'song');
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('pause-overlay-state')), findsOneWidget);
+      expect(
+        find.text('${Copy.pausedDuring} ${Copy.djStateLabel(DJState.song)}'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('pause overlay disappears on resume', (tester) async {
+      final provider = _createTestProvider();
+      provider.onSessionStatus('active');
+      provider.onDjStateUpdate(state: DJState.song);
+      provider.onDjPause(pausedFromState: 'song');
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      // Overlay visible
+      expect(find.byKey(const Key('pause-overlay')), findsOneWidget);
+
+      // Resume
+      provider.onDjStateUpdate(
+        state: DJState.song,
+        timerStartedAt: DateTime.now().millisecondsSinceEpoch,
+        timerDurationMs: 15000,
+        isPaused: false,
+      );
+      await tester.pump();
+
+      // Overlay gone
+      expect(find.byKey(const Key('pause-overlay')), findsNothing);
+    });
+
+    testWidgets('countdown timer is hidden when paused', (tester) async {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final provider = _createTestProvider();
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      // Set up timer
+      provider.onDjStateUpdate(
+        state: DJState.song,
+        timerStartedAt: now,
+        timerDurationMs: 120000,
+      );
+      await tester.pump();
+      expect(find.byKey(const Key('countdown-timer')), findsOneWidget);
+
+      // Pause — clears timer fields
+      provider.onDjPause(pausedFromState: 'song', timerRemainingMs: 60000);
+      await tester.pump();
+      expect(find.byKey(const Key('countdown-timer')), findsNothing);
+    });
+
+    testWidgets('no pause overlay when isPaused is false', (tester) async {
+      final provider = _createTestProvider();
+      provider.onSessionStatus('active');
+      provider.onDjStateUpdate(state: DJState.song);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('pause-overlay')), findsNothing);
+    });
+
+    // Story 2.6 tests — Bridge moment display
+
+    testWidgets('shows bridge moment display during songSelection state', (tester) async {
+      final provider = _createTestProvider();
+      provider.onSessionStatus('active');
+      provider.onDjStateUpdate(state: DJState.songSelection);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('bridge-generic')), findsOneWidget);
+    });
+
+    testWidgets('bridge moment shows performer name during songSelection', (tester) async {
+      final provider = _createTestProvider();
+      provider.onSessionStatus('active');
+      provider.onDjStateUpdate(
+        state: DJState.songSelection,
+        currentPerformer: 'Alice',
+      );
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('bridge-performer-hype')), findsOneWidget);
+      expect(find.text('Alice'), findsWidgets);
+    });
+
+    testWidgets('no bridge moment display in non-songSelection states', (tester) async {
+      final provider = _createTestProvider();
+      provider.onSessionStatus('active');
+      provider.onDjStateUpdate(state: DJState.song);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump();
+
+      expect(find.byKey(const Key('bridge-generic')), findsNothing);
+      expect(find.byKey(const Key('bridge-performer-hype')), findsNothing);
+    });
   });
 }

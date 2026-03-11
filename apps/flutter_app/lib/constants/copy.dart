@@ -122,7 +122,6 @@ class Copy {
   static const String hostControlSkip = 'Skip';
   static const String hostControlOverride = 'Override Next';
   static const String hostControlPause = 'Pause';
-  static const String hostControlPauseComingSoon = 'Coming soon';
   static const String hostControlEndParty = 'End Party';
   static const String hostControlKickPlayer = 'Kick Player';
   static const String hostControlEndPartyConfirmTitle = 'End Party?';
@@ -133,6 +132,17 @@ class Copy {
   static const String hostKickedMessage = 'You have been removed from the party';
   static const String hostSongOverLabel = 'Song Over!';
   static const String hostSongOverHint = 'Hold to end song';
+
+  // Bridge moments
+  static const String bridgeGetReady = 'Get Ready!';
+  static const String bridgeWhosNext = "Who's up next?";
+  static const String bridgeUpNext = 'Up Next';
+  static const String bridgeLetsGo = "Let's Go!";
+
+  // Pause state
+  static const String pausedLabel = 'Paused';
+  static const String pausedDuring = 'Paused during';
+  static const String hostControlResume = 'Resume';
 
   // Dialogs
   static const String cancel = 'CANCEL';

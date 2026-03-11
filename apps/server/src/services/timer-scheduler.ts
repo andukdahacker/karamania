@@ -2,6 +2,7 @@
 // No dj-engine imports — callbacks provided by caller (session-manager)
 
 const timers = new Map<string, NodeJS.Timeout>();
+const timerMeta = new Map<string, { startedAt: number; durationMs: number }>();
 
 export function scheduleSessionTimer(
   sessionId: string,
@@ -13,10 +14,12 @@ export function scheduleSessionTimer(
 
   const timer = setTimeout(() => {
     timers.delete(sessionId);
+    timerMeta.delete(sessionId);
     onTimeout();
   }, durationMs);
 
   timers.set(sessionId, timer);
+  timerMeta.set(sessionId, { startedAt: Date.now(), durationMs });
 }
 
 export function cancelSessionTimer(sessionId: string): void {
@@ -25,6 +28,29 @@ export function cancelSessionTimer(sessionId: string): void {
     clearTimeout(timer);
     timers.delete(sessionId);
   }
+  timerMeta.delete(sessionId);
+}
+
+export function pauseSessionTimer(sessionId: string): number | null {
+  const meta = timerMeta.get(sessionId);
+  if (!meta) {
+    return null;
+  }
+
+  const elapsed = Date.now() - meta.startedAt;
+  const remaining = Math.max(0, meta.durationMs - elapsed);
+
+  cancelSessionTimer(sessionId);
+
+  return remaining;
+}
+
+export function resumeSessionTimer(
+  sessionId: string,
+  remainingMs: number,
+  onTimeout: () => void,
+): void {
+  scheduleSessionTimer(sessionId, remainingMs, onTimeout);
 }
 
 export function getActiveTimer(sessionId: string): boolean {
@@ -36,4 +62,5 @@ export function clearAllTimers(): void {
     clearTimeout(timer);
   }
   timers.clear();
+  timerMeta.clear();
 }

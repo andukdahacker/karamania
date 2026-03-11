@@ -145,7 +145,7 @@ void main() {
       expect(find.byKey(const Key('host-overlay-barrier')), findsNothing);
     });
 
-    testWidgets('pause button is disabled (onTap: null)', (tester) async {
+    testWidgets('pause button is enabled and shows Pause label when not paused', (tester) async {
       final provider = _createHostProvider();
 
       await tester.pumpWidget(
@@ -160,17 +160,39 @@ void main() {
       final pauseFinder = find.byKey(const Key('host-control-pause'));
       expect(pauseFinder, findsOneWidget);
 
-      // The pause button is wrapped in a Tooltip with the coming soon message
-      final tooltipWidget = tester.widgetList<Tooltip>(find.byType(Tooltip))
-          .where((t) => t.message == Copy.hostControlPauseComingSoon);
-      expect(tooltipWidget.isNotEmpty, isTrue);
-
-      // Verify the InkWell inside pause button has null onTap
+      // Verify the InkWell inside pause button has non-null onTap
       final inkWell = tester.widget<InkWell>(find.descendant(
         of: pauseFinder,
         matching: find.byType(InkWell),
       ));
-      expect(inkWell.onTap, isNull);
+      expect(inkWell.onTap, isNotNull);
+
+      // Verify label shows Pause
+      expect(find.text(Copy.hostControlPause), findsOneWidget);
+    });
+
+    testWidgets('pause button shows Resume label and play icon when paused', (tester) async {
+      final provider = _createHostProvider();
+      provider.onDjPause(pausedFromState: 'song');
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const SizedBox(), partyProvider: provider));
+      await tester.pump();
+
+      // Expand
+      await tester.tap(find.byKey(const Key('host-controls-fab')));
+      await tester.pump();
+
+      // Find the pause button
+      final pauseFinder = find.byKey(const Key('host-control-pause'));
+      expect(pauseFinder, findsOneWidget);
+
+      // Verify label shows Resume
+      expect(find.text(Copy.hostControlResume), findsOneWidget);
+      expect(find.text(Copy.hostControlPause), findsNothing);
+
+      // Verify play_arrow icon is shown
+      expect(find.byIcon(Icons.play_arrow), findsOneWidget);
     });
 
     testWidgets('end party button shows confirmation dialog', (tester) async {

@@ -36,10 +36,14 @@ vi.mock('../../src/services/dj-state-store.js', () => ({
 const mockProcessDjTransition = vi.fn();
 const mockEndSession = vi.fn();
 const mockKickPlayer = vi.fn();
+const mockPauseSession = vi.fn();
+const mockResumeSession = vi.fn();
 vi.mock('../../src/services/session-manager.js', () => ({
   processDjTransition: (...args: unknown[]) => mockProcessDjTransition(...args),
   endSession: (...args: unknown[]) => mockEndSession(...args),
   kickPlayer: (...args: unknown[]) => mockKickPlayer(...args),
+  pauseSession: (...args: unknown[]) => mockPauseSession(...args),
+  resumeSession: (...args: unknown[]) => mockResumeSession(...args),
   persistDjState: vi.fn(),
 }));
 
@@ -52,10 +56,20 @@ vi.mock('../../src/services/connection-tracker.js', () => ({
 vi.mock('../../src/services/timer-scheduler.js', () => ({
   scheduleSessionTimer: vi.fn(),
   cancelSessionTimer: vi.fn(),
+  pauseSessionTimer: vi.fn(),
+  resumeSessionTimer: vi.fn(),
 }));
 
 vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastDjState: vi.fn(),
+  broadcastDjPause: vi.fn(),
+  broadcastDjResume: vi.fn(),
+}));
+
+vi.mock('../../src/services/activity-tracker.js', () => ({
+  recordActivity: vi.fn(),
+  removeSession: vi.fn(),
+  clearAll: vi.fn(),
 }));
 
 const mockIsValidOverrideTarget = vi.fn();
@@ -275,6 +289,167 @@ describe('host-handlers', () => {
         room: 'session-1',
         event: 'party:ended',
         data: { reason: 'host_ended' },
+      });
+    });
+  });
+
+  describe('host:pause', () => {
+    it('validates host and calls pauseSession', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      mockFindById.mockResolvedValue(session);
+      mockPauseSession.mockResolvedValue(createTestDJContext({ isPaused: true }));
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerHostHandlers } = await import('../../src/socket-handlers/host-handlers.js');
+      registerHostHandlers(socket as never, io as never);
+
+      await handlers.get('host:pause')!();
+
+      expect(mockPauseSession).toHaveBeenCalledWith('session-1');
+    });
+
+    it('rejects non-host users', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'other-user' });
+      mockFindById.mockResolvedValue(session);
+
+      const { socket, handlers, emittedToSelf } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerHostHandlers } = await import('../../src/socket-handlers/host-handlers.js');
+      registerHostHandlers(socket as never, io as never);
+
+      await handlers.get('host:pause')!();
+
+      expect(mockPauseSession).not.toHaveBeenCalled();
+      expect(emittedToSelf).toContainEqual({
+        event: 'error',
+        data: { code: 'NOT_HOST', message: 'Only the host can perform this action' },
+      });
+    });
+
+    it('emits ALREADY_PAUSED error when session is already paused', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      mockFindById.mockResolvedValue(session);
+      mockPauseSession.mockRejectedValue({ code: 'ALREADY_PAUSED', message: 'Session is already paused' });
+
+      const { socket, handlers, emittedToSelf } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerHostHandlers } = await import('../../src/socket-handlers/host-handlers.js');
+      registerHostHandlers(socket as never, io as never);
+
+      await handlers.get('host:pause')!();
+
+      expect(emittedToSelf).toContainEqual({
+        event: 'error',
+        data: { code: 'ALREADY_PAUSED', message: 'Session is already paused' },
+      });
+    });
+  });
+
+  describe('host:resume', () => {
+    it('validates host and calls resumeSession', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      mockFindById.mockResolvedValue(session);
+      mockResumeSession.mockResolvedValue(createTestDJContext({ isPaused: false }));
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerHostHandlers } = await import('../../src/socket-handlers/host-handlers.js');
+      registerHostHandlers(socket as never, io as never);
+
+      await handlers.get('host:resume')!();
+
+      expect(mockResumeSession).toHaveBeenCalledWith('session-1');
+    });
+
+    it('rejects non-host users', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'other-user' });
+      mockFindById.mockResolvedValue(session);
+
+      const { socket, handlers, emittedToSelf } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerHostHandlers } = await import('../../src/socket-handlers/host-handlers.js');
+      registerHostHandlers(socket as never, io as never);
+
+      await handlers.get('host:resume')!();
+
+      expect(mockResumeSession).not.toHaveBeenCalled();
+      expect(emittedToSelf).toContainEqual({
+        event: 'error',
+        data: { code: 'NOT_HOST', message: 'Only the host can perform this action' },
+      });
+    });
+
+    it('emits NOT_PAUSED error when session is not paused', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      mockFindById.mockResolvedValue(session);
+      mockResumeSession.mockRejectedValue({ code: 'NOT_PAUSED', message: 'Session is not paused' });
+
+      const { socket, handlers, emittedToSelf } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerHostHandlers } = await import('../../src/socket-handlers/host-handlers.js');
+      registerHostHandlers(socket as never, io as never);
+
+      await handlers.get('host:resume')!();
+
+      expect(emittedToSelf).toContainEqual({
+        event: 'error',
+        data: { code: 'NOT_PAUSED', message: 'Session is not paused' },
+      });
+    });
+  });
+
+  describe('pause guard on host:skip', () => {
+    it('returns SESSION_PAUSED error when session is paused', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'songSelection' as const, isPaused: true });
+
+      mockFindById.mockResolvedValue(session);
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { socket, handlers, emittedToSelf } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerHostHandlers } = await import('../../src/socket-handlers/host-handlers.js');
+      registerHostHandlers(socket as never, io as never);
+
+      await handlers.get('host:skip')!();
+
+      expect(mockProcessDjTransition).not.toHaveBeenCalled();
+      expect(emittedToSelf).toContainEqual({
+        event: 'error',
+        data: { code: 'SESSION_PAUSED', message: 'Cannot skip while paused — resume first' },
+      });
+    });
+  });
+
+  describe('pause guard on host:override', () => {
+    it('returns SESSION_PAUSED error when session is paused', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'songSelection' as const, isPaused: true });
+
+      mockFindById.mockResolvedValue(session);
+      mockIsValidOverrideTarget.mockReturnValue(true);
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { socket, handlers, emittedToSelf } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerHostHandlers } = await import('../../src/socket-handlers/host-handlers.js');
+      registerHostHandlers(socket as never, io as never);
+
+      await handlers.get('host:override')!({ targetState: 'ceremony' });
+
+      expect(mockProcessDjTransition).not.toHaveBeenCalled();
+      expect(emittedToSelf).toContainEqual({
+        event: 'error',
+        data: { code: 'SESSION_PAUSED', message: 'Cannot override while paused — resume first' },
       });
     });
   });

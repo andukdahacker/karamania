@@ -190,7 +190,40 @@ class SocketClient {
         currentPerformer: payload['currentPerformer'] as String?,
         timerStartedAt: payload['timerStartedAt'] as int?,
         timerDurationMs: payload['timerDurationMs'] as int?,
+        isPaused: payload['isPaused'] as bool?,
       );
+    });
+
+    // DJ pause event
+    on('dj:pause', (data) {
+      final payload = data as Map<String, dynamic>;
+      partyProvider.onDjPause(
+        pausedFromState: payload['pausedFromState'] as String? ?? '',
+        timerRemainingMs: payload['timerRemainingMs'] as int?,
+      );
+    });
+
+    // DJ resume event — carries full state payload like dj:stateChanged
+    on('dj:resume', (data) {
+      final payload = data as Map<String, dynamic>;
+      final stateString = payload['state'] as String;
+      final DJState djState;
+      try {
+        djState = DJState.values.byName(stateString);
+      } catch (_) {
+        return;
+      }
+      partyProvider.onDjStateUpdate(
+        state: djState,
+        songCount: payload['songCount'] as int?,
+        participantCount: payload['participantCount'] as int?,
+        currentPerformer: payload['currentPerformer'] as String?,
+        timerStartedAt: payload['timerStartedAt'] as int?,
+        timerDurationMs: payload['timerDurationMs'] as int?,
+        isPaused: payload['isPaused'] as bool?,
+      );
+      // Note: onDjResume() not needed — onDjStateUpdate with isPaused:false
+      // already clears pause state and calls notifyListeners() once.
     });
 
     // Party ended event
@@ -237,6 +270,14 @@ class SocketClient {
 
   void emitHostSongOver() {
     _socket?.emit('host:songOver');
+  }
+
+  void emitHostPause() {
+    _socket?.emit('host:pause');
+  }
+
+  void emitHostResume() {
+    _socket?.emit('host:resume');
   }
 
   void emitHostEndParty() {

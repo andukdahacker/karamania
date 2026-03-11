@@ -11,6 +11,7 @@ import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
 import 'package:karamania/widgets/dj_tap_button.dart';
+import 'package:karamania/widgets/bridge_moment_display.dart';
 import 'package:karamania/widgets/host_controls_overlay.dart';
 import 'package:karamania/widgets/reconnecting_banner.dart';
 import 'package:karamania/widgets/song_over_button.dart';
@@ -166,6 +167,8 @@ class _PartyScreenState extends State<PartyScreen>
               _buildLoadingSkeleton(context, displayVibe),
             if (partyProvider.isCatchingUp)
               _buildCatchUpCard(context, partyProvider, displayVibe),
+            if (partyProvider.isPaused)
+              _buildPauseOverlay(context, partyProvider),
             if (partyProvider.connectionStatus == ConnectionStatus.reconnecting)
               const ReconnectingBanner(),
             if (partyProvider.hostTransferPending)
@@ -257,6 +260,12 @@ class _PartyScreenState extends State<PartyScreen>
                     ),
               ),
             ],
+            if (partyProvider.djState == DJState.songSelection) ...[
+              const SizedBox(height: DJTokens.spaceLg),
+              BridgeMomentDisplay(
+                currentPerformer: partyProvider.currentPerformer,
+              ),
+            ],
           ],
         ),
       ),
@@ -323,6 +332,50 @@ class _PartyScreenState extends State<PartyScreen>
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPauseOverlay(BuildContext context, PartyProvider partyProvider) {
+    final pausedFrom = partyProvider.pausedFromState;
+    String? stateLabel;
+    if (pausedFrom != null) {
+      try {
+        stateLabel = Copy.djStateLabel(DJState.values.byName(pausedFrom));
+      } catch (_) {
+        stateLabel = pausedFrom;
+      }
+    }
+
+    return Positioned.fill(
+      key: const Key('pause-overlay'),
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.7),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.pause_circle_outline, size: 48, color: DJTokens.textPrimary),
+              const SizedBox(height: DJTokens.spaceMd),
+              Text(
+                Copy.pausedLabel,
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                      color: DJTokens.textPrimary,
+                    ),
+              ),
+              if (stateLabel != null) ...[
+                const SizedBox(height: DJTokens.spaceSm),
+                Text(
+                  '${Copy.pausedDuring} $stateLabel',
+                  key: const Key('pause-overlay-state'),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: DJTokens.textSecondary,
+                      ),
+                ),
+              ],
+            ],
           ),
         ),
       ),

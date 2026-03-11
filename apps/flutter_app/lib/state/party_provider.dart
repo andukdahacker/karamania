@@ -47,6 +47,8 @@ class PartyProvider extends ChangeNotifier {
   ConnectionStatus _connectionStatus = ConnectionStatus.connected;
   bool _hostTransferPending = false;
   String? _kickedMessage;
+  bool _isPaused = false;
+  String? _pausedFromState;
 
   DJState get djState => _djState;
   PartyVibe get vibe => _vibe;
@@ -68,6 +70,8 @@ class PartyProvider extends ChangeNotifier {
   ConnectionStatus get connectionStatus => _connectionStatus;
   bool get hostTransferPending => _hostTransferPending;
   String? get kickedMessage => _kickedMessage;
+  bool get isPaused => _isPaused;
+  String? get pausedFromState => _pausedFromState;
 
   /// Background color driven by current DJ state and vibe.
   Color get backgroundColor => djStateBackgroundColor(_djState, _vibe);
@@ -79,12 +83,19 @@ class PartyProvider extends ChangeNotifier {
     String? currentPerformer,
     int? timerStartedAt,
     int? timerDurationMs,
+    bool? isPaused,
   }) {
     _djState = state;
     _songCount = songCount ?? _songCount;
     _currentPerformer = currentPerformer;
     _timerStartedAt = timerStartedAt;
     _timerDurationMs = timerDurationMs;
+    if (isPaused != null) {
+      _isPaused = isPaused;
+      if (!isPaused) {
+        _pausedFromState = null;
+      }
+    }
 
     // Update participant count from DJ state only if non-null AND session is active
     if (participantCount != null && _sessionStatus == 'active') {
@@ -106,6 +117,20 @@ class PartyProvider extends ChangeNotifier {
 
   void onVibeChanged(PartyVibe value) {
     _vibe = value;
+    notifyListeners();
+  }
+
+  void onDjPause({required String pausedFromState, int? timerRemainingMs}) {
+    _isPaused = true;
+    _pausedFromState = pausedFromState;
+    _timerStartedAt = null;
+    _timerDurationMs = null;
+    notifyListeners();
+  }
+
+  void onDjResume() {
+    _isPaused = false;
+    _pausedFromState = null;
     notifyListeners();
   }
 

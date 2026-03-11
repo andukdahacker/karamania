@@ -30,6 +30,9 @@ describe('dj-broadcaster', () => {
         currentPerformer: 'Alice',
         timerStartedAt: 1000,
         timerDurationMs: 30000,
+        isPaused: false,
+        pausedFromState: null,
+        timerRemainingMs: null,
       });
     });
 
@@ -67,6 +70,9 @@ describe('dj-broadcaster', () => {
         'currentPerformer',
         'timerStartedAt',
         'timerDurationMs',
+        'isPaused',
+        'pausedFromState',
+        'timerRemainingMs',
       ]);
     });
   });
@@ -101,6 +107,9 @@ describe('dj-broadcaster', () => {
         currentPerformer: 'Bob',
         timerStartedAt: 5000,
         timerDurationMs: 180000,
+        isPaused: false,
+        pausedFromState: null,
+        timerRemainingMs: null,
       });
     });
 
@@ -111,6 +120,111 @@ describe('dj-broadcaster', () => {
       const context = createTestDJContext({ sessionId: 'session-1' });
 
       broadcastDjState('session-1', context);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Cannot broadcast'),
+      );
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe('buildDjStatePayload includes isPaused', () => {
+    it('includes isPaused: true when context is paused', async () => {
+      const { buildDjStatePayload } = await import('../../src/services/dj-broadcaster.js');
+      const context = createTestDJContextInState(DJState.song, {
+        sessionId: 'session-1',
+        isPaused: true,
+      });
+
+      const payload = buildDjStatePayload(context);
+      expect(payload.isPaused).toBe(true);
+    });
+
+    it('includes isPaused: false when context is not paused', async () => {
+      const { buildDjStatePayload } = await import('../../src/services/dj-broadcaster.js');
+      const context = createTestDJContext({ sessionId: 'session-1' });
+
+      const payload = buildDjStatePayload(context);
+      expect(payload.isPaused).toBe(false);
+    });
+  });
+
+  describe('broadcastDjPause', () => {
+    it('emits dj:pause with correct payload', async () => {
+      const mockEmit = vi.fn();
+      const mockIo = {
+        to: vi.fn().mockReturnValue({ emit: mockEmit }),
+      };
+
+      const { initDjBroadcaster, broadcastDjPause } = await import('../../src/services/dj-broadcaster.js');
+      initDjBroadcaster(mockIo as never);
+
+      const context = createTestDJContextInState(DJState.song, {
+        sessionId: 'session-1',
+        isPaused: true,
+        pausedFromState: DJState.song,
+        timerRemainingMs: 15000,
+      });
+
+      broadcastDjPause('session-1', context);
+
+      expect(mockIo.to).toHaveBeenCalledWith('session-1');
+      expect(mockEmit).toHaveBeenCalledWith('dj:pause', {
+        isPaused: true,
+        pausedFromState: DJState.song,
+        timerRemainingMs: 15000,
+      });
+    });
+
+    it('warns when io is not initialized', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const { broadcastDjPause } = await import('../../src/services/dj-broadcaster.js');
+      const context = createTestDJContext({ sessionId: 'session-1' });
+
+      broadcastDjPause('session-1', context);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Cannot broadcast'),
+      );
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe('broadcastDjResume', () => {
+    it('emits dj:resume with full state payload', async () => {
+      const mockEmit = vi.fn();
+      const mockIo = {
+        to: vi.fn().mockReturnValue({ emit: mockEmit }),
+      };
+
+      const { initDjBroadcaster, broadcastDjResume } = await import('../../src/services/dj-broadcaster.js');
+      initDjBroadcaster(mockIo as never);
+
+      const context = createTestDJContextInState(DJState.song, {
+        sessionId: 'session-1',
+        isPaused: false,
+        timerStartedAt: 5000,
+        timerDurationMs: 15000,
+      });
+
+      broadcastDjResume('session-1', context);
+
+      expect(mockIo.to).toHaveBeenCalledWith('session-1');
+      expect(mockEmit).toHaveBeenCalledWith('dj:resume', expect.objectContaining({
+        state: 'song',
+        sessionId: 'session-1',
+        isPaused: false,
+      }));
+    });
+
+    it('warns when io is not initialized', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const { broadcastDjResume } = await import('../../src/services/dj-broadcaster.js');
+      const context = createTestDJContext({ sessionId: 'session-1' });
+
+      broadcastDjResume('session-1', context);
 
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining('Cannot broadcast'),
