@@ -5,6 +5,7 @@ import * as sessionRepo from '../persistence/session-repository.js';
 import { getSessionDjState } from '../services/dj-state-store.js';
 import { processDjTransition, endSession, kickPlayer, pauseSession, resumeSession } from '../services/session-manager.js';
 import { recordActivity } from '../services/activity-tracker.js';
+import { appendEvent } from '../services/event-stream.js';
 import { getActiveConnections } from '../services/connection-tracker.js';
 import { isValidOverrideTarget } from '../dj-engine/states.js';
 import type { DJState } from '../dj-engine/types.js';
@@ -27,7 +28,7 @@ export function registerHostHandlers(socket: AuthenticatedSocket, io: SocketIOSe
     try {
       await validateHost(socket);
       recordActivity(socket.data.sessionId);
-      await pauseSession(socket.data.sessionId);
+      await pauseSession(socket.data.sessionId, socket.data.userId);
     } catch (error) {
       if (!isValidationError(error)) {
         const appErr = error as { code?: string; message?: string };
@@ -45,7 +46,7 @@ export function registerHostHandlers(socket: AuthenticatedSocket, io: SocketIOSe
     try {
       await validateHost(socket);
       recordActivity(socket.data.sessionId);
-      await resumeSession(socket.data.sessionId);
+      await resumeSession(socket.data.sessionId, socket.data.userId);
     } catch (error) {
       if (!isValidationError(error)) {
         const appErr = error as { code?: string; message?: string };
@@ -69,7 +70,8 @@ export function registerHostHandlers(socket: AuthenticatedSocket, io: SocketIOSe
         socket.emit('error', { code: 'SESSION_PAUSED', message: 'Cannot skip while paused — resume first' });
         return;
       }
-      await processDjTransition(socket.data.sessionId, context, { type: 'HOST_SKIP' });
+      appendEvent(socket.data.sessionId, { type: 'host:skip', ts: Date.now(), userId: socket.data.userId, data: { fromState: context.state } });
+      await processDjTransition(socket.data.sessionId, context, { type: 'HOST_SKIP' }, socket.data.userId);
     } catch (error) {
       if (!isValidationError(error)) {
         console.error('[host-handlers] host:skip error:', error);
@@ -93,7 +95,8 @@ export function registerHostHandlers(socket: AuthenticatedSocket, io: SocketIOSe
         socket.emit('error', { code: 'SESSION_PAUSED', message: 'Cannot override while paused — resume first' });
         return;
       }
-      await processDjTransition(socket.data.sessionId, context, { type: 'HOST_OVERRIDE', targetState });
+      appendEvent(socket.data.sessionId, { type: 'host:override', ts: Date.now(), userId: socket.data.userId, data: { fromState: context.state, toState: targetState } });
+      await processDjTransition(socket.data.sessionId, context, { type: 'HOST_OVERRIDE', targetState }, socket.data.userId);
     } catch (error) {
       if (!isValidationError(error)) {
         console.error('[host-handlers] host:override error:', error);
@@ -112,7 +115,8 @@ export function registerHostHandlers(socket: AuthenticatedSocket, io: SocketIOSe
         socket.emit('error', { code: 'INVALID_STATE', message: 'Song over is only valid during song state' });
         return;
       }
-      await processDjTransition(socket.data.sessionId, context, { type: 'SONG_ENDED' });
+      appendEvent(socket.data.sessionId, { type: 'host:songOver', ts: Date.now(), userId: socket.data.userId, data: { fromState: context.state } });
+      await processDjTransition(socket.data.sessionId, context, { type: 'SONG_ENDED' }, socket.data.userId);
     } catch (error) {
       if (!isValidationError(error)) {
         console.error('[host-handlers] host:songOver error:', error);

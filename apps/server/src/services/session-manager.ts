@@ -12,6 +12,7 @@ import { broadcastDjState, broadcastDjPause, broadcastDjResume } from '../servic
 import { removeSession } from '../services/connection-tracker.js';
 import { removeSession as removeActivitySession } from '../services/activity-tracker.js';
 import { DJState } from '../dj-engine/types.js';
+import { appendEvent, flushEventStream } from '../services/event-stream.js';
 
 // Set of session IDs that failed recovery — checked during client reconnection
 const failedRecoverySessionIds = new Set<string>();
@@ -46,12 +47,18 @@ export async function recoverActiveSessions(
       if (context.isPaused) {
         setSessionDjState(session.id, context);
         console.log(`[session-manager] Session ${session.id} recovered in paused state`);
+        appendEvent(session.id, {
+          type: 'system:recovery',
+          ts: Date.now(),
+          data: { recoveredState: context.state, songCount: context.songCount },
+        });
         recovered.push(session.id);
         continue;
       }
 
       // Reconcile timers
       const remaining = calculateRemainingMs(context, now);
+      let recoveredContext = context;
 
       if (remaining > 0) {
         // Timer still active — store state and reschedule with remaining duration
@@ -63,6 +70,7 @@ export async function recoverActiveSessions(
         // Timer expired during downtime — trigger TIMEOUT to advance state
         const { newContext, sideEffects } = processTransition(context, { type: 'TIMEOUT' }, now);
         setSessionDjState(session.id, newContext);
+        recoveredContext = newContext;
 
         // Persist the new state
         const persistEffect = sideEffects.find(
@@ -85,6 +93,12 @@ export async function recoverActiveSessions(
         // No timer to reconcile (paused or no-timeout state) — just store
         setSessionDjState(session.id, context);
       }
+
+      appendEvent(session.id, {
+        type: 'system:recovery',
+        ts: Date.now(),
+        data: { recoveredState: recoveredContext.state, songCount: recoveredContext.songCount },
+      });
 
       recovered.push(session.id);
     } catch (error) {
@@ -173,10 +187,18 @@ export async function processDjTransition(
   sessionId: string,
   context: DJContext,
   event: DJTransition,
+  userId?: string,
 ): Promise<{ newContext: DJContext; sideEffects: DJSideEffect[] }> {
   const { newContext, sideEffects } = processTransition(context, event, Date.now());
 
   setSessionDjState(sessionId, newContext);
+
+  appendEvent(sessionId, {
+    type: 'dj:stateChanged',
+    ts: Date.now(),
+    userId,
+    data: { from: context.state, to: newContext.state, trigger: event.type },
+  });
 
   for (const effect of sideEffects) {
     switch (effect.type) {
@@ -221,6 +243,13 @@ export async function startSession(params: {
 
   const { djContext, sideEffects } = await initializeDjState(params.sessionId, participants.length);
 
+  appendEvent(params.sessionId, {
+    type: 'party:started',
+    ts: Date.now(),
+    userId: params.hostUserId,
+    data: { participantCount: participants.length },
+  });
+
   return { status: 'active', djContext, sideEffects };
 }
 
@@ -241,6 +270,12 @@ export async function transferHost(
 
   // 3. Update host in DB
   await sessionRepo.updateHost(sessionId, newHostUserId);
+
+  appendEvent(sessionId, {
+    type: 'party:hostTransferred',
+    ts: Date.now(),
+    data: { fromUserId: session.host_user_id, toUserId: newHostUserId },
+  });
 
   return {
     newHostId: newHostUserId,
@@ -267,7 +302,15 @@ export async function handleParticipantJoin(params: {
     guestName: params.role === 'guest' ? params.displayName : undefined,
   });
 
-  // 2. Get current participants + session metadata
+  // 2. Log join event
+  appendEvent(params.sessionId, {
+    type: 'party:joined',
+    ts: Date.now(),
+    userId: params.userId,
+    data: { displayName: params.displayName, role: params.role },
+  });
+
+  // 3. Get current participants + session metadata
   const [participants, session] = await Promise.all([
     sessionRepo.getParticipants(params.sessionId),
     sessionRepo.findById(params.sessionId),
@@ -306,9 +349,31 @@ export async function endSession(
     : context;
 
   // Transition to finale — automatically broadcasts, persists, cancels timers
+  // Note: processDjTransition appends a dj:stateChanged event for END_PARTY internally,
+  // followed by the party:ended event below. This ordering is intentional.
   const { newContext } = await processDjTransition(sessionId, contextForTransition, { type: 'END_PARTY' });
 
-  // Update DB status + ended_at
+  // Step A: Append party:ended event (DJ context still available)
+  const endTs = Date.now();
+  appendEvent(sessionId, {
+    type: 'party:ended',
+    ts: endTs,
+    userId: hostUserId,
+    data: {
+      songCount: context.songCount ?? 0,
+      duration: context.sessionStartedAt ? endTs - context.sessionStartedAt : 0,
+    },
+  });
+
+  // Step B: Flush and write event stream to DB (BEFORE cleanup)
+  const events = flushEventStream(sessionId);
+  if (events.length > 0) {
+    sessionRepo.writeEventStream(sessionId, events).catch((err) => {
+      console.error('[session-manager] Failed to write event stream:', err);
+    });
+  }
+
+  // Step C: Update DB status + ended_at
   await sessionRepo.updateStatus(sessionId, 'ended');
 
   // Clean up in-memory state
@@ -320,7 +385,7 @@ export async function endSession(
   return newContext;
 }
 
-export async function pauseSession(sessionId: string): Promise<DJContext> {
+export async function pauseSession(sessionId: string, userId?: string): Promise<DJContext> {
   const context = getSessionDjState(sessionId);
   if (!context) {
     throw createAppError('SESSION_NOT_FOUND', 'No active DJ state for session', 404);
@@ -348,10 +413,17 @@ export async function pauseSession(sessionId: string): Promise<DJContext> {
   void persistDjState(sessionId, serializeDJContext(updatedContext));
   broadcastDjPause(sessionId, updatedContext);
 
+  appendEvent(sessionId, {
+    type: 'dj:pause',
+    ts: Date.now(),
+    userId,
+    data: { fromState: context.state },
+  });
+
   return updatedContext;
 }
 
-export async function resumeSession(sessionId: string): Promise<DJContext> {
+export async function resumeSession(sessionId: string, userId?: string): Promise<DJContext> {
   const context = getSessionDjState(sessionId);
   if (!context) {
     throw createAppError('SESSION_NOT_FOUND', 'No active DJ state for session', 404);
@@ -385,6 +457,13 @@ export async function resumeSession(sessionId: string): Promise<DJContext> {
   void persistDjState(sessionId, serializeDJContext(updatedContext));
   broadcastDjResume(sessionId, updatedContext);
 
+  appendEvent(sessionId, {
+    type: 'dj:resume',
+    ts: Date.now(),
+    userId,
+    data: { toState: updatedContext.state },
+  });
+
   return updatedContext;
 }
 
@@ -406,6 +485,13 @@ export async function kickPlayer(
 
   // Remove from DB
   await sessionRepo.removeParticipant(sessionId, targetUserId);
+
+  appendEvent(sessionId, {
+    type: 'party:kicked',
+    ts: Date.now(),
+    userId: hostUserId,
+    data: { kickedUserId: targetUserId },
+  });
 
   // Update DJ context participant count
   const context = getSessionDjState(sessionId);

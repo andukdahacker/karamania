@@ -131,6 +131,14 @@ export async function updateDjState(sessionId: string, djState: unknown): Promis
     .execute();
 }
 
+export async function writeEventStream(sessionId: string, events: unknown[]): Promise<void> {
+  await db
+    .updateTable('sessions')
+    .set({ event_stream: JSON.stringify(events) })
+    .where('id', '=', sessionId)
+    .execute();
+}
+
 export async function removeParticipant(sessionId: string, userId: string): Promise<void> {
   await db
     .deleteFrom('session_participants')

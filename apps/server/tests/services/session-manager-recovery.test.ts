@@ -73,6 +73,16 @@ vi.mock('../../src/services/party-code.js', () => ({
   generateUniquePartyCode: vi.fn(),
 }));
 
+const mockAppendEvent = vi.fn();
+vi.mock('../../src/services/event-stream.js', () => ({
+  appendEvent: (...args: unknown[]) => mockAppendEvent(...args),
+  flushEventStream: vi.fn().mockReturnValue([]),
+}));
+
+vi.mock('../../src/services/activity-tracker.js', () => ({
+  removeSession: vi.fn(),
+}));
+
 describe('session-manager recovery', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -439,6 +449,33 @@ describe('session-manager recovery', () => {
     it('returns false for unknown sessions', async () => {
       const { isRecoveryFailed } = await import('../../src/services/session-manager.js');
       expect(isRecoveryFailed('unknown')).toBe(false);
+    });
+  });
+
+  describe('recovery event logging', () => {
+    it('recovered sessions get a system:recovery marker event with recovered state and song count', async () => {
+      const now = Date.now();
+      const djContext = createTestDJContextInState(DJState.song, {
+        sessionId: 'session-recovery',
+        timerStartedAt: now - 5000,
+        timerDurationMs: 180_000,
+        songCount: 3,
+      });
+
+      const session = createTestSession({
+        id: 'session-recovery',
+        status: 'active',
+        dj_state: serializeDJContext(djContext),
+      });
+      mockFindActiveSessions.mockResolvedValue([session]);
+
+      const { recoverActiveSessions } = await import('../../src/services/session-manager.js');
+      await recoverActiveSessions(now);
+
+      expect(mockAppendEvent).toHaveBeenCalledWith('session-recovery', expect.objectContaining({
+        type: 'system:recovery',
+        data: { recoveredState: DJState.song, songCount: 3 },
+      }));
     });
   });
 });

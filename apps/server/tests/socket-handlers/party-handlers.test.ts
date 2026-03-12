@@ -34,6 +34,15 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastDjState: mockBroadcastDjState,
 }));
 
+const mockAppendEvent = vi.fn();
+vi.mock('../../src/services/event-stream.js', () => ({
+  appendEvent: (...args: unknown[]) => mockAppendEvent(...args),
+}));
+
+vi.mock('../../src/services/activity-tracker.js', () => ({
+  recordActivity: vi.fn(),
+}));
+
 function createMockSocket(sessionId = 'test-session-id') {
   const handlers = new Map<string, (data: unknown) => void>();
   const emittedToRoom: Array<{ event: string; data: unknown }> = [];
@@ -126,6 +135,24 @@ describe('party-handlers', () => {
       await handler({ vibe: 'kpop' });
 
       expect(toSpy).toHaveBeenCalledWith('s1');
+    });
+  });
+
+  describe('event stream logging', () => {
+    it('PARTY_VIBE_CHANGED appends party:vibeChanged event', async () => {
+      mockUpdateVibe.mockResolvedValue(undefined);
+      const { socket, handlers } = createMockSocket('session-123');
+
+      const { registerPartyHandlers } = await import('../../src/socket-handlers/party-handlers.js');
+      registerPartyHandlers(socket as never);
+
+      await handlers.get('party:vibeChanged')!({ vibe: 'rock' });
+
+      expect(mockAppendEvent).toHaveBeenCalledWith('session-123', expect.objectContaining({
+        type: 'party:vibeChanged',
+        userId: 'test-user-id',
+        data: { vibe: 'rock' },
+      }));
     });
   });
 

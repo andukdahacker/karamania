@@ -17,6 +17,7 @@ import { EVENTS } from '../shared/events.js';
 import type { AuthenticatedSocket } from '../shared/socket-types.js';
 import { initDjBroadcaster, buildDjStatePayload } from '../services/dj-broadcaster.js';
 import { recordActivity } from '../services/activity-tracker.js';
+import { appendEvent } from '../services/event-stream.js';
 
 // Module-level timer maps for cleanup
 const hostTransferTimers = new Map<string, NodeJS.Timeout>();
@@ -168,7 +169,14 @@ export function setupSocketHandlers(io: SocketIOServer, logger: FastifyBaseLogge
       if (!cleanupTimers.has(sessionId)) {
         cleanupTimers.set(sessionId, new Map());
       }
+      const disconnectedDisplayName = displayName;
       const cleanupTimer = setTimeout(() => {
+        appendEvent(sessionId, {
+          type: 'party:left',
+          ts: Date.now(),
+          userId,
+          data: { displayName: disconnectedDisplayName },
+        });
         removeDisconnectedEntry(sessionId, userId);
         cleanupTimers.get(sessionId)?.delete(userId);
         if (cleanupTimers.get(sessionId)?.size === 0) {

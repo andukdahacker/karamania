@@ -34,6 +34,7 @@ const mockFindById = vi.fn();
 const mockUpdateStatus = vi.fn();
 const mockUpdateHost = vi.fn();
 const mockUpdateDjState = vi.fn();
+const mockWriteEventStream = vi.fn();
 vi.mock('../../src/persistence/session-repository.js', () => ({
   create: mockSessionCreate,
   addParticipant: mockAddParticipant,
@@ -43,6 +44,7 @@ vi.mock('../../src/persistence/session-repository.js', () => ({
   updateStatus: mockUpdateStatus,
   updateHost: mockUpdateHost,
   updateDjState: mockUpdateDjState,
+  writeEventStream: mockWriteEventStream,
 }));
 
 const mockDjContext = {
@@ -87,6 +89,13 @@ vi.mock('../../src/services/dj-state-store.js', () => ({
 vi.mock('../../src/services/timer-scheduler.js', () => ({
   scheduleSessionTimer: vi.fn(),
   cancelSessionTimer: vi.fn(),
+}));
+
+const mockAppendEvent = vi.fn();
+const mockFlushEventStream = vi.fn();
+vi.mock('../../src/services/event-stream.js', () => ({
+  appendEvent: mockAppendEvent,
+  flushEventStream: mockFlushEventStream,
 }));
 
 describe('session-manager', () => {
@@ -404,6 +413,82 @@ describe('session-manager', () => {
 
       expect(result).toBeNull();
       expect(mockUpdateHost).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('event stream logging', () => {
+    it('startSession appends party:started event', async () => {
+      const testSession = createTestSession({ id: 'session-1', status: 'lobby', host_user_id: 'host-user' });
+      mockFindById.mockResolvedValue(testSession);
+      mockGetParticipants.mockResolvedValue([
+        { id: 'p1', user_id: 'host-user', guest_name: null, display_name: 'Host', joined_at: new Date() },
+        { id: 'p2', user_id: null, guest_name: 'Alice', display_name: null, joined_at: new Date() },
+        { id: 'p3', user_id: null, guest_name: 'Bob', display_name: null, joined_at: new Date() },
+      ]);
+      mockUpdateStatus.mockResolvedValue(undefined);
+
+      const { startSession } = await import('../../src/services/session-manager.js');
+      await startSession({ sessionId: 'session-1', hostUserId: 'host-user' });
+
+      expect(mockAppendEvent).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        type: 'party:started',
+        userId: 'host-user',
+        data: { participantCount: 3 },
+      }));
+    });
+
+    it('handleParticipantJoin appends party:joined event', async () => {
+      mockAddParticipantIfNotExists.mockResolvedValue(undefined);
+      mockGetParticipants.mockResolvedValue([]);
+      mockFindById.mockResolvedValue(createTestSession({ id: 'session-1' }));
+
+      const { handleParticipantJoin } = await import('../../src/services/session-manager.js');
+      await handleParticipantJoin({
+        sessionId: 'session-1',
+        userId: 'user-2',
+        role: 'guest',
+        displayName: 'Alice',
+      });
+
+      expect(mockAppendEvent).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        type: 'party:joined',
+        userId: 'user-2',
+        data: { displayName: 'Alice', role: 'guest' },
+      }));
+    });
+
+    it('transferHost appends party:hostTransferred event', async () => {
+      const testSession = createTestSession({ id: 'session-1', status: 'active', host_user_id: 'old-host' });
+      mockFindById.mockResolvedValue(testSession);
+      mockGetParticipants.mockResolvedValue([
+        { id: 'p1', user_id: 'old-host', guest_name: null, display_name: 'OldHost', joined_at: new Date() },
+        { id: 'p2', user_id: 'new-host', guest_name: null, display_name: 'NewHost', joined_at: new Date() },
+      ]);
+      mockUpdateHost.mockResolvedValue(undefined);
+
+      const { transferHost } = await import('../../src/services/session-manager.js');
+      await transferHost('session-1', 'new-host');
+
+      expect(mockAppendEvent).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        type: 'party:hostTransferred',
+        data: { fromUserId: 'old-host', toUserId: 'new-host' },
+      }));
+    });
+
+    it('kickPlayer appends party:kicked event', async () => {
+      const testSession = createTestSession({ id: 'session-1', status: 'active', host_user_id: 'host-user' });
+      mockFindById.mockResolvedValue(testSession);
+      const mockRemoveParticipant = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(await import('../../src/persistence/session-repository.js')).removeParticipant = mockRemoveParticipant;
+
+      const { kickPlayer } = await import('../../src/services/session-manager.js');
+      await kickPlayer('session-1', 'host-user', 'target-user');
+
+      expect(mockAppendEvent).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        type: 'party:kicked',
+        userId: 'host-user',
+        data: { kickedUserId: 'target-user' },
+      }));
     });
   });
 });

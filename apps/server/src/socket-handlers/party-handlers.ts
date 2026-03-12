@@ -5,13 +5,16 @@ import { updateVibe } from '../persistence/session-repository.js';
 import { startSession } from '../services/session-manager.js';
 import { broadcastDjState } from '../services/dj-broadcaster.js';
 import { recordActivity } from '../services/activity-tracker.js';
+import { appendEvent } from '../services/event-stream.js';
 
 export function registerPartyHandlers(socket: AuthenticatedSocket): void {
   socket.on(EVENTS.PARTY_VIBE_CHANGED, async (data: { vibe: string }) => {
     if (!(VALID_VIBES as readonly string[]).includes(data.vibe)) return;
     recordActivity(socket.data.sessionId);
     await updateVibe(socket.data.sessionId, data.vibe);
+    appendEvent(socket.data.sessionId, { type: 'party:vibeChanged', ts: Date.now(), userId: socket.data.userId, data: { vibe: data.vibe } });
     socket.to(socket.data.sessionId).emit(EVENTS.PARTY_VIBE_CHANGED, { vibe: data.vibe });
+
   });
 
   socket.on(EVENTS.PARTY_START, async () => {
