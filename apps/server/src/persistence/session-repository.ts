@@ -175,6 +175,19 @@ export async function getParticipantScore(
   return result?.participation_score;
 }
 
+export async function updateTopAward(
+  sessionId: string,
+  userId: string,
+  award: string
+): Promise<void> {
+  await db
+    .updateTable('session_participants')
+    .set({ top_award: award })
+    .where('session_id', '=', sessionId)
+    .where('user_id', '=', userId)
+    .execute();
+}
+
 export async function updateStatus(sessionId: string, status: string) {
   const values: Record<string, unknown> = { status };
   if (status === 'ended') {

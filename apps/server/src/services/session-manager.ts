@@ -12,8 +12,9 @@ import { broadcastDjState, broadcastDjPause, broadcastDjResume } from '../servic
 import { removeSession } from '../services/connection-tracker.js';
 import { removeSession as removeActivitySession } from '../services/activity-tracker.js';
 import { DJState } from '../dj-engine/types.js';
-import { appendEvent, flushEventStream } from '../services/event-stream.js';
+import { appendEvent, flushEventStream, getEventStream, type SessionEvent } from '../services/event-stream.js';
 import { calculateScoreIncrement, ACTION_TIER_MAP } from '../services/participation-scoring.js';
+import { generateAward, AWARD_TEMPLATES, AwardTone, type AwardContext } from '../services/award-generator.js';
 
 // In-memory score cache — avoids DB read race condition with fire-and-forget writes
 const scoreCache = new Map<string, number>();
@@ -32,6 +33,105 @@ export function clearScoreCache(sessionId?: string): void {
   } else {
     scoreCache.clear();
   }
+}
+
+// In-memory tracking of awards given per session (for dedup)
+const sessionAwards = new Map<string, string[]>();
+
+export function clearSessionAwards(sessionId: string): void {
+  sessionAwards.delete(sessionId);
+}
+
+function countRecentReactions(events: SessionEvent[]): number {
+  // Scan backward from end — count reaction:sent events until we hit the song start
+  let count = 0;
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i]!;
+    if (event.type === 'dj:stateChanged' && event.data.to === DJState.song) {
+      break; // Found start of most recent song, stop counting
+    }
+    if (event.type === 'participation:scored' && event.data.action === 'reaction:sent') {
+      count++;
+    }
+  }
+  return count;
+}
+
+function checkCardCompletion(_events: SessionEvent[], _performerUserId: string): boolean {
+  // Epic 4 will add card:completed events — for now always returns false
+  return false;
+}
+
+function buildAwardContext(
+  sessionId: string,
+  performerUserId: string,
+): AwardContext {
+  const djContext = getSessionDjState(sessionId);
+  const songPosition = djContext?.songCount ?? 1;
+  const participantCount = djContext?.participantCount ?? 2;
+
+  const scoreCacheKey = getScoreCacheKey(sessionId, performerUserId);
+  const participationScore = scoreCache.get(scoreCacheKey) ?? 0;
+
+  const eventStream = getEventStream(sessionId);
+  const reactionCount = countRecentReactions(eventStream);
+  const cardCompleted = checkCardCompletion(eventStream, performerUserId);
+
+  const previousAwards = sessionAwards.get(sessionId) ?? [];
+
+  return {
+    songPosition,
+    cardCompleted,
+    reactionCount,
+    participationScore,
+    participantCount,
+    previousAwards,
+  };
+}
+
+export async function generateCeremonyAward(
+  sessionId: string,
+  performerUserId: string,
+  ceremonyType: 'full' | 'quick',
+): Promise<{ award: string; tone: AwardTone } | null> {
+  if (!performerUserId) return null;
+
+  const context = buildAwardContext(sessionId, performerUserId);
+  const award = generateAward(context);
+
+  // Track for dedup
+  const awards = sessionAwards.get(sessionId) ?? [];
+  awards.push(award);
+  sessionAwards.set(sessionId, awards);
+
+  // Persist top_award (fire-and-forget)
+  sessionRepo.updateTopAward(sessionId, performerUserId, award).catch((err) => {
+    console.error(`[session-manager] Failed to persist top_award for ${performerUserId}:`, err);
+  });
+
+  // Find the tone for the event stream
+  const template = AWARD_TEMPLATES.find(t => t.title === award);
+  const tone = template?.tone ?? AwardTone.comedic;
+
+  // Log to event stream
+  appendEvent(sessionId, {
+    type: 'ceremony:awardGenerated',
+    ts: Date.now(),
+    userId: performerUserId,
+    data: {
+      award,
+      songPosition: context.songPosition,
+      ceremonyType,
+      tone,
+      contextFactors: {
+        cardCompleted: context.cardCompleted,
+        reactionCount: context.reactionCount,
+        participationScore: context.participationScore,
+      },
+    },
+  });
+
+  return { award, tone };
 }
 
 export async function recordParticipationAction(
@@ -461,6 +561,7 @@ export async function endSession(
   removeSession(sessionId);
   removeActivitySession(sessionId);
   clearScoreCache(sessionId);
+  clearSessionAwards(sessionId);
 
   return newContext;
 }

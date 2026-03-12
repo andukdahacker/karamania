@@ -455,6 +455,28 @@ describe('session-repository', () => {
     });
   });
 
+  describe('updateTopAward', () => {
+    it('calls updateTable with set({ top_award }) and where chain', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const { updateTopAward } = await import('../../src/persistence/session-repository.js');
+      await updateTopAward('session-1', 'user-1', 'Vocal Menace');
+
+      expect(mockSet).toHaveBeenCalledWith({ top_award: 'Vocal Menace' });
+      expect(mockWhere).toHaveBeenCalledWith('session_id', '=', 'session-1');
+      expect(mockWhere).toHaveBeenCalledWith('user_id', '=', 'user-1');
+    });
+
+    it('passes correct award string', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const { updateTopAward } = await import('../../src/persistence/session-repository.js');
+      await updateTopAward('session-1', 'user-1', 'Heart of the Party');
+
+      expect(mockSet).toHaveBeenCalledWith({ top_award: 'Heart of the Party' });
+    });
+  });
+
   describe('getParticipantScore', () => {
     it('returns participation_score when participant exists', async () => {
       mockExecuteTakeFirst.mockResolvedValue({ participation_score: 42 });

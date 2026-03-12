@@ -1,4 +1,5 @@
 import type { DJState } from '../dj-engine/types.js';
+import type { AwardTone } from '../services/award-generator.js';
 
 export type SessionEvent =
   | { type: 'dj:stateChanged'; ts: number; userId?: string; data: { from: DJState; to: DJState; trigger: string } }
@@ -16,6 +17,7 @@ export type SessionEvent =
   | { type: 'host:songOver'; ts: number; userId: string; data: { fromState: DJState } }
   | { type: 'ceremony:typeSelected'; ts: number; data: { ceremonyType: 'full' | 'quick'; songCount: number; participantCount: number } }
   | { type: 'participation:scored'; ts: number; userId: string; data: { action: string; tier: string; points: number; rewardMultiplier: number; totalScore: number } }
+  | { type: 'ceremony:awardGenerated'; ts: number; userId: string; data: { award: string; songPosition: number; ceremonyType: 'full' | 'quick'; tone: AwardTone; contextFactors: { cardCompleted: boolean; reactionCount: number; participationScore: number } } }
   | { type: 'system:recovery'; ts: number; data: { recoveredState: DJState; songCount: number } };
 
 const streams = new Map<string, SessionEvent[]>();
