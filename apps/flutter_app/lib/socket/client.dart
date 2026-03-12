@@ -202,6 +202,7 @@ class SocketClient {
         timerStartedAt: payload['timerStartedAt'] as int?,
         timerDurationMs: payload['timerDurationMs'] as int?,
         isPaused: payload['isPaused'] as bool?,
+        ceremonyType: payload['ceremonyType'] as String?,
       );
       _stateTransitionAudio.onStateChanged(
         djState,
@@ -237,6 +238,7 @@ class SocketClient {
         timerStartedAt: payload['timerStartedAt'] as int?,
         timerDurationMs: payload['timerDurationMs'] as int?,
         isPaused: payload['isPaused'] as bool?,
+        ceremonyType: payload['ceremonyType'] as String?,
       );
       _stateTransitionAudio.onResume();
     });

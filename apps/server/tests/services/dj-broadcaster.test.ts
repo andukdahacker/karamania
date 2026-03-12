@@ -33,6 +33,7 @@ describe('dj-broadcaster', () => {
         isPaused: false,
         pausedFromState: null,
         timerRemainingMs: null,
+        ceremonyType: null,
       });
     });
 
@@ -73,6 +74,7 @@ describe('dj-broadcaster', () => {
         'isPaused',
         'pausedFromState',
         'timerRemainingMs',
+        'ceremonyType',
       ]);
     });
   });
@@ -110,6 +112,7 @@ describe('dj-broadcaster', () => {
         isPaused: false,
         pausedFromState: null,
         timerRemainingMs: null,
+        ceremonyType: null,
       });
     });
 
@@ -146,6 +149,30 @@ describe('dj-broadcaster', () => {
 
       const payload = buildDjStatePayload(context);
       expect(payload.isPaused).toBe(false);
+    });
+  });
+
+  describe('ceremonyType in broadcast payload', () => {
+    it('includes ceremonyType from metadata when state is ceremony', async () => {
+      const { buildDjStatePayload } = await import('../../src/services/dj-broadcaster.js');
+      const context = createTestDJContextInState(DJState.ceremony, {
+        sessionId: 'session-1',
+        metadata: { ceremonyType: 'full', lastCeremonyType: 'full' },
+      });
+
+      const payload = buildDjStatePayload(context);
+      expect(payload.ceremonyType).toBe('full');
+    });
+
+    it('returns null ceremonyType when state is not ceremony', async () => {
+      const { buildDjStatePayload } = await import('../../src/services/dj-broadcaster.js');
+      const context = createTestDJContextInState(DJState.song, {
+        sessionId: 'session-1',
+        metadata: { ceremonyType: 'full', lastCeremonyType: 'full' },
+      });
+
+      const payload = buildDjStatePayload(context);
+      expect(payload.ceremonyType).toBeNull();
     });
   });
 

@@ -200,6 +200,20 @@ export async function processDjTransition(
     data: { from: context.state, to: newContext.state, trigger: event.type },
   });
 
+  if (newContext.state === DJState.ceremony) {
+    appendEvent(sessionId, {
+      type: 'ceremony:typeSelected',
+      ts: Date.now(),
+      data: {
+        ceremonyType: (newContext.metadata.ceremonyType === 'full' || newContext.metadata.ceremonyType === 'quick')
+          ? newContext.metadata.ceremonyType
+          : 'quick',
+        songCount: newContext.songCount,
+        participantCount: newContext.participantCount,
+      },
+    });
+  }
+
   for (const effect of sideEffects) {
     switch (effect.type) {
       case 'persist':

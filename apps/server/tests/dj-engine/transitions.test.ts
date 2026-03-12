@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { transition } from '../../src/dj-engine/transitions.js';
-import { DJState, DJEngineError } from '../../src/dj-engine/types.js';
+import { DJState, DJEngineError, CeremonyType } from '../../src/dj-engine/types.js';
 import type { DJTransition } from '../../src/dj-engine/types.js';
 import { createTestDJContext, createTestDJContextInState } from '../factories/dj-state.js';
 
@@ -214,6 +214,84 @@ describe('transition', () => {
       const ctx = createTestDJContextInState(DJState.songSelection, { participantCount: 3 });
       const result = transition(ctx, { type: 'SONG_SELECTED' }, NOW);
       expect(result.metadata.forcedQuickCeremony).toBeUndefined();
+    });
+  });
+
+  describe('ceremony type metadata', () => {
+    it('sets ceremonyType in metadata when entering ceremony state', () => {
+      const ctx = createTestDJContextInState(DJState.song, { songCount: 0 });
+      const result = transition(ctx, { type: 'SONG_ENDED' }, NOW);
+      expect(result.state).toBe(DJState.ceremony);
+      expect(result.metadata.ceremonyType).toBeDefined();
+    });
+
+    it('sets lastCeremonyType in metadata when entering ceremony state', () => {
+      const ctx = createTestDJContextInState(DJState.song, { songCount: 0 });
+      const result = transition(ctx, { type: 'SONG_ENDED' }, NOW);
+      expect(result.metadata.lastCeremonyType).toBeDefined();
+    });
+
+    it('preserves lastCeremonyType for non-ceremony state', () => {
+      const ctx = createTestDJContextInState(DJState.ceremony, {
+        metadata: { lastCeremonyType: CeremonyType.full },
+      });
+      const result = transition(ctx, { type: 'CEREMONY_DONE' }, NOW);
+      expect(result.state).toBe(DJState.interlude);
+      expect(result.metadata.lastCeremonyType).toBe(CeremonyType.full);
+    });
+
+    it('does not set lastCeremonyType for non-ceremony state if not previously set', () => {
+      const ctx = createTestDJContextInState(DJState.songSelection);
+      const result = transition(ctx, { type: 'SONG_SELECTED' }, NOW);
+      expect(result.metadata.lastCeremonyType).toBeUndefined();
+    });
+
+    it('forcedQuickCeremony still set for <3 participants', () => {
+      const ctx = createTestDJContextInState(DJState.song, { participantCount: 2, songCount: 0 });
+      const result = transition(ctx, { type: 'SONG_ENDED' }, NOW);
+      expect(result.metadata.forcedQuickCeremony).toBe(true);
+    });
+
+    it('ceremony type is full for first song transition (songCount 0→1)', () => {
+      const ctx = createTestDJContextInState(DJState.song, { songCount: 0 });
+      const result = transition(ctx, { type: 'SONG_ENDED' }, NOW);
+      expect(result.state).toBe(DJState.ceremony);
+      expect(result.metadata.ceremonyType).toBe(CeremonyType.full);
+    });
+
+    it('ceremony type is quick after consecutive full', () => {
+      const ctx = createTestDJContextInState(DJState.song, {
+        songCount: 2,
+        metadata: { lastCeremonyType: CeremonyType.full },
+      });
+      const result = transition(ctx, { type: 'SONG_ENDED' }, NOW);
+      expect(result.state).toBe(DJState.ceremony);
+      expect(result.metadata.ceremonyType).toBe(CeremonyType.quick);
+    });
+
+    it('HOST_OVERRIDE to ceremony state triggers ceremony type selection', () => {
+      const ctx = createTestDJContextInState(DJState.interlude, { songCount: 1 });
+      const result = transition(ctx, { type: 'HOST_OVERRIDE', targetState: DJState.ceremony }, NOW);
+      expect(result.state).toBe(DJState.ceremony);
+      expect(result.metadata.ceremonyType).toBeDefined();
+      expect(result.metadata.lastCeremonyType).toBeDefined();
+    });
+
+    it('HOST_OVERRIDE to ceremony with songCount >= 5 produces quick', () => {
+      const ctx = createTestDJContextInState(DJState.interlude, { songCount: 6 });
+      const result = transition(ctx, { type: 'HOST_OVERRIDE', targetState: DJState.ceremony }, NOW);
+      expect(result.state).toBe(DJState.ceremony);
+      expect(result.metadata.ceremonyType).toBe(CeremonyType.quick);
+    });
+
+    it('ceremonyType is cleared from metadata on non-ceremony transitions', () => {
+      const ctx = createTestDJContextInState(DJState.ceremony, {
+        metadata: { ceremonyType: CeremonyType.full, lastCeremonyType: CeremonyType.full },
+      });
+      const result = transition(ctx, { type: 'CEREMONY_DONE' }, NOW);
+      expect(result.state).toBe(DJState.interlude);
+      expect(result.metadata.ceremonyType).toBeUndefined();
+      expect(result.metadata.lastCeremonyType).toBe(CeremonyType.full);
     });
   });
 

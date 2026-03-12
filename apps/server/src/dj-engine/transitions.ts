@@ -4,6 +4,7 @@
 import { DJState, DJEngineError } from './types.js';
 import type { DJContext, DJTransition } from './types.js';
 import { getStateConfig, getNextCycleState, isValidOverrideTarget } from './states.js';
+import { selectCeremonyType } from './ceremony-selection.js';
 
 /**
  * Guard: can start a session (lobby -> songSelection)?
@@ -87,6 +88,23 @@ export function transition(context: DJContext, event: DJTransition, now: number)
 
   const nextState = computeNextState(context, event);
 
+  // Determine ceremony type metadata
+  let ceremonyMetadata: Record<string, unknown> = {};
+  if (nextState === DJState.ceremony) {
+    const evalContext: DJContext = {
+      ...context,
+      state: nextState,
+      songCount: event.type === 'SONG_ENDED' ? context.songCount + 1 : context.songCount,
+      cycleHistory: [...context.cycleHistory, nextState],
+    };
+    const ceremonyType = selectCeremonyType(evalContext);
+    ceremonyMetadata = { ceremonyType, lastCeremonyType: ceremonyType };
+  } else {
+    ceremonyMetadata = context.metadata.lastCeremonyType
+      ? { ceremonyType: undefined, lastCeremonyType: context.metadata.lastCeremonyType }
+      : { ceremonyType: undefined };
+  }
+
   // Build new context (immutable — never mutate input)
   return {
     ...context,
@@ -94,6 +112,7 @@ export function transition(context: DJContext, event: DJTransition, now: number)
     cycleHistory: [...context.cycleHistory, nextState],
     metadata: {
       ...context.metadata,
+      ...ceremonyMetadata,
       ...(context.participantCount < 3 ? { forcedQuickCeremony: true } : {}),
     },
     sessionStartedAt: event.type === 'SESSION_STARTED' ? now : context.sessionStartedAt,

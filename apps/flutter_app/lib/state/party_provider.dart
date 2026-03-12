@@ -49,6 +49,7 @@ class PartyProvider extends ChangeNotifier {
   String? _kickedMessage;
   bool _isPaused = false;
   String? _pausedFromState;
+  String? _ceremonyType;
 
   DJState get djState => _djState;
   PartyVibe get vibe => _vibe;
@@ -72,6 +73,7 @@ class PartyProvider extends ChangeNotifier {
   String? get kickedMessage => _kickedMessage;
   bool get isPaused => _isPaused;
   String? get pausedFromState => _pausedFromState;
+  String? get ceremonyType => _ceremonyType;
 
   /// Background color driven by current DJ state and vibe.
   Color get backgroundColor => djStateBackgroundColor(_djState, _vibe);
@@ -84,8 +86,10 @@ class PartyProvider extends ChangeNotifier {
     int? timerStartedAt,
     int? timerDurationMs,
     bool? isPaused,
+    String? ceremonyType,
   }) {
     _djState = state;
+    _ceremonyType = ceremonyType;
     _songCount = songCount ?? _songCount;
     _currentPerformer = currentPerformer;
     _timerStartedAt = timerStartedAt;
@@ -269,6 +273,7 @@ class PartyProvider extends ChangeNotifier {
     _currentPerformer = null;
     _timerStartedAt = null;
     _timerDurationMs = null;
+    _ceremonyType = null;
     if (_wakelockEnabled) {
       _wakelockEnabled = false;
       _wakelockToggle(false);
@@ -283,6 +288,7 @@ class PartyProvider extends ChangeNotifier {
     _currentPerformer = null;
     _timerStartedAt = null;
     _timerDurationMs = null;
+    _ceremonyType = null;
     if (_wakelockEnabled) {
       _wakelockEnabled = false;
       _wakelockToggle(false);

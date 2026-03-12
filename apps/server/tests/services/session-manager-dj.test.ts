@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createTestSession } from '../factories/session.js';
 import { createTestDJContext } from '../factories/dj-state.js';
+import { DJState } from '../../src/dj-engine/types.js';
 
 vi.mock('../../src/config.js', () => ({
   config: {
@@ -834,6 +835,68 @@ describe('session-manager DJ functions', () => {
         userId: 'host-user-1',
         data: { kickedUserId: 'target-user-1' },
       }));
+    });
+  });
+
+  describe('ceremony:typeSelected event logging', () => {
+    it('processDjTransition to ceremony state appends ceremony:typeSelected event', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song, songCount: 1 });
+      const newContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        songCount: 2,
+        metadata: { ceremonyType: 'full', lastCeremonyType: 'full' },
+      });
+
+      mockProcessTransition.mockReturnValue({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      expect(mockAppendEvent).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        type: 'ceremony:typeSelected',
+        data: expect.objectContaining({
+          ceremonyType: 'full',
+          songCount: 2,
+        }),
+      }));
+    });
+
+    it('event data includes correct participantCount', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song, participantCount: 5 });
+      const newContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        participantCount: 5,
+        metadata: { ceremonyType: 'quick', lastCeremonyType: 'quick' },
+      });
+
+      mockProcessTransition.mockReturnValue({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      expect(mockAppendEvent).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        type: 'ceremony:typeSelected',
+        data: expect.objectContaining({
+          participantCount: 5,
+        }),
+      }));
+    });
+
+    it('does not append ceremony:typeSelected for non-ceremony transitions', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.songSelection });
+      const newContext = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
+
+      mockProcessTransition.mockReturnValue({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_SELECTED' });
+
+      const ceremonyEvents = mockAppendEvent.mock.calls.filter(
+        (call: unknown[]) => (call[1] as { type: string }).type === 'ceremony:typeSelected',
+      );
+      expect(ceremonyEvents).toHaveLength(0);
     });
   });
 

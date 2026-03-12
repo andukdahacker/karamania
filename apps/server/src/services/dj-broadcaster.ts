@@ -1,5 +1,6 @@
 import type { Server as SocketIOServer } from 'socket.io';
 import type { DJContext } from '../dj-engine/types.js';
+import { DJState } from '../dj-engine/types.js';
 import { EVENTS } from '../shared/events.js';
 
 let io: SocketIOServer | null = null;
@@ -19,6 +20,7 @@ export function buildDjStatePayload(context: DJContext): {
   isPaused: boolean;
   pausedFromState: string | null;
   timerRemainingMs: number | null;
+  ceremonyType: string | null;
 } {
   return {
     state: context.state,
@@ -31,6 +33,9 @@ export function buildDjStatePayload(context: DJContext): {
     isPaused: context.isPaused,
     pausedFromState: context.pausedFromState,
     timerRemainingMs: context.timerRemainingMs,
+    ceremonyType: context.state === DJState.ceremony
+      ? (context.metadata.ceremonyType as string | undefined) ?? null
+      : null,
   };
 }
 

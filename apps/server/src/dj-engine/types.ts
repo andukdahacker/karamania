@@ -18,6 +18,17 @@ export const DJState = {
 export type DJState = (typeof DJState)[keyof typeof DJState];
 
 /**
+ * Ceremony types: full (anticipation → reveal) or quick (immediate reveal).
+ * Selected by ceremony-selection.ts based on session context.
+ */
+export const CeremonyType = {
+  full: 'full',
+  quick: 'quick',
+} as const;
+
+export type CeremonyType = (typeof CeremonyType)[keyof typeof CeremonyType];
+
+/**
  * All valid transition event types for the DJ state machine.
  * Pause/resume are NOT transitions — they are session-level operations (Story 2.6).
  */

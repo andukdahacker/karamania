@@ -60,7 +60,7 @@ development_status:
   2-6-pause-resume-and-bridge-moments: done
   2-7-audio-cues-and-state-transition-sounds: done
   2-8-event-stream-logging: done
-  2-9-ceremony-type-selection-rules: backlog
+  2-9-ceremony-type-selection-rules: done
   epic-2-retrospective: optional
 
   # Epic 3: Ceremonies & Awards (5 stories)
