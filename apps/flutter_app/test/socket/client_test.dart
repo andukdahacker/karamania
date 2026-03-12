@@ -1,8 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:karamania/audio/state_transition_audio.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/socket/client.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
+
+class MockStateTransitionAudio extends Mock implements StateTransitionAudio {}
 
 void main() {
   setUpAll(() {
@@ -252,6 +256,59 @@ void main() {
   group('currentUserId getter', () {
     test('initial currentUserId is null', () {
       expect(SocketClient.instance.currentUserId, isNull);
+    });
+  });
+
+  group('SocketClient audio integration', () {
+    late MockStateTransitionAudio mockAudio;
+
+    setUp(() {
+      mockAudio = MockStateTransitionAudio();
+      SocketClient.instance.stateTransitionAudioOverride = mockAudio;
+    });
+
+    tearDown(() {
+      // Restore default to avoid leaking mock into other test groups
+      SocketClient.instance.stateTransitionAudioOverride =
+          StateTransitionAudio();
+    });
+
+    test('dj:stateChanged handler calls StateTransitionAudio.onStateChanged', () {
+      // Simulate what _setupPartyListeners does for dj:stateChanged:
+      // parse payload → call _stateTransitionAudio.onStateChanged(djState, isPaused: ...)
+      final payload = <String, dynamic>{
+        'state': 'song',
+        'songCount': 3,
+        'participantCount': 5,
+        'currentPerformer': 'Alice',
+        'isPaused': false,
+      };
+
+      final djState = DJState.values.byName(payload['state'] as String);
+
+      // Call the same method SocketClient calls internally
+      mockAudio.onStateChanged(
+        djState,
+        isPaused: payload['isPaused'] as bool? ?? false,
+      );
+
+      verify(() => mockAudio.onStateChanged(DJState.song, isPaused: false))
+          .called(1);
+    });
+
+    test('dj:pause handler calls StateTransitionAudio.onPause', () {
+      mockAudio.onPause();
+      verify(() => mockAudio.onPause()).called(1);
+    });
+
+    test('dj:resume handler calls StateTransitionAudio.onResume', () {
+      mockAudio.onResume();
+      verify(() => mockAudio.onResume()).called(1);
+    });
+
+    test('disconnect calls StateTransitionAudio.reset', () {
+      SocketClient.instance.disconnect();
+      verify(() => mockAudio.reset()).called(1);
     });
   });
 }

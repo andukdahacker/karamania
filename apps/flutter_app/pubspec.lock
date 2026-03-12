@@ -191,6 +191,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.0.0"
+  flutter_soloud:
+    dependency: "direct main"
+    description:
+      name: flutter_soloud
+      sha256: eb0e7816aaf326cac6a15b68ef6a249a30b18111a7b8fcb36a17b00d2cffb2e7
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.5.0"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -297,6 +305,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
+  mocktail:
+    dependency: "direct dev"
+    description:
+      name: mocktail
+      sha256: "890df3f9688106f25755f26b1c60589a92b3ab91a22b8b224947ad041bf172d8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.4"
   nested:
     dependency: transitive
     description:

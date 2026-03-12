@@ -11,6 +11,7 @@ import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/socket/client.dart';
 import 'package:karamania/state/timeline_provider.dart';
 import 'package:karamania/api/api_service.dart';
+import 'package:karamania/audio/audio_engine.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,14 @@ Future<void> bootstrap() async {
       iosBundleId: config.firebaseIosBundleId,
     ),
   );
+
+  // Audio engine init — graceful degradation if fails
+  try {
+    await AudioEngine.instance.init();
+    await AudioEngine.instance.preloadAll();
+  } catch (e) {
+    debugPrint('Audio init failed: $e');
+  }
 
   runApp(
     MultiProvider(

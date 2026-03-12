@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:karamania/api/api_service.dart';
+import 'package:karamania/audio/audio_engine.dart';
+import 'package:karamania/audio/state_transition_audio.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/party_provider.dart';
@@ -20,6 +23,13 @@ class SocketClient {
   Timer? _disconnectUiTimer;
   Timer? _hostTransferBannerTimer;
   PartyProvider? _partyProvider;
+  StateTransitionAudio _stateTransitionAudio = StateTransitionAudio();
+
+  /// Replace the [StateTransitionAudio] instance for testing.
+  @visibleForTesting
+  set stateTransitionAudioOverride(StateTransitionAudio audio) {
+    _stateTransitionAudio = audio;
+  }
 
   bool get isConnected => _isConnected;
   String? get currentSessionId => _currentSessionId;
@@ -96,6 +106,7 @@ class SocketClient {
     _disconnectUiTimer = null;
     _hostTransferBannerTimer?.cancel();
     _hostTransferBannerTimer = null;
+    _stateTransitionAudio.reset();
     _partyProvider?.onSessionEnd();
     _partyProvider = null;
     _userId = null;
@@ -192,6 +203,10 @@ class SocketClient {
         timerDurationMs: payload['timerDurationMs'] as int?,
         isPaused: payload['isPaused'] as bool?,
       );
+      _stateTransitionAudio.onStateChanged(
+        djState,
+        isPaused: payload['isPaused'] as bool? ?? false,
+      );
     });
 
     // DJ pause event
@@ -201,6 +216,7 @@ class SocketClient {
         pausedFromState: payload['pausedFromState'] as String? ?? '',
         timerRemainingMs: payload['timerRemainingMs'] as int?,
       );
+      _stateTransitionAudio.onPause();
     });
 
     // DJ resume event — carries full state payload like dj:stateChanged
@@ -222,12 +238,12 @@ class SocketClient {
         timerDurationMs: payload['timerDurationMs'] as int?,
         isPaused: payload['isPaused'] as bool?,
       );
-      // Note: onDjResume() not needed — onDjStateUpdate with isPaused:false
-      // already clears pause state and calls notifyListeners() once.
+      _stateTransitionAudio.onResume();
     });
 
     // Party ended event
     on('party:ended', (_) {
+      _stateTransitionAudio.reset();
       partyProvider.onSessionEnded();
     });
 
@@ -236,6 +252,7 @@ class SocketClient {
       final payload = data as Map<String, dynamic>;
       final userId = payload['userId'] as String;
       if (userId == _userId) {
+        _stateTransitionAudio.reset();
         partyProvider.onKicked();
         disconnect();
       } else {
@@ -308,6 +325,7 @@ class SocketClient {
     required String serverUrl,
     String? displayName,
     String? vibe,
+    bool accessibilityEqualVolume = false,
   }) async {
     partyProvider.onCreatePartyLoading(LoadingState.loading);
     try {
@@ -343,6 +361,10 @@ class SocketClient {
         userId: guestId ?? authProvider.firebaseUser?.uid ?? '',
         partyProvider: partyProvider,
       );
+      AudioEngine.instance.setRole(
+        isHost: true,
+        accessibilityEqualVolume: accessibilityEqualVolume,
+      );
     } catch (e) {
       partyProvider.onCreatePartyLoading(LoadingState.error);
       rethrow;
@@ -356,6 +378,7 @@ class SocketClient {
     required String serverUrl,
     required String displayName,
     required String partyCode,
+    bool accessibilityEqualVolume = false,
   }) async {
     partyProvider.onJoinPartyLoading(LoadingState.loading);
     try {
@@ -386,6 +409,10 @@ class SocketClient {
         displayName: displayName,
         userId: guestId,
         partyProvider: partyProvider,
+      );
+      AudioEngine.instance.setRole(
+        isHost: false,
+        accessibilityEqualVolume: accessibilityEqualVolume,
       );
     } catch (e) {
       partyProvider.onJoinPartyLoading(LoadingState.error);
