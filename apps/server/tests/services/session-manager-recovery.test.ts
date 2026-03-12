@@ -28,6 +28,8 @@ vi.mock('../../src/persistence/session-repository.js', () => ({
   updateStatus: (...args: unknown[]) => mockUpdateStatus(...args),
   updateDjState: (...args: unknown[]) => mockUpdateDjState(...args),
   findById: vi.fn(),
+  incrementParticipationScore: vi.fn().mockResolvedValue(undefined),
+  getParticipantScore: vi.fn(),
 }));
 
 // Mock the dj-state-store to track calls

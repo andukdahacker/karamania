@@ -13,6 +13,66 @@ import { removeSession } from '../services/connection-tracker.js';
 import { removeSession as removeActivitySession } from '../services/activity-tracker.js';
 import { DJState } from '../dj-engine/types.js';
 import { appendEvent, flushEventStream } from '../services/event-stream.js';
+import { calculateScoreIncrement, ACTION_TIER_MAP } from '../services/participation-scoring.js';
+
+// In-memory score cache — avoids DB read race condition with fire-and-forget writes
+const scoreCache = new Map<string, number>();
+
+function getScoreCacheKey(sessionId: string, userId: string): string {
+  return `${sessionId}:${userId}`;
+}
+
+export function clearScoreCache(sessionId?: string): void {
+  if (sessionId) {
+    for (const key of scoreCache.keys()) {
+      if (key.startsWith(`${sessionId}:`)) {
+        scoreCache.delete(key);
+      }
+    }
+  } else {
+    scoreCache.clear();
+  }
+}
+
+export async function recordParticipationAction(
+  sessionId: string,
+  userId: string,
+  action: string,
+  rewardMultiplier: number = 1.0
+): Promise<{ points: number; totalScore: number } | null> {
+  const increment = calculateScoreIncrement(action, rewardMultiplier);
+  if (increment === 0) return null;
+
+  // Fire-and-forget DB update (same pattern as DJ state persistence)
+  sessionRepo.incrementParticipationScore(sessionId, userId, increment).catch((err) => {
+    console.error(`[session-manager] Failed to persist score for ${userId}:`, err);
+  });
+
+  // Track score in memory to avoid read-after-write race condition
+  const cacheKey = getScoreCacheKey(sessionId, userId);
+  const cachedScore = scoreCache.get(cacheKey) ?? 0;
+  const totalScore = cachedScore + increment;
+  scoreCache.set(cacheKey, totalScore);
+
+  // Log to event stream
+  const tier = ACTION_TIER_MAP[action];
+  if (tier) {
+    appendEvent(sessionId, {
+      type: 'participation:scored',
+      ts: Date.now(),
+      userId,
+      data: {
+        action,
+        tier,
+        points: increment,
+        rewardMultiplier,
+        totalScore,
+      },
+    });
+  }
+
+  return { points: increment, totalScore };
+}
 
 // Set of session IDs that failed recovery — checked during client reconnection
 const failedRecoverySessionIds = new Set<string>();
@@ -324,7 +384,12 @@ export async function handleParticipantJoin(params: {
     data: { displayName: params.displayName, role: params.role },
   });
 
-  // 3. Get current participants + session metadata
+  // 3. Score the join action (passive tier, 1pt) — only for authenticated users
+  if (params.role !== 'guest') {
+    recordParticipationAction(params.sessionId, params.userId, 'party:joined', 1.0).catch(() => {});
+  }
+
+  // 4. Get current participants + session metadata
   const [participants, session] = await Promise.all([
     sessionRepo.getParticipants(params.sessionId),
     sessionRepo.findById(params.sessionId),
@@ -395,6 +460,7 @@ export async function endSession(
   cancelSessionTimer(sessionId);
   removeSession(sessionId);
   removeActivitySession(sessionId);
+  clearScoreCache(sessionId);
 
   return newContext;
 }

@@ -64,8 +64,8 @@ development_status:
   epic-2-retrospective: optional
 
   # Epic 3: Ceremonies & Awards (5 stories)
-  epic-3: backlog
-  3-1-participation-scoring-system: backlog
+  epic-3: in-progress
+  3-1-participation-scoring-system: done
   3-2-award-template-engine: backlog
   3-3-full-ceremony-experience: backlog
   3-4-quick-ceremony: backlog

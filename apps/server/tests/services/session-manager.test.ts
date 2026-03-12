@@ -45,6 +45,8 @@ vi.mock('../../src/persistence/session-repository.js', () => ({
   updateHost: mockUpdateHost,
   updateDjState: mockUpdateDjState,
   writeEventStream: mockWriteEventStream,
+  incrementParticipationScore: vi.fn().mockResolvedValue(undefined),
+  getParticipantScore: vi.fn(),
 }));
 
 const mockDjContext = {

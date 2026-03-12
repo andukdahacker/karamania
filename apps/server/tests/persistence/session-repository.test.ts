@@ -74,7 +74,14 @@ vi.mock('../../src/db/connection.js', () => {
       return {
         where: (...whereArgs: unknown[]) => {
           mockWhere(...whereArgs);
-          return { execute: mockExecute, executeTakeFirst: mockExecuteTakeFirst };
+          return {
+            execute: mockExecute,
+            executeTakeFirst: mockExecuteTakeFirst,
+            where: (...innerArgs: unknown[]) => {
+              mockWhere(...innerArgs);
+              return { execute: mockExecute, executeTakeFirst: mockExecuteTakeFirst };
+            },
+          };
         },
       };
     },
@@ -84,6 +91,21 @@ vi.mock('../../src/db/connection.js', () => {
     db: {
       selectFrom: vi.fn().mockReturnValue({
         selectAll: () => createWhereChain(),
+        select: (...selectArgs: unknown[]) => {
+          mockSelect(...selectArgs);
+          return {
+            where: (...args: unknown[]) => {
+              mockWhere(...args);
+              return {
+                executeTakeFirst: mockExecuteTakeFirst,
+                where: (...innerArgs: unknown[]) => {
+                  mockWhere(...innerArgs);
+                  return { executeTakeFirst: mockExecuteTakeFirst };
+                },
+              };
+            },
+          };
+        },
         leftJoin: (...args: unknown[]) => {
           mockLeftJoin(...args);
           return {
@@ -398,6 +420,60 @@ describe('session-repository', () => {
 
       expect(mockSet).toHaveBeenCalledWith({ host_user_id: 'new-host' });
       expect(mockWhere).toHaveBeenCalledWith('id', '=', 'nonexistent-session');
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('incrementParticipationScore', () => {
+    it('calls updateTable with set(eb) expression builder and where chain', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const { incrementParticipationScore } = await import('../../src/persistence/session-repository.js');
+      await incrementParticipationScore('session-1', 'user-1', 5);
+
+      expect(mockSet).toHaveBeenCalledWith(expect.any(Function));
+      expect(mockWhere).toHaveBeenCalledWith('session_id', '=', 'session-1');
+      expect(mockWhere).toHaveBeenCalledWith('user_id', '=', 'user-1');
+    });
+
+    it('passes correct increment value to expression builder callback', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const { incrementParticipationScore } = await import('../../src/persistence/session-repository.js');
+      await incrementParticipationScore('session-1', 'user-1', 3);
+
+      // The set() was called with a function — extract and validate it
+      const setCall = mockSet.mock.calls[mockSet.mock.calls.length - 1];
+      const setFn = setCall![0] as (eb: unknown) => unknown;
+      expect(typeof setFn).toBe('function');
+
+      // Mock the expression builder
+      const mockEb = vi.fn().mockReturnValue('expression-result');
+      const result = setFn(mockEb);
+      expect(mockEb).toHaveBeenCalledWith('participation_score', '+', 3);
+      expect(result).toEqual({ participation_score: 'expression-result' });
+    });
+  });
+
+  describe('getParticipantScore', () => {
+    it('returns participation_score when participant exists', async () => {
+      mockExecuteTakeFirst.mockResolvedValue({ participation_score: 42 });
+
+      const { getParticipantScore } = await import('../../src/persistence/session-repository.js');
+      const result = await getParticipantScore('session-1', 'user-1');
+
+      expect(mockSelect).toHaveBeenCalledWith('participation_score');
+      expect(mockWhere).toHaveBeenCalledWith('session_id', '=', 'session-1');
+      expect(mockWhere).toHaveBeenCalledWith('user_id', '=', 'user-1');
+      expect(result).toBe(42);
+    });
+
+    it('returns undefined when participant not found', async () => {
+      mockExecuteTakeFirst.mockResolvedValue(undefined);
+
+      const { getParticipantScore } = await import('../../src/persistence/session-repository.js');
+      const result = await getParticipantScore('session-1', 'nonexistent');
+
       expect(result).toBeUndefined();
     });
   });

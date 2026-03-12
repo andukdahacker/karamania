@@ -15,6 +15,7 @@ export type SessionEvent =
   | { type: 'host:override'; ts: number; userId: string; data: { fromState: DJState; toState: DJState } }
   | { type: 'host:songOver'; ts: number; userId: string; data: { fromState: DJState } }
   | { type: 'ceremony:typeSelected'; ts: number; data: { ceremonyType: 'full' | 'quick'; songCount: number; participantCount: number } }
+  | { type: 'participation:scored'; ts: number; userId: string; data: { action: string; tier: string; points: number; rewardMultiplier: number; totalScore: number } }
   | { type: 'system:recovery'; ts: number; data: { recoveredState: DJState; songCount: number } };
 
 const streams = new Map<string, SessionEvent[]>();

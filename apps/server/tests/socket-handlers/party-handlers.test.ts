@@ -25,8 +25,10 @@ vi.mock('../../src/persistence/session-repository.js', () => ({
 }));
 
 const mockStartSession = vi.fn();
+const mockRecordParticipationAction = vi.fn();
 vi.mock('../../src/services/session-manager.js', () => ({
   startSession: mockStartSession,
+  recordParticipationAction: (...args: unknown[]) => mockRecordParticipationAction(...args),
 }));
 
 const mockBroadcastDjState = vi.fn();
@@ -41,6 +43,13 @@ vi.mock('../../src/services/event-stream.js', () => ({
 
 vi.mock('../../src/services/activity-tracker.js', () => ({
   recordActivity: vi.fn(),
+}));
+
+const mockCheckRateLimit = vi.fn().mockReturnValue({ allowed: true, rewardMultiplier: 1.0 });
+const mockRecordUserEvent = vi.fn().mockReturnValue([]);
+vi.mock('../../src/services/rate-limiter.js', () => ({
+  checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
+  recordUserEvent: (...args: unknown[]) => mockRecordUserEvent(...args),
 }));
 
 function createMockSocket(sessionId = 'test-session-id') {
@@ -135,6 +144,33 @@ describe('party-handlers', () => {
       await handler({ vibe: 'kpop' });
 
       expect(toSpy).toHaveBeenCalledWith('s1');
+    });
+  });
+
+  describe('participation scoring on vibe change', () => {
+    it('calls rate limiter and recordParticipationAction with rewardMultiplier', async () => {
+      mockUpdateVibe.mockResolvedValue(undefined);
+      mockRecordUserEvent.mockReturnValue([1000, 2000, 3000]);
+      mockCheckRateLimit.mockReturnValue({ allowed: true, rewardMultiplier: 0.5 });
+
+      const { socket, handlers } = createMockSocket('session-123');
+
+      const { registerPartyHandlers } = await import('../../src/socket-handlers/party-handlers.js');
+      registerPartyHandlers(socket as never);
+
+      await handlers.get('party:vibeChanged')!({ vibe: 'rock' });
+
+      expect(mockRecordUserEvent).toHaveBeenCalledWith('test-user-id', expect.any(Number));
+      expect(mockCheckRateLimit).toHaveBeenCalledWith(
+        [1000, 2000, 3000],
+        expect.any(Number),
+      );
+      expect(mockRecordParticipationAction).toHaveBeenCalledWith(
+        'session-123',
+        'test-user-id',
+        'party:vibeChanged',
+        0.5,
+      );
     });
   });
 

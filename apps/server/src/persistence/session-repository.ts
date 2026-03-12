@@ -147,6 +147,34 @@ export async function removeParticipant(sessionId: string, userId: string): Prom
     .execute();
 }
 
+export async function incrementParticipationScore(
+  sessionId: string,
+  userId: string,
+  increment: number
+): Promise<void> {
+  await db
+    .updateTable('session_participants')
+    .set((eb) => ({
+      participation_score: eb('participation_score', '+', increment),
+    }))
+    .where('session_id', '=', sessionId)
+    .where('user_id', '=', userId)
+    .execute();
+}
+
+export async function getParticipantScore(
+  sessionId: string,
+  userId: string
+): Promise<number | undefined> {
+  const result = await db
+    .selectFrom('session_participants')
+    .select('participation_score')
+    .where('session_id', '=', sessionId)
+    .where('user_id', '=', userId)
+    .executeTakeFirst();
+  return result?.participation_score;
+}
+
 export async function updateStatus(sessionId: string, status: string) {
   const values: Record<string, unknown> = { status };
   if (status === 'ended') {

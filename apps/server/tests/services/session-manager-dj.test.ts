@@ -44,6 +44,8 @@ vi.mock('../../src/persistence/session-repository.js', () => ({
   updateDjState: mockUpdateDjState,
   removeParticipant: (...args: unknown[]) => mockRemoveParticipant(...args),
   writeEventStream: (...args: unknown[]) => mockWriteEventStream(...args),
+  incrementParticipationScore: vi.fn().mockResolvedValue(undefined),
+  getParticipantScore: vi.fn(),
 }));
 
 const mockCreateDJContext = vi.fn();
