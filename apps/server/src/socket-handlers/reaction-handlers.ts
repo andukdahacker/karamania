@@ -6,6 +6,8 @@ import { recordParticipationAction } from '../services/session-manager.js';
 import { getSessionDjState } from '../services/dj-state-store.js';
 import { recordActivity } from '../services/activity-tracker.js';
 import { DJState } from '../dj-engine/types.js';
+import { recordReactionStreak } from '../services/streak-tracker.js';
+import { appendEvent } from '../services/event-stream.js';
 
 export function registerReactionHandlers(socket: AuthenticatedSocket, io: SocketIOServer): void {
   socket.on(EVENTS.REACTION_SENT, async (data: { emoji: string }) => {
@@ -25,6 +27,9 @@ export function registerReactionHandlers(socket: AuthenticatedSocket, io: Socket
     const timestamps = recordUserEvent(userId, now);
     const { rewardMultiplier } = checkRateLimit(timestamps, now);
 
+    // Streak tracking — counts ALL reactions regardless of rate limit (AC #5)
+    const { streakCount, milestone } = recordReactionStreak(sessionId, userId, now);
+
     // Broadcast to ALL participants in session (including sender)
     io.to(sessionId).emit(EVENTS.REACTION_BROADCAST, {
       userId,
@@ -32,9 +37,25 @@ export function registerReactionHandlers(socket: AuthenticatedSocket, io: Socket
       rewardMultiplier,
     });
 
-    // Participation scoring + event stream logging (fire-and-forget)
+    // Milestone notification — to reacting user ONLY (AC #1)
+    if (milestone !== null) {
+      socket.emit(EVENTS.REACTION_STREAK, {
+        streakCount: milestone,
+        emoji: data.emoji,
+        displayName: socket.data.displayName,
+      });
+    }
+
+    // Participation scoring (fire-and-forget)
     // recordParticipationAction internally handles appendEvent for participation:scored
-    // DO NOT call appendEvent separately — it would create duplicate events
     recordParticipationAction(sessionId, userId, 'reaction:sent', rewardMultiplier).catch(() => {});
+
+    // Log reaction to event stream (architecture schema: reaction:sent includes streak)
+    appendEvent(sessionId, {
+      type: 'reaction:sent',
+      ts: now,
+      userId,
+      data: { emoji: data.emoji, streak: streakCount },
+    });
   });
 }

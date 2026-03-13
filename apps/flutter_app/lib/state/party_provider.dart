@@ -86,6 +86,11 @@ class PartyProvider extends ChangeNotifier {
   static int _reactionIdCounter = 0;
   static final Random _reactionRandom = Random();
 
+  // Streak milestone state — displayed only to current user
+  int? _streakMilestone;
+  String? _streakEmoji;
+  String? _streakDisplayName;
+
   DJState get djState => _djState;
   PartyVibe get vibe => _vibe;
   String? get sessionId => _sessionId;
@@ -115,6 +120,9 @@ class PartyProvider extends ChangeNotifier {
   String? get ceremonyTone => _ceremonyTone;
   String? get ceremonySongTitle => _ceremonySongTitle;
   bool get showMomentCard => _showMomentCard;
+  int? get streakMilestone => _streakMilestone;
+  String? get streakEmoji => _streakEmoji;
+  String? get streakDisplayName => _streakDisplayName;
   List<ReactionEvent> get reactionFeed => List.unmodifiable(_reactionFeed);
 
   /// Background color driven by current DJ state and vibe.
@@ -142,6 +150,24 @@ class PartyProvider extends ChangeNotifier {
 
   void removeReaction(int id) {
     _reactionFeed.removeWhere((e) => e.id == id);
+    notifyListeners();
+  }
+
+  void onStreakMilestone({
+    required int streakCount,
+    required String emoji,
+    required String displayName,
+  }) {
+    _streakMilestone = streakCount;
+    _streakEmoji = emoji;
+    _streakDisplayName = displayName;
+    notifyListeners();
+  }
+
+  void dismissStreakMilestone() {
+    _streakMilestone = null;
+    _streakEmoji = null;
+    _streakDisplayName = null;
     notifyListeners();
   }
 
@@ -222,9 +248,12 @@ class PartyProvider extends ChangeNotifier {
     if (_djState == DJState.ceremony && state != DJState.ceremony) {
       _clearCeremonyState();
     }
-    // Clear reaction feed when leaving song state
-    if (state != DJState.song) {
+    // Clear reaction feed and streak state when leaving song state (AC #4)
+    if (_djState == DJState.song && state != DJState.song) {
       _reactionFeed.clear();
+      _streakMilestone = null;
+      _streakEmoji = null;
+      _streakDisplayName = null;
     }
     _djState = state;
     _ceremonyType = ceremonyType;

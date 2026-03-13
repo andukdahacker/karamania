@@ -15,6 +15,7 @@ import { DJState } from '../dj-engine/types.js';
 import { appendEvent, flushEventStream, getEventStream, type SessionEvent } from '../services/event-stream.js';
 import { calculateScoreIncrement, ACTION_TIER_MAP } from '../services/participation-scoring.js';
 import { generateAward, AWARD_TEMPLATES, AwardTone, type AwardContext } from '../services/award-generator.js';
+import { clearSessionStreaks } from '../services/streak-tracker.js';
 
 // In-memory score cache — avoids DB read race condition with fire-and-forget writes
 const scoreCache = new Map<string, number>();
@@ -481,6 +482,11 @@ export async function processDjTransition(
   // Cancel any pending ceremony reveal if skipping out of ceremony
   if (context.state === DJState.ceremony) {
     clearCeremonyTimers(sessionId);
+  }
+
+  // Clear reaction streaks when leaving song state (AC #4)
+  if (context.state === DJState.song && newContext.state !== DJState.song) {
+    clearSessionStreaks(sessionId);
   }
 
   if (newContext.state === DJState.ceremony) {

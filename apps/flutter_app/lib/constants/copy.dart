@@ -153,6 +153,22 @@ class Copy {
   static const String momentCardShare = 'Share Moment';
   static const String momentCardDismiss = 'Tap to dismiss';
 
+  // Streak milestones — personalized per UX spec (Critical Success Moment #3)
+  static String streakMilestone(String displayName, int count) {
+    switch (count) {
+      case 5:
+        return '$displayName is heating up!';
+      case 10:
+        return '$displayName IS ON FIRE!';
+      case 20:
+        return '$displayName is UNSTOPPABLE!';
+      case 50:
+        return '$displayName is LEGENDARY!';
+      default:
+        return '$count Streak!';
+    }
+  }
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

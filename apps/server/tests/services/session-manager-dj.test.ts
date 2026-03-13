@@ -120,6 +120,13 @@ vi.mock('../../src/services/activity-tracker.js', () => ({
   removeSession: vi.fn(),
 }));
 
+const mockClearSessionStreaks = vi.fn();
+vi.mock('../../src/services/streak-tracker.js', () => ({
+  clearSessionStreaks: (...args: unknown[]) => mockClearSessionStreaks(...args),
+  clearUserStreak: vi.fn(),
+  clearStreakStore: vi.fn(),
+}));
+
 describe('session-manager DJ functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -412,6 +419,51 @@ describe('session-manager DJ functions', () => {
       // Result should return immediately without waiting for persist
       expect(result.newContext).toEqual(newContext);
       expect(persistResolved).toBe(false); // persist hasn't resolved yet -- fire-and-forget
+    });
+
+    it('calls clearSessionStreaks when transitioning FROM song to another state', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
+      const newContext = createTestDJContext({ sessionId: 'session-1', state: 'ceremony' as const });
+
+      mockProcessTransition.mockReturnValue({
+        newContext,
+        sideEffects: [],
+      });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      expect(mockClearSessionStreaks).toHaveBeenCalledWith('session-1');
+    });
+
+    it('does NOT call clearSessionStreaks when transitioning TO song', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'songSelection' as const });
+      const newContext = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
+
+      mockProcessTransition.mockReturnValue({
+        newContext,
+        sideEffects: [],
+      });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_SELECTED' });
+
+      expect(mockClearSessionStreaks).not.toHaveBeenCalled();
+    });
+
+    it('does NOT call clearSessionStreaks for transitions not involving song', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'lobby' as const });
+      const newContext = createTestDJContext({ sessionId: 'session-1', state: 'songSelection' as const });
+
+      mockProcessTransition.mockReturnValue({
+        newContext,
+        sideEffects: [],
+      });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SESSION_STARTED' });
+
+      expect(mockClearSessionStreaks).not.toHaveBeenCalled();
     });
   });
 

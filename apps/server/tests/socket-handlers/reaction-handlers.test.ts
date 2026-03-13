@@ -65,12 +65,22 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastCeremonyQuick: vi.fn(),
 }));
 
+const mockAppendEvent = vi.fn();
 vi.mock('../../src/services/event-stream.js', () => ({
-  appendEvent: vi.fn(),
+  appendEvent: (...args: unknown[]) => mockAppendEvent(...args),
 }));
 
-function createMockSocket(overrides: Partial<{ userId: string; sessionId: string }> = {}) {
+const mockRecordReactionStreak = vi.fn();
+vi.mock('../../src/services/streak-tracker.js', () => ({
+  recordReactionStreak: (...args: unknown[]) => mockRecordReactionStreak(...args),
+  clearSessionStreaks: vi.fn(),
+  clearUserStreak: vi.fn(),
+  clearStreakStore: vi.fn(),
+}));
+
+function createMockSocket(overrides: Partial<{ userId: string; sessionId: string; displayName: string }> = {}) {
   const handlers = new Map<string, (data?: unknown) => Promise<void>>();
+  const emittedDirect: Array<{ event: string; data: unknown }> = [];
 
   return {
     socket: {
@@ -78,13 +88,17 @@ function createMockSocket(overrides: Partial<{ userId: string; sessionId: string
         userId: overrides.userId ?? 'user-1',
         sessionId: overrides.sessionId ?? 'session-1',
         role: 'authenticated' as const,
-        displayName: 'Test User',
+        displayName: overrides.displayName ?? 'Test User',
       },
       on: (event: string, handler: (data?: unknown) => Promise<void>) => {
         handlers.set(event, handler);
       },
+      emit: (event: string, data: unknown) => {
+        emittedDirect.push({ event, data });
+      },
     },
     handlers,
+    emittedDirect,
   };
 }
 
@@ -108,13 +122,18 @@ describe('reaction-handlers', () => {
     vi.clearAllMocks();
   });
 
+  function setupSongState() {
+    const context = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
+    mockGetSessionDjState.mockReturnValue(context);
+    mockRecordUserEvent.mockReturnValue([Date.now()]);
+    mockCheckRateLimit.mockReturnValue({ allowed: true, rewardMultiplier: 1.0 });
+    mockRecordReactionStreak.mockReturnValue({ streakCount: 1, milestone: null });
+    mockRecordParticipationAction.mockResolvedValue(undefined);
+  }
+
   describe('reaction:sent during DJState.song', () => {
     it('broadcasts reaction to session room via io.to(sessionId).emit()', async () => {
-      const context = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
-      mockGetSessionDjState.mockReturnValue(context);
-      mockRecordUserEvent.mockReturnValue([Date.now()]);
-      mockCheckRateLimit.mockReturnValue({ allowed: true, rewardMultiplier: 1.0 });
-      mockRecordParticipationAction.mockResolvedValue(undefined);
+      setupSongState();
 
       const { socket, handlers } = createMockSocket();
       const { io, emittedToRoom } = createMockIo();
@@ -140,6 +159,7 @@ describe('reaction-handlers', () => {
       mockGetSessionDjState.mockReturnValue(context);
       mockRecordUserEvent.mockReturnValue([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
       mockCheckRateLimit.mockReturnValue({ allowed: true, rewardMultiplier: 0.5 });
+      mockRecordReactionStreak.mockReturnValue({ streakCount: 3, milestone: null });
       mockRecordParticipationAction.mockResolvedValue(undefined);
 
       const { socket, handlers } = createMockSocket();
@@ -162,6 +182,7 @@ describe('reaction-handlers', () => {
       mockGetSessionDjState.mockReturnValue(context);
       mockRecordUserEvent.mockReturnValue([Date.now()]);
       mockCheckRateLimit.mockReturnValue({ allowed: true, rewardMultiplier: 0.75 });
+      mockRecordReactionStreak.mockReturnValue({ streakCount: 1, milestone: null });
       mockRecordParticipationAction.mockResolvedValue(undefined);
 
       const { socket, handlers } = createMockSocket();
@@ -181,11 +202,7 @@ describe('reaction-handlers', () => {
     });
 
     it('calls recordActivity with sessionId', async () => {
-      const context = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
-      mockGetSessionDjState.mockReturnValue(context);
-      mockRecordUserEvent.mockReturnValue([Date.now()]);
-      mockCheckRateLimit.mockReturnValue({ allowed: true, rewardMultiplier: 1.0 });
-      mockRecordParticipationAction.mockResolvedValue(undefined);
+      setupSongState();
 
       const { socket, handlers } = createMockSocket();
       const { io } = createMockIo();
@@ -196,6 +213,167 @@ describe('reaction-handlers', () => {
       await handlers.get('reaction:sent')!({ emoji: '🔥' });
 
       expect(mockRecordActivity).toHaveBeenCalledWith('session-1');
+    });
+  });
+
+  describe('reaction:streak milestone emission', () => {
+    it('emits reaction:streak via socket.emit() when milestone is reached', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
+      mockGetSessionDjState.mockReturnValue(context);
+      mockRecordUserEvent.mockReturnValue([Date.now()]);
+      mockCheckRateLimit.mockReturnValue({ allowed: true, rewardMultiplier: 1.0 });
+      mockRecordReactionStreak.mockReturnValue({ streakCount: 5, milestone: 5 });
+      mockRecordParticipationAction.mockResolvedValue(undefined);
+
+      const { socket, handlers, emittedDirect } = createMockSocket({ displayName: 'DJ Master' });
+      const { io } = createMockIo();
+
+      const { registerReactionHandlers } = await import('../../src/socket-handlers/reaction-handlers.js');
+      registerReactionHandlers(socket as never, io as never);
+
+      await handlers.get('reaction:sent')!({ emoji: '🔥' });
+
+      expect(emittedDirect).toContainEqual({
+        event: 'reaction:streak',
+        data: {
+          streakCount: 5,
+          emoji: '🔥',
+          displayName: 'DJ Master',
+        },
+      });
+    });
+
+    it('milestone payload contains streakCount, emoji, and displayName from socket.data', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
+      mockGetSessionDjState.mockReturnValue(context);
+      mockRecordUserEvent.mockReturnValue([Date.now()]);
+      mockCheckRateLimit.mockReturnValue({ allowed: true, rewardMultiplier: 1.0 });
+      mockRecordReactionStreak.mockReturnValue({ streakCount: 10, milestone: 10 });
+      mockRecordParticipationAction.mockResolvedValue(undefined);
+
+      const { socket, handlers, emittedDirect } = createMockSocket({ displayName: 'Minh' });
+      const { io } = createMockIo();
+
+      const { registerReactionHandlers } = await import('../../src/socket-handlers/reaction-handlers.js');
+      registerReactionHandlers(socket as never, io as never);
+
+      await handlers.get('reaction:sent')!({ emoji: '🎤' });
+
+      const streakEmission = emittedDirect.find(e => e.event === 'reaction:streak');
+      expect(streakEmission).toBeDefined();
+      expect(streakEmission!.data).toEqual({
+        streakCount: 10,
+        emoji: '🎤',
+        displayName: 'Minh',
+      });
+    });
+
+    it('does NOT emit reaction:streak for non-milestone reactions', async () => {
+      setupSongState();
+      // Default mock returns milestone: null
+
+      const { socket, handlers, emittedDirect } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerReactionHandlers } = await import('../../src/socket-handlers/reaction-handlers.js');
+      registerReactionHandlers(socket as never, io as never);
+
+      await handlers.get('reaction:sent')!({ emoji: '🔥' });
+
+      const streakEmission = emittedDirect.find(e => e.event === 'reaction:streak');
+      expect(streakEmission).toBeUndefined();
+    });
+
+    it('records streak regardless of rewardMultiplier value (AC #5)', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
+      mockGetSessionDjState.mockReturnValue(context);
+      mockRecordUserEvent.mockReturnValue([Date.now()]);
+      mockCheckRateLimit.mockReturnValue({ allowed: true, rewardMultiplier: 0.125 });
+      mockRecordReactionStreak.mockReturnValue({ streakCount: 15, milestone: null });
+      mockRecordParticipationAction.mockResolvedValue(undefined);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerReactionHandlers } = await import('../../src/socket-handlers/reaction-handlers.js');
+      registerReactionHandlers(socket as never, io as never);
+
+      await handlers.get('reaction:sent')!({ emoji: '🔥' });
+
+      expect(mockRecordReactionStreak).toHaveBeenCalledWith(
+        'session-1',
+        'user-1',
+        expect.any(Number),
+      );
+    });
+  });
+
+  describe('reaction:sent event stream logging', () => {
+    it('appends reaction:sent event to event stream with emoji and streak count', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
+      mockGetSessionDjState.mockReturnValue(context);
+      mockRecordUserEvent.mockReturnValue([Date.now()]);
+      mockCheckRateLimit.mockReturnValue({ allowed: true, rewardMultiplier: 1.0 });
+      mockRecordReactionStreak.mockReturnValue({ streakCount: 7, milestone: null });
+      mockRecordParticipationAction.mockResolvedValue(undefined);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerReactionHandlers } = await import('../../src/socket-handlers/reaction-handlers.js');
+      registerReactionHandlers(socket as never, io as never);
+
+      await handlers.get('reaction:sent')!({ emoji: '🎵' });
+
+      expect(mockAppendEvent).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({
+          type: 'reaction:sent',
+          userId: 'user-1',
+          data: { emoji: '🎵', streak: 7 },
+        }),
+      );
+    });
+
+    it('reaction:sent event is separate from participation:scored event', async () => {
+      setupSongState();
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerReactionHandlers } = await import('../../src/socket-handlers/reaction-handlers.js');
+      registerReactionHandlers(socket as never, io as never);
+
+      await handlers.get('reaction:sent')!({ emoji: '🔥' });
+
+      // appendEvent is called for reaction:sent
+      expect(mockAppendEvent).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({ type: 'reaction:sent' }),
+      );
+      // recordParticipationAction handles participation:scored separately
+      expect(mockRecordParticipationAction).toHaveBeenCalled();
+    });
+
+    it('logs streak count on every reaction (not just milestones)', async () => {
+      setupSongState();
+      mockRecordReactionStreak.mockReturnValue({ streakCount: 3, milestone: null });
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerReactionHandlers } = await import('../../src/socket-handlers/reaction-handlers.js');
+      registerReactionHandlers(socket as never, io as never);
+
+      await handlers.get('reaction:sent')!({ emoji: '🔥' });
+
+      expect(mockAppendEvent).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({
+          type: 'reaction:sent',
+          data: { emoji: '🔥', streak: 3 },
+        }),
+      );
     });
   });
 

@@ -341,6 +341,50 @@ void main() {
       expect(event.id, isNotNull);
       expect(event.startX, greaterThanOrEqualTo(0.0));
     });
+
+    test('reaction:streak parsing calls partyProvider.onStreakMilestone with correct args', () {
+      final provider = PartyProvider(wakelockToggle: (_) {});
+
+      // Simulate the exact payload parsing that _setupPartyListeners does
+      // This mirrors the listener: (data) { final payload = data as Map<String, dynamic>; ... }
+      final dynamic rawData = <String, dynamic>{
+        'streakCount': 10,
+        'emoji': '🔥',
+        'displayName': 'Minh',
+      };
+      final payload = rawData as Map<String, dynamic>;
+
+      provider.onStreakMilestone(
+        streakCount: payload['streakCount'] as int,
+        emoji: payload['emoji'] as String,
+        displayName: payload['displayName'] as String,
+      );
+
+      expect(provider.streakMilestone, 10);
+      expect(provider.streakEmoji, '🔥');
+      expect(provider.streakDisplayName, 'Minh');
+    });
+
+    test('reaction:streak parsing handles different milestone values', () {
+      final provider = PartyProvider(wakelockToggle: (_) {});
+
+      for (final milestone in [5, 10, 20, 50]) {
+        final dynamic rawData = <String, dynamic>{
+          'streakCount': milestone,
+          'emoji': '👏',
+          'displayName': 'Player',
+        };
+        final payload = rawData as Map<String, dynamic>;
+
+        provider.onStreakMilestone(
+          streakCount: payload['streakCount'] as int,
+          emoji: payload['emoji'] as String,
+          displayName: payload['displayName'] as String,
+        );
+
+        expect(provider.streakMilestone, milestone);
+      }
+    });
   });
 
   group('SocketClient ceremony event parsing', () {

@@ -303,6 +303,16 @@ class SocketClient {
       );
     });
 
+    // Streak milestone event — sent to this user only
+    on('reaction:streak', (data) {
+      final payload = data as Map<String, dynamic>;
+      _partyProvider?.onStreakMilestone(
+        streakCount: payload['streakCount'] as int,
+        emoji: payload['emoji'] as String,
+        displayName: payload['displayName'] as String,
+      );
+    });
+
     // Host transfer event (AC #4)
     on('party:hostTransferred', (data) {
       final payload = data as Map<String, dynamic>;

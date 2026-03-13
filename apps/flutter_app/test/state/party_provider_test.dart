@@ -898,5 +898,63 @@ void main() {
       expect(provider.reactionFeed.first.userId, 'user-2');
       expect(notifyCount, 1);
     });
+
+    test('streakMilestone, streakEmoji, streakDisplayName are null initially', () {
+      expect(provider.streakMilestone, isNull);
+      expect(provider.streakEmoji, isNull);
+      expect(provider.streakDisplayName, isNull);
+    });
+
+    test('onStreakMilestone sets streak fields and notifies', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onStreakMilestone(
+        streakCount: 10,
+        emoji: '🔥',
+        displayName: 'TestUser',
+      );
+
+      expect(provider.streakMilestone, 10);
+      expect(provider.streakEmoji, '🔥');
+      expect(provider.streakDisplayName, 'TestUser');
+      expect(notifyCount, 1);
+    });
+
+    test('dismissStreakMilestone clears all streak fields and notifies', () {
+      provider.onStreakMilestone(
+        streakCount: 5,
+        emoji: '👏',
+        displayName: 'Player',
+      );
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.dismissStreakMilestone();
+
+      expect(provider.streakMilestone, isNull);
+      expect(provider.streakEmoji, isNull);
+      expect(provider.streakDisplayName, isNull);
+      expect(notifyCount, 1);
+    });
+
+    test('streak state clears when DJ state exits song', () {
+      // Set to song state first
+      provider.onDjStateUpdate(state: DJState.song);
+      provider.onStreakMilestone(
+        streakCount: 20,
+        emoji: '🔥',
+        displayName: 'DJ',
+      );
+      expect(provider.streakMilestone, 20);
+
+      // Transition out of song
+      provider.onDjStateUpdate(state: DJState.ceremony);
+
+      expect(provider.streakMilestone, isNull);
+      expect(provider.streakEmoji, isNull);
+      expect(provider.streakDisplayName, isNull);
+    });
   });
 }

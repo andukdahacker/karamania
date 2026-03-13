@@ -18,6 +18,7 @@ import 'package:karamania/widgets/ceremony_display.dart';
 import 'package:karamania/widgets/moment_card_overlay.dart';
 import 'package:karamania/widgets/reaction_bar.dart';
 import 'package:karamania/widgets/reaction_feed.dart';
+import 'package:karamania/widgets/streak_milestone_overlay.dart';
 import 'package:karamania/widgets/quick_ceremony_display.dart';
 import 'package:karamania/widgets/song_over_button.dart';
 import 'package:go_router/go_router.dart';
@@ -206,6 +207,18 @@ class _PartyScreenState extends State<PartyScreen>
                         .toList(),
                     onParticleComplete: (id) => partyProvider.removeReaction(id),
                   ),
+                ),
+              ),
+            // Streak milestone overlay — only when milestone is active during song
+            if (partyProvider.djState == DJState.song &&
+                partyProvider.streakMilestone != null)
+              Positioned.fill(
+                child: StreakMilestoneOverlay(
+                  key: ValueKey(partyProvider.streakMilestone),
+                  streakCount: partyProvider.streakMilestone!,
+                  emoji: partyProvider.streakEmoji ?? '',
+                  displayName: partyProvider.streakDisplayName ?? '',
+                  onDismiss: () => partyProvider.dismissStreakMilestone(),
                 ),
               ),
             // Reaction bar at bottom — only during song state
