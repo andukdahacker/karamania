@@ -1,4 +1,5 @@
 import 'dart:async' show Timer;
+import 'dart:math' show Random;
 import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,24 @@ import 'package:karamania/theme/dj_theme.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 enum ConnectionStatus { connected, reconnecting }
+
+class ReactionEvent {
+  const ReactionEvent({
+    required this.id,
+    required this.userId,
+    required this.emoji,
+    required this.rewardMultiplier,
+    required this.timestamp,
+    required this.startX,
+  });
+
+  final int id;
+  final String userId;
+  final String emoji;
+  final double rewardMultiplier;
+  final int timestamp;
+  final double startX;
+}
 
 class ParticipantInfo {
   const ParticipantInfo({
@@ -61,6 +80,12 @@ class PartyProvider extends ChangeNotifier {
   bool _showMomentCard = false;
   Timer? _momentCardTimer;
 
+  // Reaction state
+  final List<ReactionEvent> _reactionFeed = [];
+  static const int _maxReactionFeedSize = 50;
+  static int _reactionIdCounter = 0;
+  static final Random _reactionRandom = Random();
+
   DJState get djState => _djState;
   PartyVibe get vibe => _vibe;
   String? get sessionId => _sessionId;
@@ -90,9 +115,35 @@ class PartyProvider extends ChangeNotifier {
   String? get ceremonyTone => _ceremonyTone;
   String? get ceremonySongTitle => _ceremonySongTitle;
   bool get showMomentCard => _showMomentCard;
+  List<ReactionEvent> get reactionFeed => List.unmodifiable(_reactionFeed);
 
   /// Background color driven by current DJ state and vibe.
   Color get backgroundColor => djStateBackgroundColor(_djState, _vibe);
+
+  void onReactionBroadcast({
+    required String userId,
+    required String emoji,
+    required double rewardMultiplier,
+  }) {
+    _reactionFeed.add(ReactionEvent(
+      id: _reactionIdCounter++,
+      userId: userId,
+      emoji: emoji,
+      rewardMultiplier: rewardMultiplier,
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+      startX: _reactionRandom.nextDouble(),
+    ));
+    // Cap feed size to prevent unbounded memory growth (NFR28)
+    if (_reactionFeed.length > _maxReactionFeedSize) {
+      _reactionFeed.removeAt(0);
+    }
+    notifyListeners();
+  }
+
+  void removeReaction(int id) {
+    _reactionFeed.removeWhere((e) => e.id == id);
+    notifyListeners();
+  }
 
   void onCeremonyAnticipation({
     required String? performerName,
@@ -170,6 +221,10 @@ class PartyProvider extends ChangeNotifier {
     // Clear ceremony data when transitioning OUT of ceremony state
     if (_djState == DJState.ceremony && state != DJState.ceremony) {
       _clearCeremonyState();
+    }
+    // Clear reaction feed when leaving song state
+    if (state != DJState.song) {
+      _reactionFeed.clear();
     }
     _djState = state;
     _ceremonyType = ceremonyType;

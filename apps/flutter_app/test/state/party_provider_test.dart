@@ -2,7 +2,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/state/loading_state.dart';
-import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus;
+import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus, ReactionEvent;
 import 'package:karamania/theme/dj_theme.dart';
 
 void main() {
@@ -793,6 +793,110 @@ void main() {
         async.elapse(const Duration(seconds: 1));
         expect(provider.showMomentCard, isFalse);
       });
+    });
+  });
+
+  group('PartyProvider reaction feed', () {
+    late PartyProvider provider;
+
+    setUp(() {
+      provider = PartyProvider(wakelockToggle: (_) {});
+    });
+
+    test('onReactionBroadcast adds reaction to feed and notifies', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onReactionBroadcast(
+        userId: 'user-1',
+        emoji: '🔥',
+        rewardMultiplier: 1.0,
+      );
+
+      expect(provider.reactionFeed, hasLength(1));
+      expect(provider.reactionFeed.first.userId, 'user-1');
+      expect(provider.reactionFeed.first.emoji, '🔥');
+      expect(provider.reactionFeed.first.rewardMultiplier, 1.0);
+      expect(notifyCount, 1);
+    });
+
+    test('reaction feed caps at _maxReactionFeedSize (50)', () {
+      for (int i = 0; i < 55; i++) {
+        provider.onReactionBroadcast(
+          userId: 'user-$i',
+          emoji: '🔥',
+          rewardMultiplier: 1.0,
+        );
+      }
+
+      expect(provider.reactionFeed, hasLength(50));
+      // First 5 should have been pruned, so first remaining is user-5
+      expect(provider.reactionFeed.first.userId, 'user-5');
+    });
+
+    test('reaction feed clears when DJ state exits song', () {
+      // Enter song state
+      provider.onDjStateUpdate(state: DJState.song);
+      provider.onReactionBroadcast(
+        userId: 'user-1',
+        emoji: '🔥',
+        rewardMultiplier: 1.0,
+      );
+      expect(provider.reactionFeed, hasLength(1));
+
+      // Exit song state
+      provider.onDjStateUpdate(state: DJState.songSelection);
+      expect(provider.reactionFeed, isEmpty);
+    });
+
+    test('reactionFeed getter returns unmodifiable list', () {
+      provider.onReactionBroadcast(
+        userId: 'user-1',
+        emoji: '🔥',
+        rewardMultiplier: 1.0,
+      );
+
+      final feed = provider.reactionFeed;
+      expect(() => (feed as List<ReactionEvent>).add(
+        const ReactionEvent(id: 999, userId: 'x', emoji: 'x', rewardMultiplier: 1.0, timestamp: 0, startX: 0.5),
+      ), throwsUnsupportedError);
+    });
+
+    test('onReactionBroadcast assigns stable id and startX', () {
+      provider.onReactionBroadcast(
+        userId: 'user-1',
+        emoji: '🔥',
+        rewardMultiplier: 1.0,
+      );
+
+      final event = provider.reactionFeed.first;
+      expect(event.id, isNotNull);
+      expect(event.startX, greaterThanOrEqualTo(0.0));
+      expect(event.startX, lessThan(1.0));
+    });
+
+    test('removeReaction removes reaction by id and notifies', () {
+      provider.onReactionBroadcast(
+        userId: 'user-1',
+        emoji: '🔥',
+        rewardMultiplier: 1.0,
+      );
+      provider.onReactionBroadcast(
+        userId: 'user-2',
+        emoji: '👏',
+        rewardMultiplier: 0.5,
+      );
+      expect(provider.reactionFeed, hasLength(2));
+
+      final idToRemove = provider.reactionFeed.first.id;
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.removeReaction(idToRemove);
+
+      expect(provider.reactionFeed, hasLength(1));
+      expect(provider.reactionFeed.first.userId, 'user-2');
+      expect(notifyCount, 1);
     });
   });
 }

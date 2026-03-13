@@ -312,6 +312,37 @@ void main() {
     });
   });
 
+  group('SocketClient reaction methods', () {
+    test('emitReaction does not throw when not connected', () {
+      expect(() => SocketClient.instance.emitReaction('🔥'), returnsNormally);
+    });
+
+    test('reaction:broadcast parsing calls partyProvider.onReactionBroadcast', () {
+      final provider = PartyProvider(wakelockToggle: (_) {});
+
+      // Simulate what _setupPartyListeners does for reaction:broadcast
+      final payload = <String, dynamic>{
+        'userId': 'user-42',
+        'emoji': '👏',
+        'rewardMultiplier': 0.75,
+      };
+
+      provider.onReactionBroadcast(
+        userId: payload['userId'] as String,
+        emoji: payload['emoji'] as String,
+        rewardMultiplier: (payload['rewardMultiplier'] as num).toDouble(),
+      );
+
+      expect(provider.reactionFeed, hasLength(1));
+      final event = provider.reactionFeed.first;
+      expect(event.userId, 'user-42');
+      expect(event.emoji, '👏');
+      expect(event.rewardMultiplier, 0.75);
+      expect(event.id, isNotNull);
+      expect(event.startX, greaterThanOrEqualTo(0.0));
+    });
+  });
+
   group('SocketClient ceremony event parsing', () {
     late PartyProvider provider;
 

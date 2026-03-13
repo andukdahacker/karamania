@@ -293,6 +293,16 @@ class SocketClient {
       }
     });
 
+    // Reaction broadcast event
+    on('reaction:broadcast', (data) {
+      final payload = data as Map<String, dynamic>;
+      _partyProvider?.onReactionBroadcast(
+        userId: payload['userId'] as String,
+        emoji: payload['emoji'] as String,
+        rewardMultiplier: (payload['rewardMultiplier'] as num).toDouble(),
+      );
+    });
+
     // Host transfer event (AC #4)
     on('party:hostTransferred', (data) {
       final payload = data as Map<String, dynamic>;
@@ -336,6 +346,10 @@ class SocketClient {
 
   void emitHostKickPlayer(String userId) {
     _socket?.emit('host:kickPlayer', {'userId': userId});
+  }
+
+  void emitReaction(String emoji) {
+    _socket?.emit('reaction:sent', {'emoji': emoji});
   }
 
   void emitMomentCardShared() {

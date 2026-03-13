@@ -16,6 +16,8 @@ import 'package:karamania/widgets/host_controls_overlay.dart';
 import 'package:karamania/widgets/reconnecting_banner.dart';
 import 'package:karamania/widgets/ceremony_display.dart';
 import 'package:karamania/widgets/moment_card_overlay.dart';
+import 'package:karamania/widgets/reaction_bar.dart';
+import 'package:karamania/widgets/reaction_feed.dart';
 import 'package:karamania/widgets/quick_ceremony_display.dart';
 import 'package:karamania/widgets/song_over_button.dart';
 import 'package:go_router/go_router.dart';
@@ -188,6 +190,31 @@ class _PartyScreenState extends State<PartyScreen>
                   songTitle: partyProvider.ceremonySongTitle,
                   onDismiss: () => partyProvider.dismissMomentCard(),
                 ),
+              ),
+            // Reaction feed overlay (floating emojis) — only during song state
+            if (partyProvider.djState == DJState.song)
+              Positioned.fill(
+                child: RepaintBoundary(
+                  child: ReactionFeed(
+                    reactions: partyProvider.reactionFeed
+                        .map((e) => ReactionFeedItem(
+                              id: e.id,
+                              emoji: e.emoji,
+                              startX: e.startX,
+                              opacity: e.rewardMultiplier.clamp(0.1, 1.0),
+                            ))
+                        .toList(),
+                    onParticleComplete: (id) => partyProvider.removeReaction(id),
+                  ),
+                ),
+              ),
+            // Reaction bar at bottom — only during song state
+            if (partyProvider.djState == DJState.song)
+              Positioned(
+                bottom: DJTokens.spaceLg + 48,
+                left: 0,
+                right: 0,
+                child: ReactionBar(vibe: displayVibe),
               ),
             if (partyProvider.isHost && partyProvider.djState == DJState.song)
               Positioned(
