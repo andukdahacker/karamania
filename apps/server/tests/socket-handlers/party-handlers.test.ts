@@ -34,6 +34,8 @@ vi.mock('../../src/services/session-manager.js', () => ({
 const mockBroadcastDjState = vi.fn();
 vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastDjState: mockBroadcastDjState,
+  broadcastCeremonyAnticipation: vi.fn(),
+  broadcastCeremonyReveal: vi.fn(),
 }));
 
 const mockAppendEvent = vi.fn();

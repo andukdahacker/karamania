@@ -259,4 +259,103 @@ describe('dj-broadcaster', () => {
       warnSpy.mockRestore();
     });
   });
+
+  describe('broadcastCeremonyAnticipation', () => {
+    it('emits ceremony:anticipation to session room with correct payload', async () => {
+      const mockEmit = vi.fn();
+      const mockIo = {
+        to: vi.fn().mockReturnValue({ emit: mockEmit }),
+      };
+
+      const { initDjBroadcaster, broadcastCeremonyAnticipation } = await import('../../src/services/dj-broadcaster.js');
+      initDjBroadcaster(mockIo as never);
+
+      broadcastCeremonyAnticipation('session-1', {
+        performerName: 'Alice',
+        revealAt: 1234567890,
+      });
+
+      expect(mockIo.to).toHaveBeenCalledWith('session-1');
+      expect(mockEmit).toHaveBeenCalledWith('ceremony:anticipation', {
+        performerName: 'Alice',
+        revealAt: 1234567890,
+      });
+    });
+
+    it('broadcasts with performerName: null', async () => {
+      const mockEmit = vi.fn();
+      const mockIo = {
+        to: vi.fn().mockReturnValue({ emit: mockEmit }),
+      };
+
+      const { initDjBroadcaster, broadcastCeremonyAnticipation } = await import('../../src/services/dj-broadcaster.js');
+      initDjBroadcaster(mockIo as never);
+
+      broadcastCeremonyAnticipation('session-1', {
+        performerName: null,
+        revealAt: 1234567890,
+      });
+
+      expect(mockEmit).toHaveBeenCalledWith('ceremony:anticipation', {
+        performerName: null,
+        revealAt: 1234567890,
+      });
+    });
+
+    it('warns when io is not initialized', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const { broadcastCeremonyAnticipation } = await import('../../src/services/dj-broadcaster.js');
+      broadcastCeremonyAnticipation('session-1', {
+        performerName: null,
+        revealAt: 1234567890,
+      });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Cannot broadcast'),
+      );
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe('broadcastCeremonyReveal', () => {
+    it('emits ceremony:reveal to session room with correct payload', async () => {
+      const mockEmit = vi.fn();
+      const mockIo = {
+        to: vi.fn().mockReturnValue({ emit: mockEmit }),
+      };
+
+      const { initDjBroadcaster, broadcastCeremonyReveal } = await import('../../src/services/dj-broadcaster.js');
+      initDjBroadcaster(mockIo as never);
+
+      broadcastCeremonyReveal('session-1', {
+        award: 'Mic Drop Master',
+        performerName: 'Bob',
+        tone: 'hype',
+      });
+
+      expect(mockIo.to).toHaveBeenCalledWith('session-1');
+      expect(mockEmit).toHaveBeenCalledWith('ceremony:reveal', {
+        award: 'Mic Drop Master',
+        performerName: 'Bob',
+        tone: 'hype',
+      });
+    });
+
+    it('warns when io is not initialized', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const { broadcastCeremonyReveal } = await import('../../src/services/dj-broadcaster.js');
+      broadcastCeremonyReveal('session-1', {
+        award: 'Star of the Show',
+        performerName: null,
+        tone: 'hype',
+      });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Cannot broadcast'),
+      );
+      warnSpy.mockRestore();
+    });
+  });
 });

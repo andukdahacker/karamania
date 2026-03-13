@@ -84,10 +84,14 @@ vi.mock('../../src/services/timer-scheduler.js', () => ({
 const mockBroadcastDjState = vi.fn();
 const mockBroadcastDjPause = vi.fn();
 const mockBroadcastDjResume = vi.fn();
+const mockBroadcastCeremonyAnticipation = vi.fn();
+const mockBroadcastCeremonyReveal = vi.fn();
 vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastDjState: (...args: unknown[]) => mockBroadcastDjState(...args),
   broadcastDjPause: (...args: unknown[]) => mockBroadcastDjPause(...args),
   broadcastDjResume: (...args: unknown[]) => mockBroadcastDjResume(...args),
+  broadcastCeremonyAnticipation: (...args: unknown[]) => mockBroadcastCeremonyAnticipation(...args),
+  broadcastCeremonyReveal: (...args: unknown[]) => mockBroadcastCeremonyReveal(...args),
 }));
 
 const mockRemoveSession = vi.fn();

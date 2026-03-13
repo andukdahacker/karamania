@@ -26,8 +26,14 @@ void main() {
       verify(() => mockEngine.play(SoundCue.songStart, volume: 0.7)).called(1);
     });
 
-    test('DJState.ceremony plays SoundCue.ceremonyStart', () {
+    test('DJState.ceremony plays SoundCue.ceremonyStart at participant volume', () {
       audio.onStateChanged(DJState.ceremony);
+      verify(() => mockEngine.play(SoundCue.ceremonyStart, volume: 0.6))
+          .called(1);
+    });
+
+    test('DJState.ceremony plays SoundCue.ceremonyStart at host volume', () {
+      audio.onStateChanged(DJState.ceremony, isHost: true);
       verify(() => mockEngine.play(SoundCue.ceremonyStart, volume: 1.0))
           .called(1);
     });
@@ -71,7 +77,7 @@ void main() {
       audio.onStateChanged(DJState.song);
       audio.onStateChanged(DJState.ceremony);
       verify(() => mockEngine.play(SoundCue.songStart, volume: 0.7)).called(1);
-      verify(() => mockEngine.play(SoundCue.ceremonyStart, volume: 1.0))
+      verify(() => mockEngine.play(SoundCue.ceremonyStart, volume: 0.6))
           .called(1);
     });
   });

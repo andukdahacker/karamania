@@ -311,4 +311,60 @@ void main() {
       verify(() => mockAudio.reset()).called(1);
     });
   });
+
+  group('SocketClient ceremony event parsing', () {
+    late PartyProvider provider;
+
+    setUp(() {
+      provider = PartyProvider(wakelockToggle: (_) {});
+    });
+
+    test('ceremony:anticipation event calls partyProvider.onCeremonyAnticipation', () {
+      final payload = <String, dynamic>{
+        'performerName': 'Alice',
+        'revealAt': 1234567890,
+      };
+
+      provider.onCeremonyAnticipation(
+        performerName: payload['performerName'] as String?,
+        revealAt: payload['revealAt'] as int,
+      );
+
+      expect(provider.ceremonyPerformerName, 'Alice');
+      expect(provider.ceremonyRevealAt, 1234567890);
+    });
+
+    test('ceremony:anticipation with null performerName', () {
+      final payload = <String, dynamic>{
+        'performerName': null,
+        'revealAt': 9999999,
+      };
+
+      provider.onCeremonyAnticipation(
+        performerName: payload['performerName'] as String?,
+        revealAt: payload['revealAt'] as int,
+      );
+
+      expect(provider.ceremonyPerformerName, isNull);
+      expect(provider.ceremonyRevealAt, 9999999);
+    });
+
+    test('ceremony:reveal event calls partyProvider.onCeremonyReveal', () {
+      final payload = <String, dynamic>{
+        'award': 'Mic Drop Master',
+        'performerName': 'Bob',
+        'tone': 'hype',
+      };
+
+      provider.onCeremonyReveal(
+        award: payload['award'] as String,
+        performerName: payload['performerName'] as String?,
+        tone: payload['tone'] as String,
+      );
+
+      expect(provider.ceremonyAward, 'Mic Drop Master');
+      expect(provider.ceremonyPerformerName, 'Bob');
+      expect(provider.ceremonyTone, 'hype');
+    });
+  });
 }

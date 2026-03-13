@@ -31,10 +31,9 @@ const stateConfigs: Record<DJState, StateConfig> = {
     isPlaceholder: false,
   },
   [DJState.ceremony]: {
-    // TODO: Epic 3 implements full ceremony behavior
     allowedTransitions: ['CEREMONY_DONE', 'TIMEOUT', 'HOST_SKIP', 'HOST_OVERRIDE', 'END_PARTY'],
     hasTimeout: true,
-    isPlaceholder: true,
+    isPlaceholder: false,
   },
   [DJState.interlude]: {
     // TODO: Epic 7 implements full interlude behavior

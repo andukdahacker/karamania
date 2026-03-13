@@ -14,13 +14,15 @@ class StateTransitionAudio {
 
   /// Play a sound cue when the DJ state changes.
   /// No-op for duplicate states or when paused.
-  void onStateChanged(DJState newState, {bool isPaused = false}) {
+  void onStateChanged(DJState newState, {bool isPaused = false, bool isHost = false}) {
     if (isPaused) return;
     if (newState == _previousState) return;
 
     final cue = _cueForState(newState);
     if (cue != null) {
-      _engine.play(cue, volume: cue.defaultVolume);
+      // FR25: Host = full volume (dominant audio source), participants = 60% (spatial)
+      final volume = (newState == DJState.ceremony && !isHost) ? 0.6 : cue.defaultVolume;
+      _engine.play(cue, volume: volume);
     }
     _previousState = newState;
   }

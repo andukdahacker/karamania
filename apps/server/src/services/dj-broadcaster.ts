@@ -68,3 +68,32 @@ export function broadcastDjResume(sessionId: string, context: DJContext): void {
   const payload = buildDjStatePayload(context);
   io.to(sessionId).emit(EVENTS.DJ_RESUME, payload);
 }
+
+export function broadcastCeremonyAnticipation(
+  sessionId: string,
+  data: {
+    performerName: string | null;
+    revealAt: number;
+  },
+): void {
+  if (!io) {
+    console.warn('[dj-broadcaster] Cannot broadcast — io not initialized');
+    return;
+  }
+  io.to(sessionId).emit(EVENTS.CEREMONY_ANTICIPATION, data);
+}
+
+export function broadcastCeremonyReveal(
+  sessionId: string,
+  data: {
+    award: string;
+    performerName: string | null;
+    tone: string;
+  },
+): void {
+  if (!io) {
+    console.warn('[dj-broadcaster] Cannot broadcast — io not initialized');
+    return;
+  }
+  io.to(sessionId).emit(EVENTS.CEREMONY_REVEAL, data);
+}

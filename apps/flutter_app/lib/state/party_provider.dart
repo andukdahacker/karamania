@@ -51,6 +51,12 @@ class PartyProvider extends ChangeNotifier {
   String? _pausedFromState;
   String? _ceremonyType;
 
+  // Ceremony state — populated by ceremony:anticipation and ceremony:reveal events
+  String? _ceremonyPerformerName;
+  int? _ceremonyRevealAt;
+  String? _ceremonyAward;
+  String? _ceremonyTone;
+
   DJState get djState => _djState;
   PartyVibe get vibe => _vibe;
   String? get sessionId => _sessionId;
@@ -74,9 +80,42 @@ class PartyProvider extends ChangeNotifier {
   bool get isPaused => _isPaused;
   String? get pausedFromState => _pausedFromState;
   String? get ceremonyType => _ceremonyType;
+  String? get ceremonyPerformerName => _ceremonyPerformerName;
+  int? get ceremonyRevealAt => _ceremonyRevealAt;
+  String? get ceremonyAward => _ceremonyAward;
+  String? get ceremonyTone => _ceremonyTone;
 
   /// Background color driven by current DJ state and vibe.
   Color get backgroundColor => djStateBackgroundColor(_djState, _vibe);
+
+  void onCeremonyAnticipation({
+    required String? performerName,
+    required int revealAt,
+  }) {
+    _ceremonyPerformerName = performerName;
+    _ceremonyRevealAt = revealAt;
+    _ceremonyAward = null;
+    _ceremonyTone = null;
+    notifyListeners();
+  }
+
+  void onCeremonyReveal({
+    required String award,
+    required String? performerName,
+    required String tone,
+  }) {
+    _ceremonyAward = award;
+    _ceremonyTone = tone;
+    if (performerName != null) _ceremonyPerformerName = performerName;
+    notifyListeners();
+  }
+
+  void _clearCeremonyState() {
+    _ceremonyPerformerName = null;
+    _ceremonyRevealAt = null;
+    _ceremonyAward = null;
+    _ceremonyTone = null;
+  }
 
   void onDjStateUpdate({
     required DJState state,
@@ -88,6 +127,10 @@ class PartyProvider extends ChangeNotifier {
     bool? isPaused,
     String? ceremonyType,
   }) {
+    // Clear ceremony data when transitioning OUT of ceremony state
+    if (_djState == DJState.ceremony && state != DJState.ceremony) {
+      _clearCeremonyState();
+    }
     _djState = state;
     _ceremonyType = ceremonyType;
     _songCount = songCount ?? _songCount;
@@ -274,6 +317,7 @@ class PartyProvider extends ChangeNotifier {
     _timerStartedAt = null;
     _timerDurationMs = null;
     _ceremonyType = null;
+    _clearCeremonyState();
     if (_wakelockEnabled) {
       _wakelockEnabled = false;
       _wakelockToggle(false);
@@ -289,6 +333,7 @@ class PartyProvider extends ChangeNotifier {
     _timerStartedAt = null;
     _timerDurationMs = null;
     _ceremonyType = null;
+    _clearCeremonyState();
     if (_wakelockEnabled) {
       _wakelockEnabled = false;
       _wakelockToggle(false);
@@ -304,6 +349,7 @@ class PartyProvider extends ChangeNotifier {
 
   /// Disable wakelock when leaving the session.
   void onSessionEnd() {
+    _clearCeremonyState();
     if (_wakelockEnabled) {
       _wakelockEnabled = false;
       _wakelockToggle(false);

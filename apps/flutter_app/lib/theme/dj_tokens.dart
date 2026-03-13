@@ -22,6 +22,10 @@ class DJTokens {
   // Timing
   static const Duration transitionFast = Duration(milliseconds: 150);
 
+  // Icon / emoji sizes
+  static const double iconSizeLg = 48.0;
+  static const double iconSizeXl = 64.0;
+
   // Spacing
   static const double spaceXs = 4.0;
   static const double spaceSm = 8.0;

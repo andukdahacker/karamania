@@ -12,7 +12,7 @@ const DEFAULT_TIMER_DURATIONS: TimerConfig = {
   [DJState.songSelection]: 30_000,    // 30s
   [DJState.partyCardDeal]: 5_000,     // 5s placeholder (TODO: Epic 4)
   [DJState.song]: 180_000,            // 180s (3 minutes)
-  [DJState.ceremony]: 10_000,         // 10s placeholder (TODO: Epic 3)
+  [DJState.ceremony]: 12_000,         // 12s: 2s anticipation + 10s reveal display
   [DJState.interlude]: 15_000,        // 15s placeholder (TODO: Epic 7)
   [DJState.finale]: 0,                // No timeout — session ends explicitly
 };

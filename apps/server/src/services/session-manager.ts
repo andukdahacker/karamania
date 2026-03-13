@@ -8,7 +8,7 @@ import { calculateRemainingMs } from '../dj-engine/timers.js';
 import type { DJContext, DJTransition, DJSideEffect } from '../dj-engine/types.js';
 import { getSessionDjState, setSessionDjState, removeSessionDjState } from '../services/dj-state-store.js';
 import { scheduleSessionTimer, cancelSessionTimer, pauseSessionTimer, resumeSessionTimer } from '../services/timer-scheduler.js';
-import { broadcastDjState, broadcastDjPause, broadcastDjResume } from '../services/dj-broadcaster.js';
+import { broadcastDjState, broadcastDjPause, broadcastDjResume, broadcastCeremonyAnticipation, broadcastCeremonyReveal } from '../services/dj-broadcaster.js';
 import { removeSession } from '../services/connection-tracker.js';
 import { removeSession as removeActivitySession } from '../services/activity-tracker.js';
 import { DJState } from '../dj-engine/types.js';
@@ -40,6 +40,70 @@ const sessionAwards = new Map<string, string[]>();
 
 export function clearSessionAwards(sessionId: string): void {
   sessionAwards.delete(sessionId);
+}
+
+const ANTICIPATION_DURATION_MS = 2000;
+const DEFAULT_AWARD = 'Star of the Show';
+const DEFAULT_AWARD_TONE = 'hype';
+
+// Track scheduled ceremony reveals for cleanup
+const ceremonyRevealTimers = new Map<string, NodeJS.Timeout>();
+
+export function clearCeremonyTimers(sessionId: string): void {
+  const timer = ceremonyRevealTimers.get(sessionId);
+  if (timer) {
+    clearTimeout(timer);
+    ceremonyRevealTimers.delete(sessionId);
+  }
+}
+
+async function orchestrateFullCeremony(
+  sessionId: string,
+  context: DJContext,
+): Promise<void> {
+  const performerName = context.currentPerformer;
+
+  // Compute synchronized reveal timestamp BEFORE any async work
+  // so that async latency doesn't shorten the anticipation phase
+  const revealAt = Date.now() + ANTICIPATION_DURATION_MS;
+
+  // Performer tracking not implemented until Epic 5 — always empty for now
+  const performerUserId = '';
+  const awardResult = performerUserId
+    ? await generateCeremonyAward(sessionId, performerUserId, 'full')
+    : null;
+
+  // Phase 1: Broadcast anticipation to all clients
+  broadcastCeremonyAnticipation(sessionId, {
+    performerName,
+    revealAt,
+  });
+
+  // Phase 2: Schedule reveal broadcast at revealAt
+  const revealTimer = setTimeout(() => {
+    ceremonyRevealTimers.delete(sessionId);
+    const award = awardResult?.award ?? DEFAULT_AWARD;
+    const tone = awardResult?.tone ?? DEFAULT_AWARD_TONE;
+
+    broadcastCeremonyReveal(sessionId, {
+      award,
+      performerName,
+      tone,
+    });
+
+    // Log ceremony reveal to event stream
+    appendEvent(sessionId, {
+      type: 'ceremony:revealed',
+      ts: Date.now(),
+      data: {
+        award,
+        performerName,
+        ceremonyType: 'full' as const,
+      },
+    });
+  }, ANTICIPATION_DURATION_MS);
+
+  ceremonyRevealTimers.set(sessionId, revealTimer);
 }
 
 function countRecentReactions(events: SessionEvent[]): number {
@@ -360,18 +424,31 @@ export async function processDjTransition(
     data: { from: context.state, to: newContext.state, trigger: event.type },
   });
 
+  // Cancel any pending ceremony reveal if skipping out of ceremony
+  if (context.state === DJState.ceremony) {
+    clearCeremonyTimers(sessionId);
+  }
+
   if (newContext.state === DJState.ceremony) {
+    const resolvedCeremonyType = (newContext.metadata.ceremonyType === 'full' || newContext.metadata.ceremonyType === 'quick')
+      ? newContext.metadata.ceremonyType
+      : 'quick';
+
     appendEvent(sessionId, {
       type: 'ceremony:typeSelected',
       ts: Date.now(),
       data: {
-        ceremonyType: (newContext.metadata.ceremonyType === 'full' || newContext.metadata.ceremonyType === 'quick')
-          ? newContext.metadata.ceremonyType
-          : 'quick',
+        ceremonyType: resolvedCeremonyType,
         songCount: newContext.songCount,
         participantCount: newContext.participantCount,
       },
     });
+
+    if (resolvedCeremonyType === 'full') {
+      // Fire-and-forget — don't block DJ transition pipeline
+      void orchestrateFullCeremony(sessionId, newContext);
+    }
+    // Quick ceremony handled by Story 3.4
   }
 
   for (const effect of sideEffects) {

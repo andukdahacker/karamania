@@ -14,6 +14,7 @@ import 'package:karamania/widgets/dj_tap_button.dart';
 import 'package:karamania/widgets/bridge_moment_display.dart';
 import 'package:karamania/widgets/host_controls_overlay.dart';
 import 'package:karamania/widgets/reconnecting_banner.dart';
+import 'package:karamania/widgets/ceremony_display.dart';
 import 'package:karamania/widgets/song_over_button.dart';
 import 'package:go_router/go_router.dart';
 
@@ -220,51 +221,63 @@ class _PartyScreenState extends State<PartyScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.music_note,
-              size: 64,
-              color: displayVibe.accent,
-            ),
-            const SizedBox(height: DJTokens.spaceLg),
-            Text(
-              Copy.djStateLabel(partyProvider.djState),
-              key: const Key('dj-state-label'),
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: DJTokens.textPrimary,
-                  ),
-            ),
-            const SizedBox(height: DJTokens.spaceMd),
-            Text(
-              '${partyProvider.participantCount} ${Copy.participants.toLowerCase()}',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: DJTokens.textSecondary,
-                  ),
-            ),
-            if (partyProvider.currentPerformer != null) ...[
-              const SizedBox(height: DJTokens.spaceMd),
+            if (partyProvider.djState == DJState.ceremony &&
+                partyProvider.ceremonyType == 'full' &&
+                partyProvider.ceremonyRevealAt != null) ...[
+              CeremonyDisplay(
+                performerName: partyProvider.ceremonyPerformerName,
+                revealAt: partyProvider.ceremonyRevealAt!,
+                vibe: displayVibe,
+                award: partyProvider.ceremonyAward,
+                tone: partyProvider.ceremonyTone,
+              ),
+            ] else ...[
+              Icon(
+                Icons.music_note,
+                size: DJTokens.iconSizeXl,
+                color: displayVibe.accent,
+              ),
+              const SizedBox(height: DJTokens.spaceLg),
               Text(
-                partyProvider.currentPerformer!,
-                key: const Key('current-performer'),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: displayVibe.accent,
+                Copy.djStateLabel(partyProvider.djState),
+                key: const Key('dj-state-label'),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: DJTokens.textPrimary,
                     ),
               ),
-            ],
-            if (_remainingSeconds != null) ...[
               const SizedBox(height: DJTokens.spaceMd),
               Text(
-                _formatCountdown(_remainingSeconds!),
-                key: const Key('countdown-timer'),
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                '${partyProvider.participantCount} ${Copy.participants.toLowerCase()}',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: DJTokens.textSecondary,
                     ),
               ),
-            ],
-            if (partyProvider.djState == DJState.songSelection) ...[
-              const SizedBox(height: DJTokens.spaceLg),
-              BridgeMomentDisplay(
-                currentPerformer: partyProvider.currentPerformer,
-              ),
+              if (partyProvider.currentPerformer != null) ...[
+                const SizedBox(height: DJTokens.spaceMd),
+                Text(
+                  partyProvider.currentPerformer!,
+                  key: const Key('current-performer'),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: displayVibe.accent,
+                      ),
+                ),
+              ],
+              if (_remainingSeconds != null) ...[
+                const SizedBox(height: DJTokens.spaceMd),
+                Text(
+                  _formatCountdown(_remainingSeconds!),
+                  key: const Key('countdown-timer'),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: DJTokens.textSecondary,
+                      ),
+                ),
+              ],
+              if (partyProvider.djState == DJState.songSelection) ...[
+                const SizedBox(height: DJTokens.spaceLg),
+                BridgeMomentDisplay(
+                  currentPerformer: partyProvider.currentPerformer,
+                ),
+              ],
             ],
           ],
         ),

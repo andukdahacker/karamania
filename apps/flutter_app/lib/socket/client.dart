@@ -183,6 +183,24 @@ class SocketClient {
       partyProvider.onParticipantReconnected(userId);
     });
 
+    // Ceremony events
+    on('ceremony:anticipation', (data) {
+      final payload = data as Map<String, dynamic>;
+      partyProvider.onCeremonyAnticipation(
+        performerName: payload['performerName'] as String?,
+        revealAt: payload['revealAt'] as int,
+      );
+    });
+
+    on('ceremony:reveal', (data) {
+      final payload = data as Map<String, dynamic>;
+      partyProvider.onCeremonyReveal(
+        award: payload['award'] as String,
+        performerName: payload['performerName'] as String?,
+        tone: payload['tone'] as String,
+      );
+    });
+
     // DJ state change event
     on('dj:stateChanged', (data) {
       final payload = data as Map<String, dynamic>;
@@ -207,6 +225,7 @@ class SocketClient {
       _stateTransitionAudio.onStateChanged(
         djState,
         isPaused: payload['isPaused'] as bool? ?? false,
+        isHost: partyProvider.isHost,
       );
     });
 

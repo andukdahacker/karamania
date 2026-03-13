@@ -144,6 +144,10 @@ class Copy {
   static const String pausedDuring = 'Paused during';
   static const String hostControlResume = 'Resume';
 
+  // Ceremony
+  static const String ceremonyAnticipation = 'And the award goes to...';
+  static const String defaultAward = 'Star of the Show';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';
