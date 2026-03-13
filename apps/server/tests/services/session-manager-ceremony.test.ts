@@ -75,12 +75,14 @@ vi.mock('../../src/services/timer-scheduler.js', () => ({
 const mockBroadcastDjState = vi.fn();
 const mockBroadcastCeremonyAnticipation = vi.fn();
 const mockBroadcastCeremonyReveal = vi.fn();
+const mockBroadcastCeremonyQuick = vi.fn();
 vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastDjState: (...args: unknown[]) => mockBroadcastDjState(...args),
   broadcastDjPause: vi.fn(),
   broadcastDjResume: vi.fn(),
   broadcastCeremonyAnticipation: (...args: unknown[]) => mockBroadcastCeremonyAnticipation(...args),
   broadcastCeremonyReveal: (...args: unknown[]) => mockBroadcastCeremonyReveal(...args),
+  broadcastCeremonyQuick: (...args: unknown[]) => mockBroadcastCeremonyQuick(...args),
 }));
 
 vi.mock('../../src/services/connection-tracker.js', () => ({
@@ -231,7 +233,7 @@ describe('session-manager ceremony orchestration', () => {
       }));
     });
 
-    it('does NOT orchestrate ceremony when type is quick', async () => {
+    it('does NOT call full ceremony functions when type is quick', async () => {
       const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
       const newContext = createTestDJContext({
         sessionId: 'session-1',
@@ -250,11 +252,236 @@ describe('session-manager ceremony orchestration', () => {
 
       expect(mockBroadcastCeremonyReveal).not.toHaveBeenCalled();
     });
+
+    it('calls orchestrateQuickCeremony when entering ceremony with type quick', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
+      const newContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        currentPerformer: null,
+        metadata: { ceremonyType: 'quick', lastCeremonyType: 'quick' },
+      });
+
+      mockProcessTransition.mockReturnValue({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      expect(mockBroadcastCeremonyQuick).toHaveBeenCalledWith('session-1', {
+        award: 'Star of the Show',
+        performerName: null,
+        tone: 'hype',
+      });
+    });
+  });
+
+  describe('orchestrateQuickCeremony', () => {
+    it('emits ceremony:quick event immediately with award data', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
+      const newContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        currentPerformer: 'Alice',
+        metadata: { ceremonyType: 'quick', lastCeremonyType: 'quick' },
+      });
+
+      mockProcessTransition.mockReturnValue({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      // Quick ceremony broadcasts immediately — no delay
+      expect(mockBroadcastCeremonyQuick).toHaveBeenCalledWith('session-1', {
+        award: 'Star of the Show',
+        performerName: 'Alice',
+        tone: 'hype',
+      });
+    });
+
+    it('uses fallback award when no performer is identified', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
+      const newContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        currentPerformer: null,
+        metadata: { ceremonyType: 'quick', lastCeremonyType: 'quick' },
+      });
+
+      mockProcessTransition.mockReturnValue({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      expect(mockBroadcastCeremonyQuick).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        award: 'Star of the Show',
+        tone: 'hype',
+      }));
+    });
+
+    it('appends ceremony:revealed event with ceremonyType quick', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
+      const newContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        currentPerformer: null,
+        metadata: { ceremonyType: 'quick', lastCeremonyType: 'quick' },
+      });
+
+      mockProcessTransition.mockReturnValue({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      expect(mockAppendEvent).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        type: 'ceremony:revealed',
+        data: expect.objectContaining({
+          award: 'Star of the Show',
+          performerName: null,
+          ceremonyType: 'quick',
+        }),
+      }));
+    });
+
+    it('schedules auto-advance after 10s', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
+      const newContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        metadata: { ceremonyType: 'quick', lastCeremonyType: 'quick' },
+      });
+
+      mockProcessTransition.mockReturnValue({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      // Before 10s — no auto-advance
+      const ceremonyDoneContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+      });
+      mockGetSessionDjState.mockReturnValue(ceremonyDoneContext);
+      mockProcessTransition.mockReturnValue({
+        newContext: createTestDJContext({ sessionId: 'session-1', state: DJState.interlude }),
+        sideEffects: [],
+      });
+
+      vi.advanceTimersByTime(9999);
+      expect(mockGetSessionDjState).not.toHaveBeenCalled();
+
+      // At 10s — auto-advance fires
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(mockGetSessionDjState).toHaveBeenCalledWith('session-1');
+    });
+
+    it('auto-advance calls processDjTransition with CEREMONY_DONE event', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
+      const newContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        metadata: { ceremonyType: 'quick', lastCeremonyType: 'quick' },
+      });
+
+      mockProcessTransition.mockReturnValueOnce({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      const currentContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+      });
+      mockGetSessionDjState.mockReturnValue(currentContext);
+      mockProcessTransition.mockReturnValueOnce({
+        newContext: createTestDJContext({ sessionId: 'session-1', state: DJState.interlude }),
+        sideEffects: [],
+      });
+
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      // processDjTransition called twice: once for SONG_ENDED, once for CEREMONY_DONE
+      expect(mockProcessTransition).toHaveBeenCalledTimes(2);
+    });
+
+    it('auto-advance does not fire if session ended (getSessionDjState returns null)', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
+      const newContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        metadata: { ceremonyType: 'quick', lastCeremonyType: 'quick' },
+      });
+
+      mockProcessTransition.mockReturnValue({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      // Session ended — context is null
+      mockGetSessionDjState.mockReturnValue(null);
+
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      // processDjTransition should only have been called once (for SONG_ENDED)
+      expect(mockProcessTransition).toHaveBeenCalledTimes(1);
+    });
+
+    it('auto-advance does not fire if state is no longer ceremony (HOST_SKIP raced)', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
+      const newContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        metadata: { ceremonyType: 'quick', lastCeremonyType: 'quick' },
+      });
+
+      mockProcessTransition.mockReturnValue({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      // Already transitioned out of ceremony
+      mockGetSessionDjState.mockReturnValue(createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.interlude,
+      }));
+
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      // processDjTransition should only have been called once (for SONG_ENDED)
+      expect(mockProcessTransition).toHaveBeenCalledTimes(1);
+    });
+
+    it('auto-advance gracefully handles processDjTransition throwing', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
+      const newContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        metadata: { ceremonyType: 'quick', lastCeremonyType: 'quick' },
+      });
+
+      mockProcessTransition.mockReturnValueOnce({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      const currentContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+      });
+      mockGetSessionDjState.mockReturnValue(currentContext);
+
+      // Simulate DJEngineError from validateTransitionAllowed
+      mockProcessTransition.mockImplementationOnce(() => {
+        throw new Error('INVALID_TRANSITION');
+      });
+
+      // Should not throw — error is caught gracefully
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
   });
 
   describe('clearCeremonyTimers', () => {
-    it('cancels pending reveal timer when HOST_SKIP fires during ceremony', async () => {
-      // First, enter ceremony to set up a timer
+    it('cancels pending reveal timer when HOST_SKIP fires during full ceremony', async () => {
       const songContext = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
       const ceremonyContext = createTestDJContext({
         sessionId: 'session-1',
@@ -269,7 +496,6 @@ describe('session-manager ceremony orchestration', () => {
 
       expect(mockBroadcastCeremonyAnticipation).toHaveBeenCalled();
 
-      // Now skip out of ceremony — should clear timer
       const interludeContext = createTestDJContext({
         sessionId: 'session-1',
         state: DJState.interlude,
@@ -278,10 +504,41 @@ describe('session-manager ceremony orchestration', () => {
 
       await processDjTransition('session-1', ceremonyContext, { type: 'HOST_SKIP' });
 
-      // Advance timers — reveal should NOT fire because timer was cleared
       vi.advanceTimersByTime(5000);
 
       expect(mockBroadcastCeremonyReveal).not.toHaveBeenCalled();
+    });
+
+    it('cancels pending quick ceremony auto-advance timer when HOST_SKIP fires', async () => {
+      const songContext = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
+      const ceremonyContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        metadata: { ceremonyType: 'quick', lastCeremonyType: 'quick' },
+      });
+
+      mockProcessTransition.mockReturnValueOnce({ newContext: ceremonyContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', songContext, { type: 'SONG_ENDED' });
+
+      expect(mockBroadcastCeremonyQuick).toHaveBeenCalled();
+
+      // HOST_SKIP out of ceremony — should clear quick ceremony timer
+      const interludeContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.interlude,
+      });
+      mockProcessTransition.mockReturnValueOnce({ newContext: interludeContext, sideEffects: [] });
+
+      await processDjTransition('session-1', ceremonyContext, { type: 'HOST_SKIP' });
+
+      // Advance past 10s — auto-advance should NOT fire because timer was cleared
+      mockGetSessionDjState.mockReturnValue(null);
+      await vi.advanceTimersByTimeAsync(15_000);
+
+      // processDjTransition was called twice (SONG_ENDED + HOST_SKIP), not a third time
+      expect(mockProcessTransition).toHaveBeenCalledTimes(2);
     });
   });
 

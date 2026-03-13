@@ -147,6 +147,7 @@ class Copy {
   // Ceremony
   static const String ceremonyAnticipation = 'And the award goes to...';
   static const String defaultAward = 'Star of the Show';
+  static const String quickCeremonyLabel = 'Quick Award';
 
   // Dialogs
   static const String cancel = 'CANCEL';

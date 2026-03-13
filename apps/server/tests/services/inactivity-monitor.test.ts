@@ -60,6 +60,7 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastDjResume: vi.fn(),
   broadcastCeremonyAnticipation: vi.fn(),
   broadcastCeremonyReveal: vi.fn(),
+  broadcastCeremonyQuick: vi.fn(),
 }));
 
 vi.mock('../../src/services/connection-tracker.js', () => ({

@@ -8,7 +8,7 @@ import { calculateRemainingMs } from '../dj-engine/timers.js';
 import type { DJContext, DJTransition, DJSideEffect } from '../dj-engine/types.js';
 import { getSessionDjState, setSessionDjState, removeSessionDjState } from '../services/dj-state-store.js';
 import { scheduleSessionTimer, cancelSessionTimer, pauseSessionTimer, resumeSessionTimer } from '../services/timer-scheduler.js';
-import { broadcastDjState, broadcastDjPause, broadcastDjResume, broadcastCeremonyAnticipation, broadcastCeremonyReveal } from '../services/dj-broadcaster.js';
+import { broadcastDjState, broadcastDjPause, broadcastDjResume, broadcastCeremonyAnticipation, broadcastCeremonyReveal, broadcastCeremonyQuick } from '../services/dj-broadcaster.js';
 import { removeSession } from '../services/connection-tracker.js';
 import { removeSession as removeActivitySession } from '../services/activity-tracker.js';
 import { DJState } from '../dj-engine/types.js';
@@ -43,6 +43,7 @@ export function clearSessionAwards(sessionId: string): void {
 }
 
 const ANTICIPATION_DURATION_MS = 2000;
+const QUICK_CEREMONY_DURATION_MS = 10_000; // 10s display then auto-advance
 const DEFAULT_AWARD = 'Star of the Show';
 const DEFAULT_AWARD_TONE = 'hype';
 
@@ -104,6 +105,55 @@ async function orchestrateFullCeremony(
   }, ANTICIPATION_DURATION_MS);
 
   ceremonyRevealTimers.set(sessionId, revealTimer);
+}
+
+async function orchestrateQuickCeremony(
+  sessionId: string,
+  context: DJContext,
+): Promise<void> {
+  const performerName = context.currentPerformer;
+
+  // Performer tracking not implemented until Epic 5 — always empty for now
+  const performerUserId = '';
+  const awardResult = performerUserId
+    ? await generateCeremonyAward(sessionId, performerUserId, 'quick')
+    : null;
+
+  const award = awardResult?.award ?? DEFAULT_AWARD;
+  const tone = awardResult?.tone ?? DEFAULT_AWARD_TONE;
+
+  // Broadcast quick ceremony immediately — no anticipation phase
+  broadcastCeremonyQuick(sessionId, {
+    award,
+    performerName,
+    tone,
+  });
+
+  // Log ceremony reveal to event stream
+  appendEvent(sessionId, {
+    type: 'ceremony:revealed',
+    ts: Date.now(),
+    data: {
+      award,
+      performerName,
+      ceremonyType: 'quick' as const,
+    },
+  });
+
+  // Schedule auto-advance after display duration
+  // Follows handleRecoveryTimeout pattern: retrieve current context, guard state, try-catch
+  const advanceTimer = setTimeout(async () => {
+    ceremonyRevealTimers.delete(sessionId);
+    const currentContext = getSessionDjState(sessionId);
+    if (!currentContext || currentContext.state !== DJState.ceremony) return;
+    try {
+      await processDjTransition(sessionId, currentContext, { type: 'CEREMONY_DONE' });
+    } catch {
+      // Already transitioned (e.g., HOST_SKIP raced) — safe to ignore
+    }
+  }, QUICK_CEREMONY_DURATION_MS);
+
+  ceremonyRevealTimers.set(sessionId, advanceTimer);
 }
 
 function countRecentReactions(events: SessionEvent[]): number {
@@ -447,8 +497,10 @@ export async function processDjTransition(
     if (resolvedCeremonyType === 'full') {
       // Fire-and-forget — don't block DJ transition pipeline
       void orchestrateFullCeremony(sessionId, newContext);
+    } else {
+      // Quick ceremony — immediate award flash, auto-advances after 10s
+      void orchestrateQuickCeremony(sessionId, newContext);
     }
-    // Quick ceremony handled by Story 3.4
   }
 
   for (const effect of sideEffects) {
@@ -635,6 +687,7 @@ export async function endSession(
   // Clean up in-memory state
   removeSessionDjState(sessionId);
   cancelSessionTimer(sessionId);
+  clearCeremonyTimers(sessionId);
   removeSession(sessionId);
   removeActivitySession(sessionId);
   clearScoreCache(sessionId);

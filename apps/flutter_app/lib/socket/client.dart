@@ -201,6 +201,15 @@ class SocketClient {
       );
     });
 
+    on('ceremony:quick', (data) {
+      final payload = data as Map<String, dynamic>;
+      partyProvider.onCeremonyQuick(
+        award: payload['award'] as String,
+        performerName: payload['performerName'] as String?,
+        tone: payload['tone'] as String,
+      );
+    });
+
     // DJ state change event
     on('dj:stateChanged', (data) {
       final payload = data as Map<String, dynamic>;

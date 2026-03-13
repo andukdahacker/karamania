@@ -31,6 +31,7 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastDjState: mockBroadcastDjState,
   broadcastCeremonyAnticipation: vi.fn(),
   broadcastCeremonyReveal: vi.fn(),
+  broadcastCeremonyQuick: vi.fn(),
 }));
 
 const mockUpdateVibe = vi.fn();

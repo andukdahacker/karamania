@@ -358,4 +358,67 @@ describe('dj-broadcaster', () => {
       warnSpy.mockRestore();
     });
   });
+
+  describe('broadcastCeremonyQuick', () => {
+    it('emits ceremony:quick to session room with correct payload', async () => {
+      const mockEmit = vi.fn();
+      const mockIo = {
+        to: vi.fn().mockReturnValue({ emit: mockEmit }),
+      };
+
+      const { initDjBroadcaster, broadcastCeremonyQuick } = await import('../../src/services/dj-broadcaster.js');
+      initDjBroadcaster(mockIo as never);
+
+      broadcastCeremonyQuick('session-1', {
+        award: 'Mic Drop Master',
+        performerName: 'Alice',
+        tone: 'hype',
+      });
+
+      expect(mockIo.to).toHaveBeenCalledWith('session-1');
+      expect(mockEmit).toHaveBeenCalledWith('ceremony:quick', {
+        award: 'Mic Drop Master',
+        performerName: 'Alice',
+        tone: 'hype',
+      });
+    });
+
+    it('broadcasts with performerName: null', async () => {
+      const mockEmit = vi.fn();
+      const mockIo = {
+        to: vi.fn().mockReturnValue({ emit: mockEmit }),
+      };
+
+      const { initDjBroadcaster, broadcastCeremonyQuick } = await import('../../src/services/dj-broadcaster.js');
+      initDjBroadcaster(mockIo as never);
+
+      broadcastCeremonyQuick('session-1', {
+        award: 'Star of the Show',
+        performerName: null,
+        tone: 'comedic',
+      });
+
+      expect(mockEmit).toHaveBeenCalledWith('ceremony:quick', {
+        award: 'Star of the Show',
+        performerName: null,
+        tone: 'comedic',
+      });
+    });
+
+    it('warns when io is not initialized', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const { broadcastCeremonyQuick } = await import('../../src/services/dj-broadcaster.js');
+      broadcastCeremonyQuick('session-1', {
+        award: 'Star of the Show',
+        performerName: null,
+        tone: 'hype',
+      });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Cannot broadcast'),
+      );
+      warnSpy.mockRestore();
+    });
+  });
 });

@@ -366,5 +366,41 @@ void main() {
       expect(provider.ceremonyPerformerName, 'Bob');
       expect(provider.ceremonyTone, 'hype');
     });
+
+    test('ceremony:quick event calls partyProvider.onCeremonyQuick', () {
+      final payload = <String, dynamic>{
+        'award': 'Star of the Show',
+        'performerName': 'Carol',
+        'tone': 'comedic',
+      };
+
+      provider.onCeremonyQuick(
+        award: payload['award'] as String,
+        performerName: payload['performerName'] as String?,
+        tone: payload['tone'] as String,
+      );
+
+      expect(provider.ceremonyAward, 'Star of the Show');
+      expect(provider.ceremonyPerformerName, 'Carol');
+      expect(provider.ceremonyTone, 'comedic');
+      expect(provider.ceremonyRevealAt, isNull);
+    });
+
+    test('ceremony:quick with null performerName', () {
+      final payload = <String, dynamic>{
+        'award': 'Star of the Show',
+        'performerName': null,
+        'tone': 'hype',
+      };
+
+      provider.onCeremonyQuick(
+        award: payload['award'] as String,
+        performerName: payload['performerName'] as String?,
+        tone: payload['tone'] as String,
+      );
+
+      expect(provider.ceremonyAward, 'Star of the Show');
+      expect(provider.ceremonyPerformerName, isNull);
+    });
   });
 }

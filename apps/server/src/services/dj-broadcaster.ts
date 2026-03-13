@@ -97,3 +97,18 @@ export function broadcastCeremonyReveal(
   }
   io.to(sessionId).emit(EVENTS.CEREMONY_REVEAL, data);
 }
+
+export function broadcastCeremonyQuick(
+  sessionId: string,
+  data: {
+    award: string;
+    performerName: string | null;
+    tone: string;
+  },
+): void {
+  if (!io) {
+    console.warn('[dj-broadcaster] Cannot broadcast — io not initialized');
+    return;
+  }
+  io.to(sessionId).emit(EVENTS.CEREMONY_QUICK, data);
+}

@@ -110,6 +110,18 @@ class PartyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void onCeremonyQuick({
+    required String award,
+    required String? performerName,
+    required String tone,
+  }) {
+    _ceremonyPerformerName = performerName;
+    _ceremonyAward = award;
+    _ceremonyTone = tone;
+    _ceremonyRevealAt = null; // Quick ceremony has no revealAt timing
+    notifyListeners();
+  }
+
   void _clearCeremonyState() {
     _ceremonyPerformerName = null;
     _ceremonyRevealAt = null;
