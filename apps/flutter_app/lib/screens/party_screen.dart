@@ -15,6 +15,7 @@ import 'package:karamania/widgets/bridge_moment_display.dart';
 import 'package:karamania/widgets/host_controls_overlay.dart';
 import 'package:karamania/widgets/reconnecting_banner.dart';
 import 'package:karamania/widgets/ceremony_display.dart';
+import 'package:karamania/widgets/moment_card_overlay.dart';
 import 'package:karamania/widgets/quick_ceremony_display.dart';
 import 'package:karamania/widgets/song_over_button.dart';
 import 'package:go_router/go_router.dart';
@@ -175,6 +176,19 @@ class _PartyScreenState extends State<PartyScreen>
               const ReconnectingBanner(),
             if (partyProvider.hostTransferPending)
               _buildHostTransferBanner(context, displayVibe),
+            // Moment card overlay — only during Full ceremony celebration window
+            if (partyProvider.showMomentCard &&
+                partyProvider.ceremonyType == 'full' &&
+                partyProvider.ceremonyAward != null)
+              Positioned.fill(
+                child: MomentCardOverlay(
+                  award: partyProvider.ceremonyAward!,
+                  vibe: displayVibe,
+                  performerName: partyProvider.ceremonyPerformerName,
+                  songTitle: partyProvider.ceremonySongTitle,
+                  onDismiss: () => partyProvider.dismissMomentCard(),
+                ),
+              ),
             if (partyProvider.isHost && partyProvider.djState == DJState.song)
               Positioned(
                 bottom: DJTokens.spaceLg,

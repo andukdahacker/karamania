@@ -125,6 +125,44 @@ describe('round-trip guarantee', () => {
   });
 });
 
+describe('currentSongTitle serialization', () => {
+  it('round-trips with currentSongTitle set', () => {
+    const ctx = createTestDJContext({
+      currentSongTitle: 'Bohemian Rhapsody',
+    });
+    const roundTripped = deserializeDJContext(serializeDJContext(ctx));
+    expect(roundTripped.currentSongTitle).toBe('Bohemian Rhapsody');
+    expect(roundTripped).toEqual(ctx);
+  });
+
+  it('round-trips with currentSongTitle: null', () => {
+    const ctx = createTestDJContext({
+      currentSongTitle: null,
+    });
+    const roundTripped = deserializeDJContext(serializeDJContext(ctx));
+    expect(roundTripped.currentSongTitle).toBeNull();
+  });
+
+  it('initial context has currentSongTitle: null', () => {
+    const ctx = createTestDJContext();
+    expect(ctx.currentSongTitle).toBeNull();
+  });
+
+  it('defaults to null when currentSongTitle is missing from JSON', () => {
+    const json = serializeDJContext(createTestDJContext());
+    delete (json as Record<string, unknown>).currentSongTitle;
+    const deserialized = deserializeDJContext(json);
+    expect(deserialized.currentSongTitle).toBeNull();
+  });
+
+  it('throws on non-string currentSongTitle', () => {
+    const json = serializeDJContext(createTestDJContext());
+    (json as Record<string, unknown>).currentSongTitle = 123;
+    expect(() => deserializeDJContext(json)).toThrow(DJEngineError);
+    expect(() => deserializeDJContext(json)).toThrow('currentSongTitle must be a string or null');
+  });
+});
+
 describe('deserialization error handling', () => {
   it('throws on null input', () => {
     expect(() => deserializeDJContext(null)).toThrow(DJEngineError);

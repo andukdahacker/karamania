@@ -1,3 +1,4 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/state/loading_state.dart';
@@ -699,6 +700,99 @@ void main() {
       provider.onDjStateUpdate(state: DJState.ceremony);
 
       expect(provider.isPaused, isTrue); // Unchanged
+    });
+  });
+
+  group('PartyProvider moment card', () {
+    late PartyProvider provider;
+
+    setUp(() {
+      provider = PartyProvider(wakelockToggle: (_) {});
+    });
+
+    test('onCeremonyReveal with songTitle stores it correctly', () {
+      provider.onCeremonyReveal(
+        award: 'Mic Drop Master',
+        performerName: 'Alice',
+        tone: 'hype',
+        songTitle: 'Bohemian Rhapsody',
+      );
+
+      expect(provider.ceremonySongTitle, 'Bohemian Rhapsody');
+    });
+
+    test('onCeremonyReveal without songTitle defaults to null', () {
+      provider.onCeremonyReveal(
+        award: 'Mic Drop Master',
+        performerName: 'Alice',
+        tone: 'hype',
+      );
+
+      expect(provider.ceremonySongTitle, isNull);
+    });
+
+    test('ceremonySongTitle getter returns stored value', () {
+      provider.onCeremonyReveal(
+        award: 'Award',
+        performerName: null,
+        tone: 'hype',
+        songTitle: 'Don\'t Stop Believin\'',
+      );
+
+      expect(provider.ceremonySongTitle, 'Don\'t Stop Believin\'');
+    });
+
+    test('showMomentCardOverlay sets showMomentCard to true and notifies', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.showMomentCardOverlay();
+
+      expect(provider.showMomentCard, isTrue);
+      expect(notifyCount, 1);
+    });
+
+    test('dismissMomentCard sets showMomentCard to false and notifies', () {
+      provider.showMomentCardOverlay();
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.dismissMomentCard();
+
+      expect(provider.showMomentCard, isFalse);
+      expect(notifyCount, 1);
+    });
+
+    test('_clearCeremonyState clears ceremonySongTitle and dismisses moment card', () {
+      provider.onCeremonyReveal(
+        award: 'Award',
+        performerName: null,
+        tone: 'hype',
+        songTitle: 'Song Title',
+      );
+      provider.showMomentCardOverlay();
+
+      // Trigger _clearCeremonyState via onDjStateUpdate transitioning OUT of ceremony
+      provider.onDjStateUpdate(state: DJState.ceremony);
+      provider.onDjStateUpdate(state: DJState.interlude);
+
+      expect(provider.ceremonySongTitle, isNull);
+      expect(provider.showMomentCard, isFalse);
+    });
+
+    test('auto-dismiss: moment card timer fires after 10s', () {
+      fakeAsync((async) {
+        final provider = PartyProvider(wakelockToggle: (_) {});
+        provider.showMomentCardOverlay();
+        expect(provider.showMomentCard, isTrue);
+
+        async.elapse(const Duration(seconds: 9));
+        expect(provider.showMomentCard, isTrue);
+
+        async.elapse(const Duration(seconds: 1));
+        expect(provider.showMomentCard, isFalse);
+      });
     });
   });
 }

@@ -18,6 +18,7 @@ export function createTestDJContext(overrides?: Partial<DJContext>): DJContext {
     songCount: 0,
     sessionStartedAt: null,
     currentPerformer: null,
+    currentSongTitle: null,
     timerStartedAt: null,
     timerDurationMs: null,
     isPaused: false,

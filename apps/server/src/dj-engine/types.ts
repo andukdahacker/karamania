@@ -56,6 +56,7 @@ export interface DJContext {
   songCount: number;
   sessionStartedAt: number | null;
   currentPerformer: string | null;
+  currentSongTitle: string | null;
   timerStartedAt: number | null;
   timerDurationMs: number | null;
   isPaused: boolean;

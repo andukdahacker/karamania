@@ -63,6 +63,7 @@ async function orchestrateFullCeremony(
   context: DJContext,
 ): Promise<void> {
   const performerName = context.currentPerformer;
+  const songTitle = context.currentSongTitle;
 
   // Compute synchronized reveal timestamp BEFORE any async work
   // so that async latency doesn't shorten the anticipation phase
@@ -90,6 +91,7 @@ async function orchestrateFullCeremony(
       award,
       performerName,
       tone,
+      songTitle,
     });
 
     // Log ceremony reveal to event stream
@@ -100,6 +102,7 @@ async function orchestrateFullCeremony(
         award,
         performerName,
         ceremonyType: 'full' as const,
+        songTitle,
       },
     });
   }, ANTICIPATION_DURATION_MS);
@@ -137,6 +140,7 @@ async function orchestrateQuickCeremony(
       award,
       performerName,
       ceremonyType: 'quick' as const,
+      songTitle: context.currentSongTitle,
     },
   });
 

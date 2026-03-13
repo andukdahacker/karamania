@@ -183,7 +183,52 @@ describe('session-manager ceremony orchestration', () => {
         award: 'Star of the Show',
         performerName: null,
         tone: 'hype',
+        songTitle: null,
       });
+    });
+
+    it('includes songTitle from context in reveal broadcast', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
+      const newContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        currentPerformer: 'Alice',
+        currentSongTitle: 'Bohemian Rhapsody',
+        metadata: { ceremonyType: 'full', lastCeremonyType: 'full' },
+      });
+
+      mockProcessTransition.mockReturnValue({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      vi.advanceTimersByTime(2000);
+
+      expect(mockBroadcastCeremonyReveal).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        songTitle: 'Bohemian Rhapsody',
+      }));
+    });
+
+    it('includes songTitle: null in reveal broadcast when currentSongTitle is null', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: DJState.song });
+      const newContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.ceremony,
+        currentPerformer: null,
+        currentSongTitle: null,
+        metadata: { ceremonyType: 'full', lastCeremonyType: 'full' },
+      });
+
+      mockProcessTransition.mockReturnValue({ newContext, sideEffects: [] });
+
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', context, { type: 'SONG_ENDED' });
+
+      vi.advanceTimersByTime(2000);
+
+      expect(mockBroadcastCeremonyReveal).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        songTitle: null,
+      }));
     });
 
     it('uses fallback award when no performer is identified', async () => {
@@ -229,6 +274,7 @@ describe('session-manager ceremony orchestration', () => {
           award: 'Star of the Show',
           performerName: null,
           ceremonyType: 'full',
+          songTitle: null,
         }),
       }));
     });
@@ -338,6 +384,7 @@ describe('session-manager ceremony orchestration', () => {
           award: 'Star of the Show',
           performerName: null,
           ceremonyType: 'quick',
+          songTitle: null,
         }),
       }));
     });

@@ -21,6 +21,7 @@ export function createDJContext(sessionId: string, participantCount: number): DJ
     songCount: 0,
     sessionStartedAt: null,
     currentPerformer: null,
+    currentSongTitle: null,
     timerStartedAt: null,
     timerDurationMs: null,
     isPaused: false,

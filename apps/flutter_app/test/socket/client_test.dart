@@ -354,17 +354,60 @@ void main() {
         'award': 'Mic Drop Master',
         'performerName': 'Bob',
         'tone': 'hype',
+        'songTitle': null,
       };
 
       provider.onCeremonyReveal(
         award: payload['award'] as String,
         performerName: payload['performerName'] as String?,
         tone: payload['tone'] as String,
+        songTitle: payload['songTitle'] as String?,
       );
 
       expect(provider.ceremonyAward, 'Mic Drop Master');
       expect(provider.ceremonyPerformerName, 'Bob');
       expect(provider.ceremonyTone, 'hype');
+      expect(provider.ceremonySongTitle, isNull);
+    });
+
+    test('ceremony:reveal handler passes songTitle to provider', () {
+      final payload = <String, dynamic>{
+        'award': 'Mic Drop Master',
+        'performerName': 'Bob',
+        'tone': 'hype',
+        'songTitle': 'Bohemian Rhapsody',
+      };
+
+      provider.onCeremonyReveal(
+        award: payload['award'] as String,
+        performerName: payload['performerName'] as String?,
+        tone: payload['tone'] as String,
+        songTitle: payload['songTitle'] as String?,
+      );
+
+      expect(provider.ceremonySongTitle, 'Bohemian Rhapsody');
+    });
+
+    test('ceremony:reveal handler flow sets ceremony state and triggers moment card', () {
+      // Simulates the full ceremony:reveal handler sequence from client.dart
+      final payload = <String, dynamic>{
+        'award': 'Mic Drop Master',
+        'performerName': 'Alice',
+        'tone': 'hype',
+        'songTitle': 'Bohemian Rhapsody',
+      };
+
+      provider.onCeremonyReveal(
+        award: payload['award'] as String,
+        performerName: payload['performerName'] as String?,
+        tone: payload['tone'] as String,
+        songTitle: payload['songTitle'] as String?,
+      );
+      provider.showMomentCardOverlay();
+
+      expect(provider.ceremonyAward, 'Mic Drop Master');
+      expect(provider.ceremonySongTitle, 'Bohemian Rhapsody');
+      expect(provider.showMomentCard, isTrue);
     });
 
     test('ceremony:quick event calls partyProvider.onCeremonyQuick', () {

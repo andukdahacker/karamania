@@ -149,6 +149,10 @@ class Copy {
   static const String defaultAward = 'Star of the Show';
   static const String quickCeremonyLabel = 'Quick Award';
 
+  // Moment card
+  static const String momentCardShare = 'Share Moment';
+  static const String momentCardDismiss = 'Tap to dismiss';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

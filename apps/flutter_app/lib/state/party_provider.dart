@@ -1,3 +1,4 @@
+import 'dart:async' show Timer;
 import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
@@ -56,6 +57,9 @@ class PartyProvider extends ChangeNotifier {
   int? _ceremonyRevealAt;
   String? _ceremonyAward;
   String? _ceremonyTone;
+  String? _ceremonySongTitle;
+  bool _showMomentCard = false;
+  Timer? _momentCardTimer;
 
   DJState get djState => _djState;
   PartyVibe get vibe => _vibe;
@@ -84,6 +88,8 @@ class PartyProvider extends ChangeNotifier {
   int? get ceremonyRevealAt => _ceremonyRevealAt;
   String? get ceremonyAward => _ceremonyAward;
   String? get ceremonyTone => _ceremonyTone;
+  String? get ceremonySongTitle => _ceremonySongTitle;
+  bool get showMomentCard => _showMomentCard;
 
   /// Background color driven by current DJ state and vibe.
   Color get backgroundColor => djStateBackgroundColor(_djState, _vibe);
@@ -103,9 +109,11 @@ class PartyProvider extends ChangeNotifier {
     required String award,
     required String? performerName,
     required String tone,
+    String? songTitle,
   }) {
     _ceremonyAward = award;
     _ceremonyTone = tone;
+    _ceremonySongTitle = songTitle;
     if (performerName != null) _ceremonyPerformerName = performerName;
     notifyListeners();
   }
@@ -122,11 +130,31 @@ class PartyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void showMomentCardOverlay() {
+    _showMomentCard = true;
+    _momentCardTimer?.cancel();
+    _momentCardTimer = Timer(const Duration(seconds: 10), () {
+      dismissMomentCard();
+    });
+    notifyListeners();
+  }
+
+  void dismissMomentCard() {
+    _showMomentCard = false;
+    _momentCardTimer?.cancel();
+    _momentCardTimer = null;
+    notifyListeners();
+  }
+
   void _clearCeremonyState() {
     _ceremonyPerformerName = null;
     _ceremonyRevealAt = null;
     _ceremonyAward = null;
     _ceremonyTone = null;
+    _ceremonySongTitle = null;
+    _showMomentCard = false;
+    _momentCardTimer?.cancel();
+    _momentCardTimer = null;
   }
 
   void onDjStateUpdate({
@@ -357,6 +385,12 @@ class PartyProvider extends ChangeNotifier {
     _participants = _participants.where((p) => p.userId != userId).toList();
     _participantCount = _participants.length;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _momentCardTimer?.cancel();
+    super.dispose();
   }
 
   /// Disable wakelock when leaving the session.

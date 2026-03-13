@@ -17,6 +17,7 @@ export function serializeDJContext(context: DJContext): unknown {
     songCount: context.songCount,
     sessionStartedAt: context.sessionStartedAt,
     currentPerformer: context.currentPerformer,
+    currentSongTitle: context.currentSongTitle,
     timerStartedAt: context.timerStartedAt,
     timerDurationMs: context.timerDurationMs,
     isPaused: context.isPaused,
@@ -77,8 +78,12 @@ export function deserializeDJContext(json: unknown): DJContext {
   }
 
   // Validate nullable string fields
-  if (obj.currentPerformer !== null && typeof obj.currentPerformer !== 'string') {
+  if (obj.currentPerformer !== null && obj.currentPerformer !== undefined && typeof obj.currentPerformer !== 'string') {
     throw new DJEngineError('INVALID_CURRENT_PERFORMER', 'currentPerformer must be a string or null');
+  }
+
+  if (obj.currentSongTitle !== null && obj.currentSongTitle !== undefined && typeof obj.currentSongTitle !== 'string') {
+    throw new DJEngineError('INVALID_CURRENT_SONG_TITLE', 'currentSongTitle must be a string or null');
   }
 
   // Validate cycleHistory
@@ -103,6 +108,7 @@ export function deserializeDJContext(json: unknown): DJContext {
     songCount: obj.songCount as number,
     sessionStartedAt: (obj.sessionStartedAt as number | null) ?? null,
     currentPerformer: (obj.currentPerformer as string | null) ?? null,
+    currentSongTitle: (obj.currentSongTitle as string | null) ?? null,
     timerStartedAt: (obj.timerStartedAt as number | null) ?? null,
     timerDurationMs: (obj.timerDurationMs as number | null) ?? null,
     isPaused: obj.isPaused as boolean,

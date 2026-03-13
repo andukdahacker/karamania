@@ -89,6 +89,7 @@ export function broadcastCeremonyReveal(
     award: string;
     performerName: string | null;
     tone: string;
+    songTitle: string | null;
   },
 ): void {
   if (!io) {

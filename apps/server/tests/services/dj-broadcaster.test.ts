@@ -332,6 +332,7 @@ describe('dj-broadcaster', () => {
         award: 'Mic Drop Master',
         performerName: 'Bob',
         tone: 'hype',
+        songTitle: null,
       });
 
       expect(mockIo.to).toHaveBeenCalledWith('session-1');
@@ -339,6 +340,31 @@ describe('dj-broadcaster', () => {
         award: 'Mic Drop Master',
         performerName: 'Bob',
         tone: 'hype',
+        songTitle: null,
+      });
+    });
+
+    it('broadcasts with songTitle when provided', async () => {
+      const mockEmit = vi.fn();
+      const mockIo = {
+        to: vi.fn().mockReturnValue({ emit: mockEmit }),
+      };
+
+      const { initDjBroadcaster, broadcastCeremonyReveal } = await import('../../src/services/dj-broadcaster.js');
+      initDjBroadcaster(mockIo as never);
+
+      broadcastCeremonyReveal('session-1', {
+        award: 'Mic Drop Master',
+        performerName: 'Bob',
+        tone: 'hype',
+        songTitle: 'Bohemian Rhapsody',
+      });
+
+      expect(mockEmit).toHaveBeenCalledWith('ceremony:reveal', {
+        award: 'Mic Drop Master',
+        performerName: 'Bob',
+        tone: 'hype',
+        songTitle: 'Bohemian Rhapsody',
       });
     });
 
@@ -350,6 +376,7 @@ describe('dj-broadcaster', () => {
         award: 'Star of the Show',
         performerName: null,
         tone: 'hype',
+        songTitle: null,
       });
 
       expect(warnSpy).toHaveBeenCalledWith(

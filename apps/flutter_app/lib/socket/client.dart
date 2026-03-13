@@ -198,7 +198,10 @@ class SocketClient {
         award: payload['award'] as String,
         performerName: payload['performerName'] as String?,
         tone: payload['tone'] as String,
+        songTitle: payload['songTitle'] as String?,
       );
+      // Trigger moment card overlay for Full ceremony
+      partyProvider.showMomentCardOverlay();
     });
 
     on('ceremony:quick', (data) {
@@ -333,6 +336,13 @@ class SocketClient {
 
   void emitHostKickPlayer(String userId) {
     _socket?.emit('host:kickPlayer', {'userId': userId});
+  }
+
+  void emitMomentCardShared() {
+    _socket?.emit('card:shared', {
+      'type': 'moment',
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
   }
 
   void startParty(PartyProvider partyProvider) {
