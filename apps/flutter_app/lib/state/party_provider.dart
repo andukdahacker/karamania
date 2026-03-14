@@ -3,6 +3,7 @@ import 'dart:math' show Random;
 import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
+import 'package:karamania/constants/party_cards.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -80,6 +81,9 @@ class PartyProvider extends ChangeNotifier {
   bool _showMomentCard = false;
   Timer? _momentCardTimer;
 
+  // Party card state — populated by card:dealt event
+  PartyCardData? _currentCard;
+
   // Reaction state
   final List<ReactionEvent> _reactionFeed = [];
   static const int _maxReactionFeedSize = 50;
@@ -120,6 +124,7 @@ class PartyProvider extends ChangeNotifier {
   String? get ceremonyTone => _ceremonyTone;
   String? get ceremonySongTitle => _ceremonySongTitle;
   bool get showMomentCard => _showMomentCard;
+  PartyCardData? get currentCard => _currentCard;
   int? get streakMilestone => _streakMilestone;
   String? get streakEmoji => _streakEmoji;
   String? get streakDisplayName => _streakDisplayName;
@@ -223,6 +228,11 @@ class PartyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void onCardDealt(PartyCardData card) {
+    _currentCard = card;
+    notifyListeners();
+  }
+
   void _clearCeremonyState() {
     _ceremonyPerformerName = null;
     _ceremonyRevealAt = null;
@@ -247,6 +257,10 @@ class PartyProvider extends ChangeNotifier {
     // Clear ceremony data when transitioning OUT of ceremony state
     if (_djState == DJState.ceremony && state != DJState.ceremony) {
       _clearCeremonyState();
+    }
+    // Clear card state when leaving partyCardDeal state
+    if (_djState == DJState.partyCardDeal && state != DJState.partyCardDeal) {
+      _currentCard = null;
     }
     // Clear reaction feed and streak state when leaving song state (AC #4)
     if (_djState == DJState.song && state != DJState.song) {

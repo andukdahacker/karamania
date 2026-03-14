@@ -14,7 +14,7 @@ function isValidationError(error: unknown): boolean {
   return error instanceof Error && error.message === 'Not host';
 }
 
-async function validateHost(socket: AuthenticatedSocket): Promise<void> {
+export async function validateHost(socket: AuthenticatedSocket): Promise<void> {
   const session = await sessionRepo.findById(socket.data.sessionId);
   if (!session || session.host_user_id !== socket.data.userId) {
     socket.emit('error', { code: 'NOT_HOST', message: 'Only the host can perform this action' });

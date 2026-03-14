@@ -3,6 +3,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:karamania/audio/sound_cue.dart';
 import 'package:karamania/audio/state_transition_audio.dart';
 import 'package:karamania/config/app_config.dart';
+import 'package:karamania/constants/party_cards.dart';
 import 'package:karamania/socket/client.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
@@ -576,6 +577,47 @@ void main() {
 
       expect(provider.ceremonyAward, 'Star of the Show');
       expect(provider.ceremonyPerformerName, isNull);
+    });
+  });
+
+  group('SocketClient card:dealt parsing', () {
+    late PartyProvider provider;
+    late List<bool> wakelockCalls;
+
+    setUp(() {
+      wakelockCalls = [];
+      provider = PartyProvider(wakelockToggle: (enable) => wakelockCalls.add(enable));
+    });
+
+    test('card:dealt listener parses payload and calls onCardDealt', () {
+      final payload = <String, dynamic>{
+        'cardId': 'chipmunk-mode',
+        'title': 'Chipmunk Mode',
+        'description': 'Sing in the highest pitch you can manage',
+        'cardType': 'vocal',
+        'emoji': '🐿️',
+      };
+
+      final card = PartyCardData.fromPayload(payload);
+      provider.onCardDealt(card);
+
+      expect(provider.currentCard, isNotNull);
+      expect(provider.currentCard!.id, 'chipmunk-mode');
+      expect(provider.currentCard!.title, 'Chipmunk Mode');
+      expect(provider.currentCard!.type, PartyCardType.vocal);
+    });
+
+    test('card:dealt handles malformed payload gracefully', () {
+      // PartyCardData.fromPayload will throw on bad data — the socket handler
+      // catches and ignores. We test the parse failure here.
+      expect(
+        () => PartyCardData.fromPayload(<String, dynamic>{'bad': 'data'}),
+        throwsA(isA<TypeError>()),
+      );
+    });
+
+    test('emitCardRedraw does not throw when not connected', () {
+      expect(() => SocketClient.instance.emitCardRedraw(), returnsNormally);
     });
   });
 }

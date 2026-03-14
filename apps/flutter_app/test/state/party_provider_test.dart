@@ -2,6 +2,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/state/loading_state.dart';
+import 'package:karamania/constants/party_cards.dart';
 import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus, ReactionEvent;
 import 'package:karamania/theme/dj_theme.dart';
 
@@ -955,6 +956,60 @@ void main() {
       expect(provider.streakMilestone, isNull);
       expect(provider.streakEmoji, isNull);
       expect(provider.streakDisplayName, isNull);
+    });
+  });
+
+  group('Party card state', () {
+    late PartyProvider provider;
+    late List<bool> wakelockCalls;
+
+    setUp(() {
+      wakelockCalls = [];
+      provider = PartyProvider(wakelockToggle: (enable) => wakelockCalls.add(enable));
+    });
+
+    test('onCardDealt sets currentCard and notifies listeners', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      const card = PartyCardData(
+        id: 'chipmunk-mode',
+        title: 'Chipmunk Mode',
+        description: 'Sing high',
+        type: PartyCardType.vocal,
+        emoji: '🐿️',
+      );
+
+      provider.onCardDealt(card);
+
+      expect(provider.currentCard, isNotNull);
+      expect(provider.currentCard!.id, 'chipmunk-mode');
+      expect(notifyCount, 1);
+    });
+
+    test('card state clears when leaving partyCardDeal state', () {
+      // Set to partyCardDeal state
+      provider.onDjStateUpdate(state: DJState.partyCardDeal);
+
+      // Deal a card
+      const card = PartyCardData(
+        id: 'robot-mode',
+        title: 'Robot Mode',
+        description: 'Sing like a robot',
+        type: PartyCardType.vocal,
+        emoji: '🤖',
+      );
+      provider.onCardDealt(card);
+      expect(provider.currentCard, isNotNull);
+
+      // Transition out of partyCardDeal
+      provider.onDjStateUpdate(state: DJState.song);
+
+      expect(provider.currentCard, isNull);
+    });
+
+    test('card state is null initially', () {
+      expect(provider.currentCard, isNull);
     });
   });
 }

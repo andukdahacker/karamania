@@ -55,6 +55,20 @@ class _HostControlsOverlayState extends State<HostControlsOverlay> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (_expanded) ...[
+                // Re-deal card button — only during partyCardDeal state
+                if (partyProvider.djState == DJState.partyCardDeal) ...[
+                  _ControlButton(
+                    key: const Key('host-redeal-card'),
+                    label: Copy.hostControlRedealCard,
+                    icon: Icons.refresh,
+                    color: vibe.accent,
+                    onTap: () {
+                      _collapse();
+                      SocketClient.instance.emitCardRedraw();
+                    },
+                  ),
+                  const SizedBox(height: DJTokens.spaceSm),
+                ],
                 _ControlButton(
                   key: const Key('host-control-invite'),
                   label: Copy.hostControlInvite,

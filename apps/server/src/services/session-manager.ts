@@ -8,7 +8,8 @@ import { calculateRemainingMs } from '../dj-engine/timers.js';
 import type { DJContext, DJTransition, DJSideEffect } from '../dj-engine/types.js';
 import { getSessionDjState, setSessionDjState, removeSessionDjState } from '../services/dj-state-store.js';
 import { scheduleSessionTimer, cancelSessionTimer, pauseSessionTimer, resumeSessionTimer } from '../services/timer-scheduler.js';
-import { broadcastDjState, broadcastDjPause, broadcastDjResume, broadcastCeremonyAnticipation, broadcastCeremonyReveal, broadcastCeremonyQuick } from '../services/dj-broadcaster.js';
+import { broadcastDjState, broadcastDjPause, broadcastDjResume, broadcastCeremonyAnticipation, broadcastCeremonyReveal, broadcastCeremonyQuick, broadcastCardDealt } from '../services/dj-broadcaster.js';
+import { dealCard, clearDealtCards } from '../services/card-dealer.js';
 import { removeSession } from '../services/connection-tracker.js';
 import { removeSession as removeActivitySession } from '../services/activity-tracker.js';
 import { DJState } from '../dj-engine/types.js';
@@ -159,6 +160,46 @@ async function orchestrateQuickCeremony(
   }, QUICK_CEREMONY_DURATION_MS);
 
   ceremonyRevealTimers.set(sessionId, advanceTimer);
+}
+
+function orchestrateCardDeal(
+  sessionId: string,
+  context: DJContext,
+): void {
+  const card = dealCard(sessionId, context.participantCount);
+
+  // Store dealt card in DJ context metadata for persistence/recovery
+  const updatedContext: DJContext = {
+    ...context,
+    metadata: {
+      ...context.metadata,
+      currentCard: {
+        id: card.id,
+        title: card.title,
+        description: card.description,
+        type: card.type,
+        emoji: card.emoji,
+      },
+    },
+  };
+  setSessionDjState(sessionId, updatedContext);
+  void persistDjState(sessionId, serializeDJContext(updatedContext));
+
+  // Broadcast card to all participants
+  broadcastCardDealt(sessionId, {
+    cardId: card.id,
+    title: card.title,
+    description: card.description,
+    cardType: card.type,
+    emoji: card.emoji,
+  });
+
+  // Log to event stream
+  appendEvent(sessionId, {
+    type: 'card:dealt',
+    ts: Date.now(),
+    data: { cardId: card.id, cardType: card.type },
+  });
 }
 
 function countRecentReactions(events: SessionEvent[]): number {
@@ -513,10 +554,21 @@ export async function processDjTransition(
     }
   }
 
+  // Orchestrate card dealing when entering partyCardDeal state
+  // orchestrateCardDeal persists enriched context (with currentCard metadata),
+  // so we skip the side effect persist to avoid overwriting card data.
+  let orchestrationPersisted = false;
+  if (newContext.state === DJState.partyCardDeal) {
+    orchestrateCardDeal(sessionId, newContext);
+    orchestrationPersisted = true;
+  }
+
   for (const effect of sideEffects) {
     switch (effect.type) {
       case 'persist':
-        void persistDjState(sessionId, effect.data.context);
+        if (!orchestrationPersisted) {
+          void persistDjState(sessionId, effect.data.context);
+        }
         break;
       case 'scheduleTimer':
         scheduleSessionTimer(sessionId, effect.data.durationMs, () => {
@@ -702,6 +754,7 @@ export async function endSession(
   removeActivitySession(sessionId);
   clearScoreCache(sessionId);
   clearSessionAwards(sessionId);
+  clearDealtCards(sessionId);
 
   return newContext;
 }

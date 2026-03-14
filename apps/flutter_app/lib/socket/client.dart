@@ -6,6 +6,7 @@ import 'package:karamania/api/api_service.dart';
 import 'package:karamania/audio/audio_engine.dart';
 import 'package:karamania/audio/sound_cue.dart';
 import 'package:karamania/audio/state_transition_audio.dart';
+import 'package:karamania/constants/party_cards.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/party_provider.dart';
@@ -326,6 +327,17 @@ class SocketClient {
       }
     });
 
+    // Card dealt — server dealt a party card for the current round
+    on('card:dealt', (data) {
+      final payload = data as Map<String, dynamic>;
+      try {
+        final card = PartyCardData.fromPayload(payload);
+        _partyProvider?.onCardDealt(card);
+      } catch (_) {
+        // Malformed payload — ignore silently
+      }
+    });
+
     // Host transfer event (AC #4)
     on('party:hostTransferred', (data) {
       final payload = data as Map<String, dynamic>;
@@ -377,6 +389,10 @@ class SocketClient {
 
   void emitSoundboard(String soundId) {
     _socket?.emit('sound:play', {'soundId': soundId});
+  }
+
+  void emitCardRedraw() {
+    _socket?.emit('card:redraw');
   }
 
   void emitMomentCardShared() {

@@ -113,3 +113,20 @@ export function broadcastCeremonyQuick(
   }
   io.to(sessionId).emit(EVENTS.CEREMONY_QUICK, data);
 }
+
+export function broadcastCardDealt(
+  sessionId: string,
+  data: {
+    cardId: string;
+    title: string;
+    description: string;
+    cardType: string;
+    emoji: string;
+  },
+): void {
+  if (!io) {
+    console.warn('[dj-broadcaster] Cannot broadcast — io not initialized');
+    return;
+  }
+  io.to(sessionId).emit(EVENTS.CARD_DEALT, data);
+}

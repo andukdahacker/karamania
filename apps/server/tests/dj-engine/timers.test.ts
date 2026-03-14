@@ -8,7 +8,7 @@ describe('createTimerConfig', () => {
     const config = createTimerConfig();
     expect(config[DJState.lobby]).toBe(0);
     expect(config[DJState.songSelection]).toBe(30_000);
-    expect(config[DJState.partyCardDeal]).toBe(5_000);
+    expect(config[DJState.partyCardDeal]).toBe(15_000);
     expect(config[DJState.song]).toBe(180_000);
     expect(config[DJState.ceremony]).toBe(12_000);
     expect(config[DJState.interlude]).toBe(15_000);

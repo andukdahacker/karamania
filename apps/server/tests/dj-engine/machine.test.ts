@@ -174,7 +174,7 @@ describe('processTransition', () => {
     });
   });
 
-  describe('placeholder states auto-advance', () => {
+  describe('timed states auto-advance', () => {
     it('partyCardDeal auto-advances via TIMEOUT', () => {
       const ctx = createTestDJContextInState(DJState.partyCardDeal);
       const { newContext } = processTransition(ctx, { type: 'TIMEOUT' }, NOW);

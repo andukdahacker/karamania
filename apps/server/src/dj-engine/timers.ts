@@ -10,7 +10,7 @@ import { DJState } from './types.js';
 const DEFAULT_TIMER_DURATIONS: TimerConfig = {
   [DJState.lobby]: 0,           // No timeout — waits for host to start
   [DJState.songSelection]: 30_000,    // 30s
-  [DJState.partyCardDeal]: 5_000,     // 5s placeholder (TODO: Epic 4)
+  [DJState.partyCardDeal]: 15_000,    // 15s: card display + future accept/dismiss interaction (Story 4.5)
   [DJState.song]: 180_000,            // 180s (3 minutes)
   [DJState.ceremony]: 12_000,         // 12s: 2s anticipation + 10s reveal display
   [DJState.interlude]: 15_000,        // 15s placeholder (TODO: Epic 7)

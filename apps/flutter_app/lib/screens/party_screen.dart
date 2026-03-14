@@ -16,6 +16,7 @@ import 'package:karamania/widgets/host_controls_overlay.dart';
 import 'package:karamania/widgets/reconnecting_banner.dart';
 import 'package:karamania/widgets/ceremony_display.dart';
 import 'package:karamania/widgets/moment_card_overlay.dart';
+import 'package:karamania/widgets/party_card_deal_overlay.dart';
 import 'package:karamania/widgets/reaction_bar.dart';
 import 'package:karamania/widgets/soundboard_bar.dart';
 import 'package:karamania/widgets/reaction_feed.dart';
@@ -191,6 +192,14 @@ class _PartyScreenState extends State<PartyScreen>
                   performerName: partyProvider.ceremonyPerformerName,
                   songTitle: partyProvider.ceremonySongTitle,
                   onDismiss: () => partyProvider.dismissMomentCard(),
+                ),
+              ),
+            // Party card deal overlay — during partyCardDeal state with dealt card
+            if (partyProvider.djState == DJState.partyCardDeal &&
+                partyProvider.currentCard != null)
+              Positioned.fill(
+                child: PartyCardDealOverlay(
+                  card: partyProvider.currentCard!,
                 ),
               ),
             // Reaction feed overlay (floating emojis) — only during song state

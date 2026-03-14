@@ -153,6 +153,13 @@ class Copy {
   static const String momentCardShare = 'Share Moment';
   static const String momentCardDismiss = 'Tap to dismiss';
 
+  // Party card copy
+  static const String partyCardTitle = 'Your Challenge';
+  static const String partyCardTypeVocal = 'Vocal Modifier';
+  static const String partyCardTypePerformance = 'Performance Modifier';
+  static const String partyCardTypeGroup = 'Group Involvement';
+  static const String hostControlRedealCard = 'Re-deal Card';
+
   // Streak milestones — personalized per UX spec (Critical Success Moment #3)
   static String streakMilestone(String displayName, int count) {
     switch (count) {

@@ -20,10 +20,10 @@ const stateConfigs: Record<DJState, StateConfig> = {
     isPlaceholder: false,
   },
   [DJState.partyCardDeal]: {
-    // TODO: Epic 4 implements full party card behavior
+    // Story 4.4: Party card dealing — auto-advances via TIMEOUT if no interaction
     allowedTransitions: ['CARD_DEALT', 'CARD_DONE', 'TIMEOUT', 'HOST_SKIP', 'HOST_OVERRIDE', 'END_PARTY'],
     hasTimeout: true,
-    isPlaceholder: true,
+    isPlaceholder: false,
   },
   [DJState.song]: {
     allowedTransitions: ['SONG_ENDED', 'TIMEOUT', 'HOST_SKIP', 'HOST_OVERRIDE', 'END_PARTY'],
