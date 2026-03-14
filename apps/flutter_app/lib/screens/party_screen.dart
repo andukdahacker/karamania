@@ -17,6 +17,7 @@ import 'package:karamania/widgets/reconnecting_banner.dart';
 import 'package:karamania/widgets/ceremony_display.dart';
 import 'package:karamania/widgets/moment_card_overlay.dart';
 import 'package:karamania/widgets/reaction_bar.dart';
+import 'package:karamania/widgets/soundboard_bar.dart';
 import 'package:karamania/widgets/reaction_feed.dart';
 import 'package:karamania/widgets/streak_milestone_overlay.dart';
 import 'package:karamania/widgets/quick_ceremony_display.dart';
@@ -220,6 +221,14 @@ class _PartyScreenState extends State<PartyScreen>
                   displayName: partyProvider.streakDisplayName ?? '',
                   onDismiss: () => partyProvider.dismissStreakMilestone(),
                 ),
+              ),
+            // Soundboard bar — positioned above reaction bar during song
+            if (partyProvider.djState == DJState.song)
+              Positioned(
+                bottom: DJTokens.spaceLg + 48 + 56 + DJTokens.spaceSm,
+                left: 0,
+                right: 0,
+                child: const SoundboardBar(),
               ),
             // Reaction bar at bottom — only during song state
             if (partyProvider.djState == DJState.song)

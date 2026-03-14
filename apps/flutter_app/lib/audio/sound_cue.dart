@@ -11,7 +11,14 @@ enum SoundCue {
   partyJoined,
   countdownTick,
   errorBuzz,
-  uiTap;
+  uiTap,
+  // Soundboard effects (Story 4.3)
+  sbAirHorn,
+  sbCrowdCheer,
+  sbDrumRoll,
+  sbRecordScratch,
+  sbRimshot,
+  sbWolfWhistle;
 
   /// Asset path for this sound cue (snake_case conversion).
   String get assetPath {
@@ -34,5 +41,11 @@ enum SoundCue {
         SoundCue.countdownTick => 0.7,
         SoundCue.errorBuzz => 0.7,
         SoundCue.uiTap => 0.7,
+        SoundCue.sbAirHorn => 1.0,
+        SoundCue.sbCrowdCheer => 1.0,
+        SoundCue.sbDrumRoll => 1.0,
+        SoundCue.sbRecordScratch => 1.0,
+        SoundCue.sbRimshot => 1.0,
+        SoundCue.sbWolfWhistle => 1.0,
       };
 }

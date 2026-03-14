@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:karamania/api/api_service.dart';
 import 'package:karamania/audio/audio_engine.dart';
+import 'package:karamania/audio/sound_cue.dart';
 import 'package:karamania/audio/state_transition_audio.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
@@ -313,6 +314,18 @@ class SocketClient {
       );
     });
 
+    // Soundboard broadcast from other users — play sound locally
+    on('sound:play', (data) {
+      final payload = data as Map<String, dynamic>;
+      final soundId = payload['soundId'] as String;
+      try {
+        final cue = SoundCue.values.byName(soundId);
+        AudioEngine.instance.play(cue);
+      } catch (_) {
+        // Unknown soundId — ignore silently
+      }
+    });
+
     // Host transfer event (AC #4)
     on('party:hostTransferred', (data) {
       final payload = data as Map<String, dynamic>;
@@ -360,6 +373,10 @@ class SocketClient {
 
   void emitReaction(String emoji) {
     _socket?.emit('reaction:sent', {'emoji': emoji});
+  }
+
+  void emitSoundboard(String soundId) {
+    _socket?.emit('sound:play', {'soundId': soundId});
   }
 
   void emitMomentCardShared() {

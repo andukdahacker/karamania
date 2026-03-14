@@ -43,8 +43,31 @@ void main() {
       expect(SoundCue.resumeChime.defaultVolume, 0.7);
     });
 
-    test('all cue values are present (10 total)', () {
-      expect(SoundCue.values.length, 10);
+    test('all cue values are present (16 total)', () {
+      expect(SoundCue.values.length, 16);
+    });
+
+    test('soundboard cues generate correct asset paths', () {
+      expect(SoundCue.sbAirHorn.assetPath, 'assets/sounds/sb_air_horn.opus');
+      expect(SoundCue.sbCrowdCheer.assetPath, 'assets/sounds/sb_crowd_cheer.opus');
+      expect(SoundCue.sbDrumRoll.assetPath, 'assets/sounds/sb_drum_roll.opus');
+      expect(SoundCue.sbRecordScratch.assetPath, 'assets/sounds/sb_record_scratch.opus');
+      expect(SoundCue.sbRimshot.assetPath, 'assets/sounds/sb_rimshot.opus');
+      expect(SoundCue.sbWolfWhistle.assetPath, 'assets/sounds/sb_wolf_whistle.opus');
+    });
+
+    test('all soundboard cues have defaultVolume of 1.0', () {
+      final soundboardCues = [
+        SoundCue.sbAirHorn,
+        SoundCue.sbCrowdCheer,
+        SoundCue.sbDrumRoll,
+        SoundCue.sbRecordScratch,
+        SoundCue.sbRimshot,
+        SoundCue.sbWolfWhistle,
+      ];
+      for (final cue in soundboardCues) {
+        expect(cue.defaultVolume, 1.0, reason: '${cue.name} should have volume 1.0');
+      }
     });
   });
 }

@@ -20,6 +20,7 @@ export type SessionEvent =
   | { type: 'ceremony:awardGenerated'; ts: number; userId: string; data: { award: string; songPosition: number; ceremonyType: 'full' | 'quick'; tone: AwardTone; contextFactors: { cardCompleted: boolean; reactionCount: number; participationScore: number } } }
   | { type: 'ceremony:revealed'; ts: number; data: { award: string; performerName: string | null; ceremonyType: 'full' | 'quick'; songTitle: string | null } }
   | { type: 'reaction:sent'; ts: number; userId: string; data: { emoji: string; streak: number } }
+  | { type: 'sound:play'; ts: number; userId: string; data: { soundId: string } }
   | { type: 'system:recovery'; ts: number; data: { recoveredState: DJState; songCount: number } };
 
 const streams = new Map<string, SessionEvent[]>();

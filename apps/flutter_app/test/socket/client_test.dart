@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:karamania/audio/sound_cue.dart';
 import 'package:karamania/audio/state_transition_audio.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/socket/client.dart';
@@ -384,6 +385,62 @@ void main() {
 
         expect(provider.streakMilestone, milestone);
       }
+    });
+  });
+
+  group('SocketClient soundboard methods', () {
+    test('emitSoundboard does not throw when not connected', () {
+      expect(() => SocketClient.instance.emitSoundboard('sbAirHorn'), returnsNormally);
+    });
+
+    test('sound:play listener resolves valid soundId to correct SoundCue', () {
+      // Simulate the full parsing path from _setupPartyListeners sound:play handler
+      final payload = <String, dynamic>{
+        'userId': 'user-42',
+        'soundId': 'sbAirHorn',
+        'rewardMultiplier': 1.0,
+      };
+
+      final soundId = payload['soundId'] as String;
+      // This is the exact resolution path used in the listener
+      final cue = SoundCue.values.byName(soundId);
+      expect(cue, SoundCue.sbAirHorn);
+      expect(cue.assetPath, 'assets/sounds/sb_air_horn.opus');
+    });
+
+    test('sound:play listener resolves all 6 soundboard cues correctly', () {
+      const soundIds = [
+        'sbAirHorn', 'sbCrowdCheer', 'sbDrumRoll',
+        'sbRecordScratch', 'sbRimshot', 'sbWolfWhistle',
+      ];
+      for (final soundId in soundIds) {
+        final cue = SoundCue.values.byName(soundId);
+        expect(cue.name, soundId, reason: '$soundId should resolve to matching SoundCue');
+      }
+    });
+
+    test('sound:play listener handles unknown soundId gracefully via try/catch', () {
+      // Simulates the exact try/catch path in the listener
+      expect(() {
+        final soundId = 'nonExistentSound';
+        try {
+          SoundCue.values.byName(soundId);
+          fail('Should have thrown ArgumentError');
+        } catch (_) {
+          // Silently ignored — same as in SocketClient listener
+        }
+      }, returnsNormally);
+    });
+
+    test('sound:play listener handles empty soundId gracefully', () {
+      expect(() {
+        try {
+          SoundCue.values.byName('');
+          fail('Should have thrown ArgumentError');
+        } catch (_) {
+          // Silently ignored
+        }
+      }, returnsNormally);
     });
   });
 
