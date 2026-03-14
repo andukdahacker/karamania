@@ -22,6 +22,9 @@ export type SessionEvent =
   | { type: 'reaction:sent'; ts: number; userId: string; data: { emoji: string; streak: number } }
   | { type: 'sound:play'; ts: number; userId: string; data: { soundId: string } }
   | { type: 'card:dealt'; ts: number; data: { cardId: string; cardType: string } }
+  | { type: 'card:sessionStats'; ts: number; data: { dealt: number; accepted: number } }
+  | { type: 'card:accepted'; ts: number; userId: string; data: { cardId: string; cardType: string } }
+  | { type: 'card:dismissed'; ts: number; userId: string; data: { cardId: string; cardType: string } }
   | { type: 'card:redealt'; ts: number; userId: string; data: { previousCardId: string; newCardId: string } }
   | { type: 'system:recovery'; ts: number; data: { recoveredState: DJState; songCount: number } };
 

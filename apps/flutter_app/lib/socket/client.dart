@@ -48,6 +48,7 @@ class SocketClient {
     _currentSessionId = sessionId;
     _userId = userId;
     _partyProvider = partyProvider;
+    partyProvider.setLocalUserId(userId);
 
     _socket = io.io(
       serverUrl,
@@ -331,11 +332,25 @@ class SocketClient {
     on('card:dealt', (data) {
       final payload = data as Map<String, dynamic>;
       try {
+        // Detect redraw: if we already have a card, this is a re-deal
+        final isRedraw = _partyProvider?.currentCard != null;
         final card = PartyCardData.fromPayload(payload);
         _partyProvider?.onCardDealt(card);
+        // Replay card-flip sound on redraw (initial deal sound handled by StateTransitionAudio)
+        if (isRedraw) {
+          AudioEngine.instance.play(SoundCue.partyCardDeal);
+        }
       } catch (_) {
         // Malformed payload — ignore silently
       }
+    });
+
+    // Card accepted broadcast — audience sees the active challenge
+    on('card:accepted', (data) {
+      final payload = data as Map<String, dynamic>;
+      final cardTitle = payload['cardTitle'] as String? ?? '';
+      final cardType = payload['cardType'] as String? ?? '';
+      _partyProvider?.onCardAcceptedBroadcast(cardTitle, cardType);
     });
 
     // Host transfer event (AC #4)
@@ -389,6 +404,14 @@ class SocketClient {
 
   void emitSoundboard(String soundId) {
     _socket?.emit('sound:play', {'soundId': soundId});
+  }
+
+  void emitCardAccepted(String cardId) {
+    _socket?.emit('card:accepted', {'cardId': cardId});
+  }
+
+  void emitCardDismissed(String cardId) {
+    _socket?.emit('card:dismissed', {'cardId': cardId});
   }
 
   void emitCardRedraw() {

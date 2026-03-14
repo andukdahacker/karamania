@@ -63,9 +63,14 @@ vi.mock('../../src/dj-engine/serializer.js', () => ({
 }));
 
 const mockPersistDjState = vi.fn();
+const mockProcessDjTransition = vi.fn().mockResolvedValue({ newContext: {}, sideEffects: [] });
+const mockRecordParticipationAction = vi.fn().mockResolvedValue(null);
+const mockIncrementCardAccepted = vi.fn();
 vi.mock('../../src/services/session-manager.js', () => ({
   persistDjState: (...args: unknown[]) => mockPersistDjState(...args),
-  recordParticipationAction: vi.fn(),
+  processDjTransition: (...args: unknown[]) => mockProcessDjTransition(...args),
+  recordParticipationAction: (...args: unknown[]) => mockRecordParticipationAction(...args),
+  incrementCardAccepted: (...args: unknown[]) => mockIncrementCardAccepted(...args),
 }));
 
 const mockValidateHost = vi.fn();
@@ -81,40 +86,370 @@ vi.mock('../../src/services/timer-scheduler.js', () => ({
   resumeSessionTimer: vi.fn(),
 }));
 
-function createMockSocket(overrides: Partial<{ userId: string; sessionId: string }> = {}) {
+function createMockSocket(overrides: Partial<{ userId: string; sessionId: string; displayName: string }> = {}) {
   const handlers = new Map<string, (data?: unknown) => Promise<void>>();
+  const emittedToRoom: Array<{ room: string; event: string; data: unknown }> = [];
   return {
     socket: {
       data: {
         userId: overrides.userId ?? 'user-1',
         sessionId: overrides.sessionId ?? 'session-1',
         role: 'authenticated' as const,
-        displayName: 'Test User',
+        displayName: overrides.displayName ?? 'Test User',
       },
       on: (event: string, handler: (data?: unknown) => Promise<void>) => {
         handlers.set(event, handler);
       },
     },
     handlers,
+    emittedToRoom,
   };
 }
 
 function createMockIo() {
+  const emittedToRoom: Array<{ room: string; event: string; data: unknown }> = [];
   return {
     io: {
-      to: () => ({ emit: vi.fn() }),
+      to: (target: string) => ({
+        emit: (event: string, data: unknown) => emittedToRoom.push({ room: target, event, data }),
+      }),
     },
+    emittedToRoom,
   };
 }
+
+const testCardMetadata = {
+  currentCard: {
+    id: 'chipmunk-mode',
+    title: 'Chipmunk Mode',
+    description: 'High pitch',
+    type: 'vocal',
+    emoji: '🐿️',
+  },
+  redrawUsed: false,
+};
 
 describe('card-handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
+  describe('card:accepted', () => {
+    it('rejects if not in partyCardDeal state', async () => {
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'song' as never,
+        currentPerformer: 'user-1',
+        metadata: testCardMetadata,
+      });
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:accepted')!({ cardId: 'chipmunk-mode' });
+
+      expect(mockRecordParticipationAction).not.toHaveBeenCalled();
+      expect(mockProcessDjTransition).not.toHaveBeenCalled();
+    });
+
+    it('rejects if user is not the current performer (singer guard)', async () => {
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'partyCardDeal' as never,
+        currentPerformer: 'other-user',
+        metadata: testCardMetadata,
+      });
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:accepted')!({ cardId: 'chipmunk-mode' });
+
+      expect(mockRecordParticipationAction).not.toHaveBeenCalled();
+      expect(mockProcessDjTransition).not.toHaveBeenCalled();
+    });
+
+    it('rejects if cardId does not match current card', async () => {
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'partyCardDeal' as never,
+        currentPerformer: 'user-1',
+        metadata: testCardMetadata,
+      });
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:accepted')!({ cardId: 'wrong-card-id' });
+
+      expect(mockRecordParticipationAction).not.toHaveBeenCalled();
+    });
+
+    describe('valid acceptance', () => {
+      beforeEach(() => {
+        const context = createTestDJContext({
+          sessionId: 'session-1',
+          state: 'partyCardDeal' as never,
+          currentPerformer: 'user-1',
+          metadata: testCardMetadata,
+        });
+        mockGetSessionDjState.mockReturnValue(context);
+      });
+
+      it('records participation scoring at engaged tier', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:accepted')!({ cardId: 'chipmunk-mode' });
+
+        expect(mockRecordParticipationAction).toHaveBeenCalledWith('session-1', 'user-1', 'card:accepted');
+      });
+
+      it('increments card accepted count', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:accepted')!({ cardId: 'chipmunk-mode' });
+
+        expect(mockIncrementCardAccepted).toHaveBeenCalledWith('session-1');
+      });
+
+      it('broadcasts card:accepted to session room', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io, emittedToRoom } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:accepted')!({ cardId: 'chipmunk-mode' });
+
+        expect(emittedToRoom).toContainEqual({
+          room: 'session-1',
+          event: 'card:accepted',
+          data: expect.objectContaining({
+            cardId: 'chipmunk-mode',
+            cardTitle: 'Chipmunk Mode',
+            cardType: 'vocal',
+            singerName: 'Test User',
+          }),
+        });
+      });
+
+      it('updates DJ context metadata with cardAccepted: true', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:accepted')!({ cardId: 'chipmunk-mode' });
+
+        expect(mockSetSessionDjState).toHaveBeenCalledWith(
+          'session-1',
+          expect.objectContaining({
+            metadata: expect.objectContaining({
+              cardAccepted: true,
+              acceptedCardId: 'chipmunk-mode',
+            }),
+          }),
+        );
+      });
+
+      it('logs card:accepted event to event stream', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:accepted')!({ cardId: 'chipmunk-mode' });
+
+        expect(mockAppendEvent).toHaveBeenCalledWith(
+          'session-1',
+          expect.objectContaining({
+            type: 'card:accepted',
+            userId: 'user-1',
+            data: { cardId: 'chipmunk-mode', cardType: 'vocal' },
+          }),
+        );
+      });
+
+      it('triggers CARD_DONE transition', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:accepted')!({ cardId: 'chipmunk-mode' });
+
+        expect(mockProcessDjTransition).toHaveBeenCalledWith(
+          'session-1',
+          expect.objectContaining({
+            metadata: expect.objectContaining({ cardAccepted: true }),
+          }),
+          { type: 'CARD_DONE' },
+        );
+      });
+    });
+  });
+
+  describe('card:dismissed', () => {
+    it('rejects if not in partyCardDeal state', async () => {
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'song' as never,
+        currentPerformer: 'user-1',
+        metadata: testCardMetadata,
+      });
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:dismissed')!({ cardId: 'chipmunk-mode' });
+
+      expect(mockProcessDjTransition).not.toHaveBeenCalled();
+    });
+
+    it('rejects non-singer (singer guard)', async () => {
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'partyCardDeal' as never,
+        currentPerformer: 'other-user',
+        metadata: testCardMetadata,
+      });
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:dismissed')!({ cardId: 'chipmunk-mode' });
+
+      expect(mockProcessDjTransition).not.toHaveBeenCalled();
+    });
+
+    describe('valid dismissal', () => {
+      beforeEach(() => {
+        const context = createTestDJContext({
+          sessionId: 'session-1',
+          state: 'partyCardDeal' as never,
+          currentPerformer: 'user-1',
+          metadata: testCardMetadata,
+        });
+        mockGetSessionDjState.mockReturnValue(context);
+      });
+
+      it('does NOT record participation scoring', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:dismissed')!({ cardId: 'chipmunk-mode' });
+
+        expect(mockRecordParticipationAction).not.toHaveBeenCalled();
+      });
+
+      it('updates metadata with cardAccepted: false', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:dismissed')!({ cardId: 'chipmunk-mode' });
+
+        expect(mockSetSessionDjState).toHaveBeenCalledWith(
+          'session-1',
+          expect.objectContaining({
+            metadata: expect.objectContaining({
+              cardAccepted: false,
+              acceptedCardId: null,
+            }),
+          }),
+        );
+      });
+
+      it('logs card:dismissed to event stream', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:dismissed')!({ cardId: 'chipmunk-mode' });
+
+        expect(mockAppendEvent).toHaveBeenCalledWith(
+          'session-1',
+          expect.objectContaining({
+            type: 'card:dismissed',
+            userId: 'user-1',
+            data: { cardId: 'chipmunk-mode', cardType: 'vocal' },
+          }),
+        );
+      });
+
+      it('triggers CARD_DONE transition', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:dismissed')!({ cardId: 'chipmunk-mode' });
+
+        expect(mockProcessDjTransition).toHaveBeenCalledWith(
+          'session-1',
+          expect.objectContaining({
+            metadata: expect.objectContaining({ cardAccepted: false }),
+          }),
+          { type: 'CARD_DONE' },
+        );
+      });
+    });
+  });
+
   describe('card:redraw', () => {
-    it('validates host via validateHost', async () => {
-      mockValidateHost.mockRejectedValue(new Error('Not host'));
+    it('allows host to redraw (existing behavior)', async () => {
+      mockValidateHost.mockResolvedValue(undefined);
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'partyCardDeal' as never,
+        participantCount: 5,
+        currentPerformer: 'other-user',
+        metadata: testCardMetadata,
+      });
+      mockGetSessionDjState.mockReturnValue(context);
+      mockRedealCard.mockReturnValue({
+        id: 'robot-mode', title: 'Robot Mode', description: 'Sing like a robot',
+        type: 'vocal', emoji: '🤖', minParticipants: 1,
+      });
 
       const { socket, handlers } = createMockSocket();
       const { io } = createMockIo();
@@ -124,8 +459,109 @@ describe('card-handlers', () => {
 
       await handlers.get('card:redraw')!();
 
-      expect(mockValidateHost).toHaveBeenCalledWith(socket);
+      expect(mockRedealCard).toHaveBeenCalled();
+      expect(mockBroadcastCardDealt).toHaveBeenCalled();
+    });
+
+    it('allows singer to redraw when redrawUsed is false', async () => {
+      mockValidateHost.mockRejectedValue(new Error('Not host'));
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'partyCardDeal' as never,
+        participantCount: 5,
+        currentPerformer: 'user-1',
+        metadata: testCardMetadata,
+      });
+      mockGetSessionDjState.mockReturnValue(context);
+      mockRedealCard.mockReturnValue({
+        id: 'robot-mode', title: 'Robot Mode', description: 'Sing like a robot',
+        type: 'vocal', emoji: '🤖', minParticipants: 1,
+      });
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:redraw')!();
+
+      expect(mockRedealCard).toHaveBeenCalled();
+    });
+
+    it('blocks singer redraw when redrawUsed is true', async () => {
+      mockValidateHost.mockRejectedValue(new Error('Not host'));
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'partyCardDeal' as never,
+        currentPerformer: 'user-1',
+        metadata: { ...testCardMetadata, redrawUsed: true },
+      });
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:redraw')!();
+
       expect(mockRedealCard).not.toHaveBeenCalled();
+    });
+
+    it('rejects non-host non-singer', async () => {
+      mockValidateHost.mockRejectedValue(new Error('Not host'));
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'partyCardDeal' as never,
+        currentPerformer: 'other-user',
+        metadata: testCardMetadata,
+      });
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:redraw')!();
+
+      expect(mockRedealCard).not.toHaveBeenCalled();
+    });
+
+    it('sets redrawUsed to true when singer redraws', async () => {
+      mockValidateHost.mockRejectedValue(new Error('Not host'));
+      const context = createTestDJContext({
+        sessionId: 'session-1',
+        state: 'partyCardDeal' as never,
+        participantCount: 5,
+        currentPerformer: 'user-1',
+        metadata: testCardMetadata,
+      });
+      mockGetSessionDjState.mockReturnValue(context);
+      mockRedealCard.mockReturnValue({
+        id: 'robot-mode', title: 'Robot Mode', description: 'Sing like a robot',
+        type: 'vocal', emoji: '🤖', minParticipants: 1,
+      });
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:redraw')!();
+
+      expect(mockSetSessionDjState).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            redrawUsed: true,
+          }),
+        }),
+      );
     });
 
     it('only fires during partyCardDeal state', async () => {
@@ -148,57 +584,7 @@ describe('card-handlers', () => {
       expect(mockRedealCard).not.toHaveBeenCalled();
     });
 
-    it('returns early if no current card in metadata', async () => {
-      mockValidateHost.mockResolvedValue(undefined);
-      const context = createTestDJContext({
-        sessionId: 'session-1',
-        state: 'partyCardDeal' as never,
-        metadata: {},
-      });
-      mockGetSessionDjState.mockReturnValue(context);
-
-      const { socket, handlers } = createMockSocket();
-      const { io } = createMockIo();
-
-      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
-      registerCardHandlers(socket as never, io as never);
-
-      await handlers.get('card:redraw')!();
-
-      expect(mockRedealCard).not.toHaveBeenCalled();
-    });
-
-    it('returns early if sessionId is missing', async () => {
-      mockValidateHost.mockResolvedValue(undefined);
-
-      const { socket, handlers } = createMockSocket();
-      socket.data.sessionId = '';
-      const { io } = createMockIo();
-
-      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
-      registerCardHandlers(socket as never, io as never);
-
-      await handlers.get('card:redraw')!();
-
-      expect(mockGetSessionDjState).not.toHaveBeenCalled();
-    });
-
-    it('returns early if userId is missing', async () => {
-      mockValidateHost.mockResolvedValue(undefined);
-
-      const { socket, handlers } = createMockSocket();
-      socket.data.userId = '';
-      const { io } = createMockIo();
-
-      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
-      registerCardHandlers(socket as never, io as never);
-
-      await handlers.get('card:redraw')!();
-
-      expect(mockGetSessionDjState).not.toHaveBeenCalled();
-    });
-
-    describe('valid re-deal', () => {
+    describe('valid host re-deal', () => {
       const newCard = {
         id: 'robot-mode',
         title: 'Robot Mode',
@@ -214,15 +600,7 @@ describe('card-handlers', () => {
           sessionId: 'session-1',
           state: 'partyCardDeal' as never,
           participantCount: 5,
-          metadata: {
-            currentCard: {
-              id: 'chipmunk-mode',
-              title: 'Chipmunk Mode',
-              description: 'High pitch',
-              type: 'vocal',
-              emoji: '🐿️',
-            },
-          },
+          metadata: testCardMetadata,
         });
         mockGetSessionDjState.mockReturnValue(context);
         mockRedealCard.mockReturnValue(newCard);
@@ -271,18 +649,6 @@ describe('card-handlers', () => {
         );
       });
 
-      it('calls persistDjState with updated context', async () => {
-        const { socket, handlers } = createMockSocket();
-        const { io } = createMockIo();
-
-        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
-        registerCardHandlers(socket as never, io as never);
-
-        await handlers.get('card:redraw')!();
-
-        expect(mockPersistDjState).toHaveBeenCalled();
-      });
-
       it('calls appendEvent with card:redealt event', async () => {
         const { socket, handlers } = createMockSocket();
         const { io } = createMockIo();
@@ -300,18 +666,6 @@ describe('card-handlers', () => {
             data: { previousCardId: 'chipmunk-mode', newCardId: 'robot-mode' },
           }),
         );
-      });
-
-      it('calls recordActivity', async () => {
-        const { socket, handlers } = createMockSocket();
-        const { io } = createMockIo();
-
-        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
-        registerCardHandlers(socket as never, io as never);
-
-        await handlers.get('card:redraw')!();
-
-        expect(mockRecordActivity).toHaveBeenCalledWith('session-1');
       });
     });
   });

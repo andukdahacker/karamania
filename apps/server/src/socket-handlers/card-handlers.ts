@@ -8,26 +8,133 @@ import { broadcastCardDealt } from '../services/dj-broadcaster.js';
 import { recordActivity } from '../services/activity-tracker.js';
 import { appendEvent } from '../services/event-stream.js';
 import { serializeDJContext } from '../dj-engine/serializer.js';
-import { persistDjState } from '../services/session-manager.js';
+import { persistDjState, processDjTransition, recordParticipationAction, incrementCardAccepted } from '../services/session-manager.js';
 import { validateHost } from './host-handlers.js';
 
 export function registerCardHandlers(
   socket: AuthenticatedSocket,
   io: SocketIOServer
 ): void {
-  // Host re-deal: replace current card with a different random one
-  socket.on(EVENTS.CARD_REDRAW, async () => {
-    try {
-      await validateHost(socket);
-    } catch {
-      return; // Not host — silently ignore
-    }
+  // card:accepted — singer accepts the dealt party card
+  socket.on(EVENTS.CARD_ACCEPTED, async (payload: { cardId: string }) => {
+    const { sessionId, userId, displayName } = socket.data;
+    if (!sessionId || !userId) return;
 
+    const context = getSessionDjState(sessionId);
+    if (!context || context.state !== DJState.partyCardDeal) return;
+
+    // Singer guard — only the current performer can accept
+    if (context.currentPerformer !== userId) return;
+
+    const currentCard = context.metadata.currentCard as { id: string; title?: string; type?: string } | undefined;
+    if (!currentCard || currentCard.id !== payload.cardId) return;
+
+    recordActivity(sessionId);
+
+    // Record participation scoring at engaged tier (5pts)
+    recordParticipationAction(sessionId, userId, 'card:accepted').catch((err) => {
+      console.error(`[card-handlers] Failed to record participation for ${userId}:`, err);
+    });
+    incrementCardAccepted(sessionId);
+
+    // Update DJ context metadata with acceptance state
+    const updatedContext = {
+      ...context,
+      metadata: {
+        ...context.metadata,
+        cardAccepted: true,
+        acceptedCardId: payload.cardId,
+      },
+    };
+    setSessionDjState(sessionId, updatedContext);
+    void persistDjState(sessionId, serializeDJContext(updatedContext));
+
+    // Broadcast acceptance to all participants so audience sees active challenge
+    io.to(sessionId).emit(EVENTS.CARD_ACCEPTED, {
+      cardId: payload.cardId,
+      cardTitle: currentCard.title ?? '',
+      cardType: currentCard.type ?? '',
+      singerName: displayName,
+    });
+
+    // Log to event stream
+    appendEvent(sessionId, {
+      type: 'card:accepted',
+      ts: Date.now(),
+      userId,
+      data: { cardId: payload.cardId, cardType: (currentCard.type as string) ?? '' },
+    });
+
+    // Trigger CARD_DONE transition to advance to song state
+    await processDjTransition(sessionId, updatedContext, { type: 'CARD_DONE' });
+  });
+
+  // card:dismissed — singer dismisses the dealt party card (or auto-dismiss on timer)
+  socket.on(EVENTS.CARD_DISMISSED, async (payload: { cardId: string }) => {
     const { sessionId, userId } = socket.data;
     if (!sessionId || !userId) return;
 
     const context = getSessionDjState(sessionId);
     if (!context || context.state !== DJState.partyCardDeal) return;
+
+    // Singer guard — only the current performer can dismiss
+    if (context.currentPerformer !== userId) return;
+
+    const currentCard = context.metadata.currentCard as { id: string; type?: string } | undefined;
+    if (!currentCard || currentCard.id !== payload.cardId) return;
+
+    recordActivity(sessionId);
+
+    // No participation points for dismissal
+
+    // Update DJ context metadata
+    const updatedContext = {
+      ...context,
+      metadata: {
+        ...context.metadata,
+        cardAccepted: false,
+        acceptedCardId: null,
+      },
+    };
+    setSessionDjState(sessionId, updatedContext);
+    void persistDjState(sessionId, serializeDJContext(updatedContext));
+
+    // Log to event stream
+    appendEvent(sessionId, {
+      type: 'card:dismissed',
+      ts: Date.now(),
+      userId,
+      data: { cardId: payload.cardId, cardType: (currentCard.type as string) ?? '' },
+    });
+
+    // Trigger CARD_DONE transition to advance to song state
+    await processDjTransition(sessionId, updatedContext, { type: 'CARD_DONE' });
+  });
+
+  // card:redraw — host OR singer can redraw the current card
+  socket.on(EVENTS.CARD_REDRAW, async () => {
+    const { sessionId, userId } = socket.data;
+    if (!sessionId || !userId) return;
+
+    const context = getSessionDjState(sessionId);
+    if (!context || context.state !== DJState.partyCardDeal) return;
+
+    // Allow if host OR if current singer
+    const isSinger = context.currentPerformer === userId;
+    let isHost = false;
+    try {
+      await validateHost(socket);
+      isHost = true;
+    } catch {
+      // Not host
+    }
+
+    if (!isHost && !isSinger) return;
+
+    // Singer redraw: check redrawUsed flag (one free redraw per turn)
+    if (isSinger && !isHost) {
+      if (context.metadata.redrawUsed === true) return;
+    }
 
     const currentCard = context.metadata.currentCard as { id: string } | undefined;
     if (!currentCard) return;
@@ -36,7 +143,7 @@ export function registerCardHandlers(
 
     const newCard = redealCard(sessionId, context.participantCount, currentCard.id);
 
-    // Update metadata with new card
+    // Update metadata with new card + mark redraw used for singer
     const updatedContext = {
       ...context,
       metadata: {
@@ -48,6 +155,7 @@ export function registerCardHandlers(
           type: newCard.type,
           emoji: newCard.emoji,
         },
+        redrawUsed: isSinger ? true : context.metadata.redrawUsed,
       },
     };
     setSessionDjState(sessionId, updatedContext);

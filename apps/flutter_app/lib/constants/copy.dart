@@ -159,6 +159,11 @@ class Copy {
   static const String partyCardTypePerformance = 'Performance Modifier';
   static const String partyCardTypeGroup = 'Group Involvement';
   static const String hostControlRedealCard = 'Re-deal Card';
+  static const String cardAcceptLabel = 'Accept';
+  static const String cardDismissLabel = 'Dismiss';
+  static const String cardRedrawLabel = 'Redraw';
+  static const String cardChallengeIncoming = 'CHALLENGE INCOMING...';
+  static const String cardWaitingForSinger = 'Waiting for singer...';
 
   // Streak milestones — personalized per UX spec (Critical Success Moment #3)
   static String streakMilestone(String displayName, int count) {

@@ -73,18 +73,21 @@ const mockTransitionResult = {
     { type: 'persist', data: { context: { state: 'songSelection' } } },
   ],
 };
+const mockProcessTransition = vi.fn().mockReturnValue(mockTransitionResult);
 vi.mock('../../src/dj-engine/machine.js', () => ({
   createDJContext: vi.fn().mockReturnValue(mockDjContext),
-  processTransition: vi.fn().mockReturnValue(mockTransitionResult),
+  processTransition: (...args: unknown[]) => mockProcessTransition(...args),
 }));
 
 vi.mock('../../src/dj-engine/serializer.js', () => ({
   deserializeDJContext: vi.fn(),
+  serializeDJContext: vi.fn().mockReturnValue({}),
 }));
 
+const mockSetSessionDjState = vi.fn();
 vi.mock('../../src/services/dj-state-store.js', () => ({
   getSessionDjState: vi.fn(),
-  setSessionDjState: vi.fn(),
+  setSessionDjState: (...args: unknown[]) => mockSetSessionDjState(...args),
   removeSessionDjState: vi.fn(),
 }));
 
@@ -95,9 +98,56 @@ vi.mock('../../src/services/timer-scheduler.js', () => ({
 
 const mockAppendEvent = vi.fn();
 const mockFlushEventStream = vi.fn();
+const mockGetEventStream = vi.fn().mockReturnValue([]);
 vi.mock('../../src/services/event-stream.js', () => ({
-  appendEvent: mockAppendEvent,
-  flushEventStream: mockFlushEventStream,
+  appendEvent: (...args: unknown[]) => mockAppendEvent(...args),
+  flushEventStream: (...args: unknown[]) => mockFlushEventStream(...args),
+  getEventStream: (...args: unknown[]) => mockGetEventStream(...args),
+}));
+
+const mockGetActiveConnections = vi.fn();
+vi.mock('../../src/services/connection-tracker.js', () => ({
+  getActiveConnections: (...args: unknown[]) => mockGetActiveConnections(...args),
+  removeSession: vi.fn(),
+}));
+
+const mockDealCard = vi.fn();
+vi.mock('../../src/services/card-dealer.js', () => ({
+  dealCard: (...args: unknown[]) => mockDealCard(...args),
+  redealCard: vi.fn(),
+  clearDealtCards: vi.fn(),
+}));
+
+const mockBroadcastDjState = vi.fn();
+const mockBroadcastCardDealt = vi.fn();
+vi.mock('../../src/services/dj-broadcaster.js', () => ({
+  broadcastDjState: (...args: unknown[]) => mockBroadcastDjState(...args),
+  broadcastDjPause: vi.fn(),
+  broadcastDjResume: vi.fn(),
+  broadcastCeremonyAnticipation: vi.fn(),
+  broadcastCeremonyReveal: vi.fn(),
+  broadcastCeremonyQuick: vi.fn(),
+  broadcastCardDealt: (...args: unknown[]) => mockBroadcastCardDealt(...args),
+}));
+
+vi.mock('../../src/services/activity-tracker.js', () => ({
+  recordActivity: vi.fn(),
+  removeSession: vi.fn(),
+}));
+
+vi.mock('../../src/services/streak-tracker.js', () => ({
+  clearSessionStreaks: vi.fn(),
+}));
+
+vi.mock('../../src/services/award-generator.js', () => ({
+  generateAward: vi.fn().mockReturnValue('Star of the Show'),
+  AWARD_TEMPLATES: [],
+  AwardTone: { comedic: 'comedic' },
+}));
+
+vi.mock('../../src/services/participation-scoring.js', () => ({
+  calculateScoreIncrement: vi.fn().mockReturnValue(0),
+  ACTION_TIER_MAP: {},
 }));
 
 describe('session-manager', () => {
@@ -491,6 +541,137 @@ describe('session-manager', () => {
         userId: 'host-user',
         data: { kickedUserId: 'target-user' },
       }));
+    });
+  });
+
+  describe('orchestrateCardDeal (via processDjTransition)', () => {
+    const testCard = {
+      id: 'chipmunk-mode',
+      title: 'Chipmunk Mode',
+      description: 'Sing high',
+      type: 'vocal',
+      emoji: '🐿️',
+      minParticipants: 1,
+    };
+
+    const inputContext = {
+      ...mockDjContext,
+      state: 'song',
+      songCount: 2,
+      participantCount: 4,
+      currentPerformer: null,
+      metadata: {},
+    };
+
+    // processTransition returns partyCardDeal state so orchestrateCardDeal fires
+    const partyCardDealResult = {
+      newContext: {
+        ...inputContext,
+        state: 'partyCardDeal',
+        cycleHistory: ['lobby', 'songSelection', 'partyCardDeal'],
+      },
+      sideEffects: [
+        { type: 'broadcast', data: {} },
+        { type: 'persist', data: { context: { state: 'partyCardDeal' } } },
+      ],
+    };
+
+    function setupCardDealMocks() {
+      mockProcessTransition.mockReturnValue(partyCardDealResult as never);
+      mockGetActiveConnections.mockReturnValue([
+        { socketId: 's1', userId: 'host-user', displayName: 'Host', connectedAt: 1000, isHost: true },
+        { socketId: 's2', userId: 'singer-1', displayName: 'Alice', connectedAt: 1001, isHost: false },
+        { socketId: 's3', userId: 'singer-2', displayName: 'Bob', connectedAt: 1002, isHost: false },
+      ]);
+      mockDealCard.mockReturnValue(testCard);
+    }
+
+    it('sets currentPerformer from active non-host connections using round-robin', async () => {
+      setupCardDealMocks();
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', inputContext as never, { type: 'CARD_DONE' } as never);
+
+      // songCount=2, 2 non-host connections → index = 2 % 2 = 0 → 'singer-1'
+      expect(mockSetSessionDjState).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({
+          currentPerformer: 'singer-1',
+        }),
+      );
+    });
+
+    it('deals a card and stores it in DJ context metadata', async () => {
+      setupCardDealMocks();
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', inputContext as never, { type: 'CARD_DONE' } as never);
+
+      expect(mockDealCard).toHaveBeenCalledWith('session-1', expect.any(Number));
+      expect(mockSetSessionDjState).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            currentCard: {
+              id: 'chipmunk-mode',
+              title: 'Chipmunk Mode',
+              description: 'Sing high',
+              type: 'vocal',
+              emoji: '🐿️',
+            },
+          }),
+        }),
+      );
+    });
+
+    it('initializes redrawUsed to false in metadata', async () => {
+      setupCardDealMocks();
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', inputContext as never, { type: 'CARD_DONE' } as never);
+
+      expect(mockSetSessionDjState).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            redrawUsed: false,
+          }),
+        }),
+      );
+    });
+
+    it('increments card dealt count', async () => {
+      setupCardDealMocks();
+      const { processDjTransition, getCardStats } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', inputContext as never, { type: 'CARD_DONE' } as never);
+
+      const stats = getCardStats('session-1');
+      expect(stats.dealt).toBeGreaterThanOrEqual(1);
+    });
+
+    it('broadcasts card dealt to session room', async () => {
+      setupCardDealMocks();
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', inputContext as never, { type: 'CARD_DONE' } as never);
+
+      expect(mockBroadcastCardDealt).toHaveBeenCalledWith('session-1', {
+        cardId: 'chipmunk-mode',
+        title: 'Chipmunk Mode',
+        description: 'Sing high',
+        cardType: 'vocal',
+        emoji: '🐿️',
+      });
+    });
+
+    it('appends card:dealt event to event stream', async () => {
+      setupCardDealMocks();
+      const { processDjTransition } = await import('../../src/services/session-manager.js');
+      await processDjTransition('session-1', inputContext as never, { type: 'CARD_DONE' } as never);
+
+      expect(mockAppendEvent).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({
+          type: 'card:dealt',
+          data: { cardId: 'chipmunk-mode', cardType: 'vocal' },
+        }),
+      );
     });
   });
 });

@@ -47,6 +47,7 @@ class PartyProvider extends ChangeNotifier {
 
   final void Function(bool enable) _wakelockToggle;
 
+  String? _localUserId;
   DJState _djState = DJState.lobby;
   PartyVibe _vibe = PartyVibe.general;
   String? _sessionId;
@@ -83,6 +84,9 @@ class PartyProvider extends ChangeNotifier {
 
   // Party card state — populated by card:dealt event
   PartyCardData? _currentCard;
+  bool _redrawUsed = false;
+  String? _acceptedCardTitle;
+  String? _acceptedCardType;
 
   // Reaction state
   final List<ReactionEvent> _reactionFeed = [];
@@ -125,13 +129,24 @@ class PartyProvider extends ChangeNotifier {
   String? get ceremonySongTitle => _ceremonySongTitle;
   bool get showMomentCard => _showMomentCard;
   PartyCardData? get currentCard => _currentCard;
+  bool get redrawUsed => _redrawUsed;
+  String? get acceptedCardTitle => _acceptedCardTitle;
+  String? get acceptedCardType => _acceptedCardType;
   int? get streakMilestone => _streakMilestone;
   String? get streakEmoji => _streakEmoji;
   String? get streakDisplayName => _streakDisplayName;
   List<ReactionEvent> get reactionFeed => List.unmodifiable(_reactionFeed);
 
+  /// Whether this client is the current singer (performer).
+  bool get isCurrentSinger =>
+      _localUserId != null && _currentPerformer == _localUserId;
+
   /// Background color driven by current DJ state and vibe.
   Color get backgroundColor => djStateBackgroundColor(_djState, _vibe);
+
+  void setLocalUserId(String userId) {
+    _localUserId = userId;
+  }
 
   void onReactionBroadcast({
     required String userId,
@@ -233,6 +248,17 @@ class PartyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void onCardRedrawUsed() {
+    _redrawUsed = true;
+    notifyListeners();
+  }
+
+  void onCardAcceptedBroadcast(String title, String type) {
+    _acceptedCardTitle = title;
+    _acceptedCardType = type;
+    notifyListeners();
+  }
+
   void _clearCeremonyState() {
     _ceremonyPerformerName = null;
     _ceremonyRevealAt = null;
@@ -261,6 +287,15 @@ class PartyProvider extends ChangeNotifier {
     // Clear card state when leaving partyCardDeal state
     if (_djState == DJState.partyCardDeal && state != DJState.partyCardDeal) {
       _currentCard = null;
+      _redrawUsed = false;
+      _acceptedCardTitle = null;
+      _acceptedCardType = null;
+    }
+    // Reset card interaction state when entering a new partyCardDeal
+    if (state == DJState.partyCardDeal && _djState != DJState.partyCardDeal) {
+      _redrawUsed = false;
+      _acceptedCardTitle = null;
+      _acceptedCardType = null;
     }
     // Clear reaction feed and streak state when leaving song state (AC #4)
     if (_djState == DJState.song && state != DJState.song) {

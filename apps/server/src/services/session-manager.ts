@@ -10,13 +10,36 @@ import { getSessionDjState, setSessionDjState, removeSessionDjState } from '../s
 import { scheduleSessionTimer, cancelSessionTimer, pauseSessionTimer, resumeSessionTimer } from '../services/timer-scheduler.js';
 import { broadcastDjState, broadcastDjPause, broadcastDjResume, broadcastCeremonyAnticipation, broadcastCeremonyReveal, broadcastCeremonyQuick, broadcastCardDealt } from '../services/dj-broadcaster.js';
 import { dealCard, clearDealtCards } from '../services/card-dealer.js';
-import { removeSession } from '../services/connection-tracker.js';
+import { getActiveConnections, removeSession } from '../services/connection-tracker.js';
 import { removeSession as removeActivitySession } from '../services/activity-tracker.js';
 import { DJState } from '../dj-engine/types.js';
 import { appendEvent, flushEventStream, getEventStream, type SessionEvent } from '../services/event-stream.js';
 import { calculateScoreIncrement, ACTION_TIER_MAP } from '../services/participation-scoring.js';
 import { generateAward, AWARD_TEMPLATES, AwardTone, type AwardContext } from '../services/award-generator.js';
 import { clearSessionStreaks } from '../services/streak-tracker.js';
+
+// In-memory card stats per session — tracks dealt/accepted counts (AC #6)
+const cardStatsCache = new Map<string, { dealt: number; accepted: number }>();
+
+export function getCardStats(sessionId: string): { dealt: number; accepted: number } {
+  return cardStatsCache.get(sessionId) ?? { dealt: 0, accepted: 0 };
+}
+
+export function incrementCardDealt(sessionId: string): void {
+  const stats = cardStatsCache.get(sessionId) ?? { dealt: 0, accepted: 0 };
+  stats.dealt++;
+  cardStatsCache.set(sessionId, stats);
+}
+
+export function incrementCardAccepted(sessionId: string): void {
+  const stats = cardStatsCache.get(sessionId) ?? { dealt: 0, accepted: 0 };
+  stats.accepted++;
+  cardStatsCache.set(sessionId, stats);
+}
+
+export function clearCardStats(sessionId: string): void {
+  cardStatsCache.delete(sessionId);
+}
 
 // In-memory score cache — avoids DB read race condition with fire-and-forget writes
 const scoreCache = new Map<string, number>();
@@ -165,12 +188,27 @@ async function orchestrateQuickCeremony(
 function orchestrateCardDeal(
   sessionId: string,
   context: DJContext,
-): void {
-  const card = dealCard(sessionId, context.participantCount);
+): DJContext {
+  // Select current performer (round-robin from active non-host participants)
+  const connections = getActiveConnections(sessionId);
+  const nonHostConnections = connections.filter(c => !c.isHost);
+  let performer: string | null = null;
+  if (nonHostConnections.length > 0) {
+    // Round-robin using songCount as rotation index
+    const index = (context.songCount) % nonHostConnections.length;
+    performer = nonHostConnections[index]!.userId;
+  } else if (connections.length > 0) {
+    // Fallback: if everyone is host (shouldn't happen), pick first connection
+    performer = connections[0]!.userId;
+  }
 
-  // Store dealt card in DJ context metadata for persistence/recovery
+  const card = dealCard(sessionId, context.participantCount);
+  incrementCardDealt(sessionId);
+
+  // Store dealt card + currentPerformer in DJ context metadata for persistence/recovery
   const updatedContext: DJContext = {
     ...context,
+    currentPerformer: performer,
     metadata: {
       ...context.metadata,
       currentCard: {
@@ -180,6 +218,7 @@ function orchestrateCardDeal(
         type: card.type,
         emoji: card.emoji,
       },
+      redrawUsed: false,
     },
   };
   setSessionDjState(sessionId, updatedContext);
@@ -200,6 +239,8 @@ function orchestrateCardDeal(
     ts: Date.now(),
     data: { cardId: card.id, cardType: card.type },
   });
+
+  return updatedContext;
 }
 
 function countRecentReactions(events: SessionEvent[]): number {
@@ -509,7 +550,7 @@ export async function processDjTransition(
   event: DJTransition,
   userId?: string,
 ): Promise<{ newContext: DJContext; sideEffects: DJSideEffect[] }> {
-  const { newContext, sideEffects } = processTransition(context, event, Date.now());
+  let { newContext, sideEffects } = processTransition(context, event, Date.now());
 
   setSessionDjState(sessionId, newContext);
 
@@ -555,11 +596,11 @@ export async function processDjTransition(
   }
 
   // Orchestrate card dealing when entering partyCardDeal state
-  // orchestrateCardDeal persists enriched context (with currentCard metadata),
+  // orchestrateCardDeal persists enriched context (with currentCard + currentPerformer),
   // so we skip the side effect persist to avoid overwriting card data.
   let orchestrationPersisted = false;
   if (newContext.state === DJState.partyCardDeal) {
-    orchestrateCardDeal(sessionId, newContext);
+    newContext = orchestrateCardDeal(sessionId, newContext);
     orchestrationPersisted = true;
   }
 
@@ -735,6 +776,16 @@ export async function endSession(
     },
   });
 
+  // Include card stats in final event stream
+  const stats = getCardStats(sessionId);
+  if (stats.dealt > 0) {
+    appendEvent(sessionId, {
+      type: 'card:sessionStats',
+      ts: Date.now(),
+      data: { dealt: stats.dealt, accepted: stats.accepted },
+    });
+  }
+
   // Step B: Flush and write event stream to DB (BEFORE cleanup)
   const events = flushEventStream(sessionId);
   if (events.length > 0) {
@@ -754,6 +805,7 @@ export async function endSession(
   removeActivitySession(sessionId);
   clearScoreCache(sessionId);
   clearSessionAwards(sessionId);
+  clearCardStats(sessionId);
   clearDealtCards(sessionId);
 
   return newContext;

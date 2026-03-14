@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/constants/copy.dart';
 import 'package:karamania/constants/tap_tiers.dart';
+import 'package:karamania/socket/client.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
@@ -200,6 +201,21 @@ class _PartyScreenState extends State<PartyScreen>
               Positioned.fill(
                 child: PartyCardDealOverlay(
                   card: partyProvider.currentCard!,
+                  isCurrentSinger: partyProvider.isCurrentSinger,
+                  redrawUsed: partyProvider.redrawUsed,
+                  currentPerformerName: partyProvider.participants
+                      .where((p) => p.userId == partyProvider.currentPerformer)
+                      .map((p) => p.displayName)
+                      .firstOrNull,
+                  acceptedCardTitle: partyProvider.acceptedCardTitle,
+                  onAccept: () => SocketClient.instance
+                      .emitCardAccepted(partyProvider.currentCard!.id),
+                  onDismiss: () => SocketClient.instance
+                      .emitCardDismissed(partyProvider.currentCard!.id),
+                  onRedraw: () {
+                    partyProvider.onCardRedrawUsed();
+                    SocketClient.instance.emitCardRedraw();
+                  },
                 ),
               ),
             // Reaction feed overlay (floating emojis) — only during song state
@@ -336,7 +352,10 @@ class _PartyScreenState extends State<PartyScreen>
               if (partyProvider.currentPerformer != null) ...[
                 const SizedBox(height: DJTokens.spaceMd),
                 Text(
-                  partyProvider.currentPerformer!,
+                  partyProvider.participants
+                      .where((p) => p.userId == partyProvider.currentPerformer)
+                      .map((p) => p.displayName)
+                      .firstOrNull ?? '',
                   key: const Key('current-performer'),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: displayVibe.accent,

@@ -1011,5 +1011,84 @@ void main() {
     test('card state is null initially', () {
       expect(provider.currentCard, isNull);
     });
+
+    group('card interaction state', () {
+    test('redrawUsed defaults to false', () {
+      expect(provider.redrawUsed, isFalse);
+    });
+
+    test('onCardRedrawUsed sets redrawUsed to true', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onCardRedrawUsed();
+
+      expect(provider.redrawUsed, isTrue);
+      expect(notifyCount, 1);
+    });
+
+    test('redrawUsed resets when entering new partyCardDeal state', () {
+      provider.onCardRedrawUsed();
+      expect(provider.redrawUsed, isTrue);
+
+      // Enter partyCardDeal
+      provider.onDjStateUpdate(state: DJState.partyCardDeal);
+      expect(provider.redrawUsed, isFalse);
+    });
+
+    test('redrawUsed resets when leaving partyCardDeal state', () {
+      provider.onDjStateUpdate(state: DJState.partyCardDeal);
+      provider.onCardRedrawUsed();
+      expect(provider.redrawUsed, isTrue);
+
+      provider.onDjStateUpdate(state: DJState.song);
+      expect(provider.redrawUsed, isFalse);
+    });
+
+    test('isCurrentSinger is false when no localUserId set', () {
+      provider.onDjStateUpdate(
+        state: DJState.partyCardDeal,
+        currentPerformer: 'user-1',
+      );
+      expect(provider.isCurrentSinger, isFalse);
+    });
+
+    test('isCurrentSinger is true when localUserId matches currentPerformer', () {
+      provider.setLocalUserId('user-1');
+      provider.onDjStateUpdate(
+        state: DJState.partyCardDeal,
+        currentPerformer: 'user-1',
+      );
+      expect(provider.isCurrentSinger, isTrue);
+    });
+
+    test('isCurrentSinger is false when localUserId does not match', () {
+      provider.setLocalUserId('user-1');
+      provider.onDjStateUpdate(
+        state: DJState.partyCardDeal,
+        currentPerformer: 'user-2',
+      );
+      expect(provider.isCurrentSinger, isFalse);
+    });
+
+    test('onCardAcceptedBroadcast sets acceptedCardTitle and notifies', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onCardAcceptedBroadcast('Chipmunk Mode', 'vocal');
+
+      expect(provider.acceptedCardTitle, 'Chipmunk Mode');
+      expect(provider.acceptedCardType, 'vocal');
+      expect(notifyCount, 1);
+    });
+
+    test('acceptedCardTitle resets when entering new partyCardDeal', () {
+      provider.onCardAcceptedBroadcast('Chipmunk Mode', 'vocal');
+      expect(provider.acceptedCardTitle, isNotNull);
+
+      provider.onDjStateUpdate(state: DJState.partyCardDeal);
+      expect(provider.acceptedCardTitle, isNull);
+    });
+    });
   });
 }
