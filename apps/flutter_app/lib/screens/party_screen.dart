@@ -26,6 +26,8 @@ import 'package:karamania/widgets/quick_ceremony_display.dart';
 import 'package:karamania/widgets/song_over_button.dart';
 import 'package:karamania/widgets/group_card_announcement_overlay.dart';
 import 'package:karamania/widgets/tag_team_flash_widget.dart';
+import 'package:karamania/widgets/lightstick_mode.dart';
+import 'package:karamania/widgets/hype_signal_button.dart';
 import 'package:go_router/go_router.dart';
 
 class PartyScreen extends StatefulWidget {
@@ -237,8 +239,10 @@ class _PartyScreenState extends State<PartyScreen>
             if (partyProvider.isTagTeamPartner &&
                 partyProvider.djState == DJState.song)
               const TagTeamFlashWidget(),
-            // Reaction feed overlay (floating emojis) — only during song state
-            if (partyProvider.djState == DJState.song)
+            // Lean-in mode widgets — hidden when lightstick mode is active
+            if (partyProvider.djState == DJState.song &&
+                !partyProvider.isLightstickMode) ...[
+              // Reaction feed overlay (floating emojis)
               Positioned.fill(
                 child: RepaintBoundary(
                   child: ReactionFeed(
@@ -254,34 +258,66 @@ class _PartyScreenState extends State<PartyScreen>
                   ),
                 ),
               ),
-            // Streak milestone overlay — only when milestone is active during song
-            if (partyProvider.djState == DJState.song &&
-                partyProvider.streakMilestone != null)
-              Positioned.fill(
-                child: StreakMilestoneOverlay(
-                  key: ValueKey(partyProvider.streakMilestone),
-                  streakCount: partyProvider.streakMilestone!,
-                  emoji: partyProvider.streakEmoji ?? '',
-                  displayName: partyProvider.streakDisplayName ?? '',
-                  onDismiss: () => partyProvider.dismissStreakMilestone(),
+              // Streak milestone overlay
+              if (partyProvider.streakMilestone != null)
+                Positioned.fill(
+                  child: StreakMilestoneOverlay(
+                    key: ValueKey(partyProvider.streakMilestone),
+                    streakCount: partyProvider.streakMilestone!,
+                    emoji: partyProvider.streakEmoji ?? '',
+                    displayName: partyProvider.streakDisplayName ?? '',
+                    onDismiss: () => partyProvider.dismissStreakMilestone(),
+                  ),
                 ),
-              ),
-            // Soundboard bar — positioned above reaction bar during song
-            if (partyProvider.djState == DJState.song)
+              // Soundboard bar
               Positioned(
                 bottom: DJTokens.spaceLg + 48 + 56 + DJTokens.spaceSm,
                 left: 0,
                 right: 0,
                 child: const SoundboardBar(),
               ),
-            // Reaction bar at bottom — only during song state
-            if (partyProvider.djState == DJState.song)
+              // Reaction bar
               Positioned(
                 bottom: DJTokens.spaceLg + 48,
                 left: 0,
                 right: 0,
                 child: ReactionBar(vibe: displayVibe),
               ),
+              // Mode toggle buttons (above SongOverButton)
+              Positioned(
+                bottom: DJTokens.spaceLg + 48 + 56 + DJTokens.spaceSm + 48 + DJTokens.spaceSm,
+                right: DJTokens.spaceMd,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _ModeToggleButton(
+                      key: const Key('lightstick-toggle'),
+                      label: Copy.lightstickToggle,
+                      icon: Icons.lightbulb_outline,
+                      color: displayVibe.accent,
+                      onTap: () {
+                        partyProvider.setLightstickMode(true);
+                        SocketClient.instance.emitLightstickToggled(true);
+                      },
+                    ),
+                    const SizedBox(width: DJTokens.spaceSm),
+                    const HypeSignalButton(),
+                  ],
+                ),
+              ),
+            ],
+            // Lightstick mode — full screen glow
+            if (partyProvider.djState == DJState.song &&
+                partyProvider.isLightstickMode)
+              Positioned.fill(
+                child: LightstickMode(
+                  onExit: () {
+                    partyProvider.setLightstickMode(false);
+                    SocketClient.instance.emitLightstickToggled(false);
+                  },
+                ),
+              ),
+            // Song Over button — visible in BOTH modes (host only)
             if (partyProvider.isHost && partyProvider.djState == DJState.song)
               Positioned(
                 bottom: DJTokens.spaceLg,
@@ -610,6 +646,49 @@ class _InviteSheet extends StatelessWidget {
           ),
           const SizedBox(height: DJTokens.spaceMd),
         ],
+      ),
+    );
+  }
+}
+
+class _ModeToggleButton extends StatelessWidget {
+  const _ModeToggleButton({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DJTokens.spaceSm,
+          vertical: DJTokens.spaceXs,
+        ),
+        decoration: BoxDecoration(
+          color: DJTokens.surfaceColor.withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(DJTokens.spaceMd),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: DJTokens.spaceXs),
+            Text(
+              label,
+              style: TextStyle(color: color, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }

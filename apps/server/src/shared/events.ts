@@ -41,6 +41,11 @@ export const EVENTS = {
   CARD_REDRAW: 'card:redraw',
   CARD_GROUP_ACTIVATED: 'card:groupActivated',
 
+  // Lightstick & Hype events
+  LIGHTSTICK_TOGGLED: 'lightstick:toggled',
+  HYPE_FIRED: 'hype:fired',
+  HYPE_COOLDOWN: 'hype:cooldown',
+
   // Song events
   SONG_DETECTED: 'song:detected',
   SONG_QUEUED: 'song:queued',

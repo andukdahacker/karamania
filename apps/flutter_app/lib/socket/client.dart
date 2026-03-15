@@ -375,6 +375,13 @@ class SocketClient {
       _partyProvider?.onCardAcceptedBroadcast(cardTitle, cardType);
     });
 
+    // Hype cooldown enforced by server
+    on('hype:cooldown', (data) {
+      final payload = data as Map<String, dynamic>;
+      final remainingMs = payload['remainingMs'] as int;
+      _partyProvider?.onHypeCooldownEnforced(remainingMs);
+    });
+
     // Host transfer event (AC #4)
     on('party:hostTransferred', (data) {
       final payload = data as Map<String, dynamic>;
@@ -438,6 +445,14 @@ class SocketClient {
 
   void emitCardRedraw() {
     _socket?.emit('card:redraw');
+  }
+
+  void emitLightstickToggled(bool active) {
+    _socket?.emit('lightstick:toggled', {'active': active});
+  }
+
+  void emitHypeSignal() {
+    _socket?.emit('hype:fired', {});
   }
 
   void emitMomentCardShared() {

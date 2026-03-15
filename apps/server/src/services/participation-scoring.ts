@@ -16,10 +16,14 @@ export const ACTION_TIER_MAP: Record<string, ParticipationTier> = {
   'party:joined': ParticipationTier.passive,
   'session:present': ParticipationTier.passive,
 
+  // Passive (1pt) — lightstick mode
+  'lightstick:toggled': ParticipationTier.passive,
+
   // Active (3pts) — lightweight engagement
   'party:vibeChanged': ParticipationTier.active,
   'reaction:sent': ParticipationTier.active,
   'sound:play': ParticipationTier.active,
+  'hype:fired': ParticipationTier.active,
 
   // Engaged (5pts) — meaningful participation
   'card:accepted': ParticipationTier.engaged,

@@ -96,6 +96,12 @@ class PartyProvider extends ChangeNotifier {
   bool _isTagTeamPartner = false;
   bool _showTagTeamFlash = false;
 
+  // Lightstick & hype state
+  bool _isLightstickMode = false;
+  Color _lightstickColor = const Color(0xFFFFD700); // default: vibe accent
+  bool _isHypeCooldown = false;
+  DateTime? _hypeCooldownEnd;
+
   // Reaction state
   final List<ReactionEvent> _reactionFeed = [];
   static const int _maxReactionFeedSize = 50;
@@ -149,6 +155,10 @@ class PartyProvider extends ChangeNotifier {
   bool get isSelectedForGroupCard => _isSelectedForGroupCard;
   bool get isTagTeamPartner => _isTagTeamPartner;
   bool get showTagTeamFlash => _showTagTeamFlash;
+  bool get isLightstickMode => _isLightstickMode;
+  Color get lightstickColor => _lightstickColor;
+  bool get isHypeCooldown => _isHypeCooldown;
+  DateTime? get hypeCooldownEnd => _hypeCooldownEnd;
   List<ReactionEvent> get reactionFeed => List.unmodifiable(_reactionFeed);
 
   /// Whether this client is the current singer (performer).
@@ -297,6 +307,34 @@ class PartyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setLightstickMode(bool active) {
+    _isLightstickMode = active;
+    notifyListeners();
+  }
+
+  void setLightstickColor(Color color) {
+    _lightstickColor = color;
+    notifyListeners();
+  }
+
+  void startHypeCooldown() {
+    _isHypeCooldown = true;
+    _hypeCooldownEnd = DateTime.now().add(const Duration(seconds: 5));
+    notifyListeners();
+  }
+
+  void onHypeCooldownEnforced(int remainingMs) {
+    _isHypeCooldown = true;
+    _hypeCooldownEnd = DateTime.now().add(Duration(milliseconds: remainingMs));
+    notifyListeners();
+  }
+
+  void clearHypeCooldown() {
+    _isHypeCooldown = false;
+    _hypeCooldownEnd = null;
+    notifyListeners();
+  }
+
   void _clearCeremonyState() {
     _ceremonyPerformerName = null;
     _ceremonyRevealAt = null;
@@ -339,7 +377,7 @@ class PartyProvider extends ChangeNotifier {
       _groupCardSelectedDisplayNames = [];
       _isSelectedForGroupCard = false;
     }
-    // Clear reaction feed, streak state, and tag team when leaving song state (AC #4)
+    // Clear reaction feed, streak state, tag team, lightstick, and hype when leaving song state (AC #4)
     if (_djState == DJState.song && state != DJState.song) {
       _reactionFeed.clear();
       _streakMilestone = null;
@@ -347,6 +385,9 @@ class PartyProvider extends ChangeNotifier {
       _streakDisplayName = null;
       _isTagTeamPartner = false;
       _showTagTeamFlash = false;
+      _isLightstickMode = false;
+      _isHypeCooldown = false;
+      _hypeCooldownEnd = null;
     }
     _djState = state;
     _ceremonyType = ceremonyType;

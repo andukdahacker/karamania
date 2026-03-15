@@ -6,6 +6,7 @@ import { registerHostHandlers } from './host-handlers.js';
 import { registerReactionHandlers } from './reaction-handlers.js';
 import { registerSoundboardHandlers } from './soundboard-handlers.js';
 import { registerCardHandlers } from './card-handlers.js';
+import { registerLightstickHandlers } from './lightstick-handlers.js';
 import { handleParticipantJoin, transferHost, isRecoveryFailed, clearRecoveryFailed } from '../services/session-manager.js';
 import { getSessionDjState } from '../services/dj-state-store.js';
 import {
@@ -49,6 +50,7 @@ export function setupSocketHandlers(io: SocketIOServer, logger: FastifyBaseLogge
     registerReactionHandlers(s, io);
     registerSoundboardHandlers(s, io);
     registerCardHandlers(s, io);
+    registerLightstickHandlers(s, io);
 
     try {
       const joinResult = await handleParticipantJoin({

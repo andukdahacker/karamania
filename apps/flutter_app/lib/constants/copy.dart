@@ -186,6 +186,12 @@ class Copy {
   static const String groupCardYouWereSelected = "You've been selected!";
   static const String tagTeamYourTurn = 'YOUR TURN!';
 
+  // Lightstick & Hype
+  static const String lightstickToggle = 'Lightstick';
+  static const String lightstickExitHint = 'Tap anywhere to exit';
+  static const String hypeSignalButton = 'Hype';
+  static const String hypeSignalCooldown = 'Recharging...';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

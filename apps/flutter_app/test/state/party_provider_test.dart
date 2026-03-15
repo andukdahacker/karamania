@@ -1,3 +1,4 @@
+import 'dart:ui' show Color;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:karamania/config/app_config.dart';
@@ -1249,6 +1250,107 @@ void main() {
         provider.onGroupCardActivated('Test', [], [], 'tag-team');
         expect(notifyCount, 1);
       });
+    });
+  });
+
+  group('Lightstick & hype state', () {
+    late PartyProvider provider;
+
+    setUp(() {
+      provider = PartyProvider(wakelockToggle: (_) {});
+    });
+
+    test('isLightstickMode defaults to false', () {
+      expect(provider.isLightstickMode, isFalse);
+    });
+
+    test('setLightstickMode(true) sets isLightstickMode to true', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.setLightstickMode(true);
+
+      expect(provider.isLightstickMode, isTrue);
+      expect(notifyCount, 1);
+    });
+
+    test('setLightstickMode(false) sets isLightstickMode to false', () {
+      provider.setLightstickMode(true);
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.setLightstickMode(false);
+
+      expect(provider.isLightstickMode, isFalse);
+      expect(notifyCount, 1);
+    });
+
+    test('setLightstickColor updates lightstickColor', () {
+      const newColor = Color(0xFFFF0080);
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.setLightstickColor(newColor);
+
+      expect(provider.lightstickColor, newColor);
+      expect(notifyCount, 1);
+    });
+
+    test('startHypeCooldown sets isHypeCooldown to true', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.startHypeCooldown();
+
+      expect(provider.isHypeCooldown, isTrue);
+      expect(provider.hypeCooldownEnd, isNotNull);
+      expect(notifyCount, 1);
+    });
+
+    test('clearHypeCooldown sets isHypeCooldown to false', () {
+      provider.startHypeCooldown();
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.clearHypeCooldown();
+
+      expect(provider.isHypeCooldown, isFalse);
+      expect(provider.hypeCooldownEnd, isNull);
+      expect(notifyCount, 1);
+    });
+
+    test('onHypeCooldownEnforced from server sets cooldown state', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onHypeCooldownEnforced(3000);
+
+      expect(provider.isHypeCooldown, isTrue);
+      expect(provider.hypeCooldownEnd, isNotNull);
+      expect(notifyCount, 1);
+    });
+
+    test('lightstick mode resets to false when DJ state leaves song', () {
+      provider.onDjStateUpdate(state: DJState.song);
+      provider.setLightstickMode(true);
+      expect(provider.isLightstickMode, isTrue);
+
+      provider.onDjStateUpdate(state: DJState.ceremony);
+
+      expect(provider.isLightstickMode, isFalse);
+    });
+
+    test('hype cooldown resets to false when DJ state leaves song', () {
+      provider.onDjStateUpdate(state: DJState.song);
+      provider.startHypeCooldown();
+      expect(provider.isHypeCooldown, isTrue);
+
+      provider.onDjStateUpdate(state: DJState.ceremony);
+
+      expect(provider.isHypeCooldown, isFalse);
+      expect(provider.hypeCooldownEnd, isNull);
     });
   });
 }
