@@ -26,6 +26,7 @@ export type SessionEvent =
   | { type: 'card:accepted'; ts: number; userId: string; data: { cardId: string; cardType: string } }
   | { type: 'card:dismissed'; ts: number; userId: string; data: { cardId: string; cardType: string } }
   | { type: 'card:redealt'; ts: number; userId: string; data: { previousCardId: string; newCardId: string } }
+  | { type: 'card:groupActivated'; ts: number; userId: string; data: { cardId: string; selectedUserIds: string[]; announcement: string } }
   | { type: 'system:recovery'; ts: number; data: { recoveredState: DJState; songCount: number } };
 
 const streams = new Map<string, SessionEvent[]>();

@@ -1090,5 +1090,165 @@ void main() {
       expect(provider.acceptedCardTitle, isNull);
     });
     });
+
+    group('group card state', () {
+      test('onGroupCardActivated sets all fields correctly', () {
+        provider.setLocalUserId('user-1');
+        provider.onGroupCardActivated(
+          'TAG TEAM: Bob takes over!',
+          ['user-2'],
+          ['Bob'],
+          'tag-team',
+        );
+
+        expect(provider.groupCardAnnouncement, 'TAG TEAM: Bob takes over!');
+        expect(provider.groupCardSelectedDisplayNames, ['Bob']);
+        expect(provider.groupCardSelectedUserIds, ['user-2']);
+        expect(provider.isSelectedForGroupCard, isFalse);
+        expect(provider.isTagTeamPartner, isFalse);
+      });
+
+      test('isSelectedForGroupCard is true when local userId is in selectedUserIds', () {
+        provider.setLocalUserId('user-2');
+        provider.onGroupCardActivated(
+          'TAG TEAM: Bob takes over!',
+          ['user-2'],
+          ['Bob'],
+          'tag-team',
+        );
+
+        expect(provider.isSelectedForGroupCard, isTrue);
+      });
+
+      test('isSelectedForGroupCard is false when not in selectedUserIds', () {
+        provider.setLocalUserId('user-3');
+        provider.onGroupCardActivated(
+          'TAG TEAM: Bob takes over!',
+          ['user-2'],
+          ['Bob'],
+          'tag-team',
+        );
+
+        expect(provider.isSelectedForGroupCard, isFalse);
+      });
+
+      test('clearGroupCardAnnouncement clears announcement only', () {
+        provider.setLocalUserId('user-2');
+        provider.onGroupCardActivated(
+          'TAG TEAM: Bob takes over!',
+          ['user-2'],
+          ['Bob'],
+          'tag-team',
+        );
+        provider.clearGroupCardAnnouncement();
+
+        expect(provider.groupCardAnnouncement, isNull);
+        // Other fields persist
+        expect(provider.isSelectedForGroupCard, isTrue);
+      });
+
+      test('group card selection fields reset when ENTERING next partyCardDeal', () {
+        provider.setLocalUserId('user-2');
+        // Enter first partyCardDeal
+        provider.onDjStateUpdate(state: DJState.partyCardDeal);
+        provider.onGroupCardActivated(
+          'TAG TEAM: Bob takes over!',
+          ['user-2'],
+          ['Bob'],
+          'tag-team',
+        );
+        expect(provider.isSelectedForGroupCard, isTrue);
+
+        // Transition to song (should NOT reset group card fields)
+        provider.onDjStateUpdate(state: DJState.song);
+        expect(provider.isSelectedForGroupCard, isTrue);
+
+        // Enter next partyCardDeal (SHOULD reset)
+        provider.onDjStateUpdate(state: DJState.partyCardDeal);
+        expect(provider.isSelectedForGroupCard, isFalse);
+        expect(provider.groupCardSelectedUserIds, isEmpty);
+        expect(provider.groupCardSelectedDisplayNames, isEmpty);
+      });
+
+      test('group card fields persist across partyCardDeal to song transition', () {
+        provider.setLocalUserId('user-2');
+        provider.onDjStateUpdate(state: DJState.partyCardDeal);
+        provider.onGroupCardActivated(
+          'HYPE SQUAD: Bob and Carol!',
+          ['user-2', 'user-3'],
+          ['Bob', 'Carol'],
+          'hype-squad',
+        );
+
+        // Transition to song
+        provider.onDjStateUpdate(state: DJState.song);
+
+        // Fields should persist
+        expect(provider.isSelectedForGroupCard, isTrue);
+        expect(provider.groupCardSelectedDisplayNames, ['Bob', 'Carol']);
+      });
+
+      test('isTagTeamPartner set correctly for tag-team card', () {
+        provider.setLocalUserId('user-2');
+        provider.onGroupCardActivated(
+          'TAG TEAM: Bob takes over!',
+          ['user-2'],
+          ['Bob'],
+          'tag-team',
+        );
+
+        expect(provider.isTagTeamPartner, isTrue);
+      });
+
+      test('isTagTeamPartner false for non-tag-team card', () {
+        provider.setLocalUserId('user-2');
+        provider.onGroupCardActivated(
+          'HYPE SQUAD: Bob and Carol!',
+          ['user-2', 'user-3'],
+          ['Bob', 'Carol'],
+          'hype-squad',
+        );
+
+        expect(provider.isTagTeamPartner, isFalse);
+      });
+
+      test('isTagTeamPartner resets when leaving song state', () {
+        provider.setLocalUserId('user-2');
+        provider.onDjStateUpdate(state: DJState.song);
+        provider.onGroupCardActivated(
+          'TAG TEAM: Bob takes over!',
+          ['user-2'],
+          ['Bob'],
+          'tag-team',
+        );
+        expect(provider.isTagTeamPartner, isTrue);
+
+        // Leave song state
+        provider.onDjStateUpdate(state: DJState.ceremony);
+        expect(provider.isTagTeamPartner, isFalse);
+        expect(provider.showTagTeamFlash, isFalse);
+      });
+
+      test('setShowTagTeamFlash updates state and notifies', () {
+        int notifyCount = 0;
+        provider.addListener(() => notifyCount++);
+
+        provider.setShowTagTeamFlash(true);
+        expect(provider.showTagTeamFlash, isTrue);
+        expect(notifyCount, 1);
+
+        provider.setShowTagTeamFlash(false);
+        expect(provider.showTagTeamFlash, isFalse);
+        expect(notifyCount, 2);
+      });
+
+      test('onGroupCardActivated notifies listeners', () {
+        int notifyCount = 0;
+        provider.addListener(() => notifyCount++);
+
+        provider.onGroupCardActivated('Test', [], [], 'tag-team');
+        expect(notifyCount, 1);
+      });
+    });
   });
 }

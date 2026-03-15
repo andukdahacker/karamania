@@ -10,6 +10,8 @@ import { appendEvent } from '../services/event-stream.js';
 import { serializeDJContext } from '../dj-engine/serializer.js';
 import { persistDjState, processDjTransition, recordParticipationAction, incrementCardAccepted } from '../services/session-manager.js';
 import { validateHost } from './host-handlers.js';
+import { getActiveConnections } from '../services/connection-tracker.js';
+import { selectGroupParticipants } from '../services/group-card-selector.js';
 
 export function registerCardHandlers(
   socket: AuthenticatedSocket,
@@ -48,6 +50,32 @@ export function registerCardHandlers(
     };
     setSessionDjState(sessionId, updatedContext);
     void persistDjState(sessionId, serializeDJContext(updatedContext));
+
+    // Group card activation — select participants and broadcast
+    if (currentCard.type === 'group') {
+      const connections = getActiveConnections(sessionId);
+      const selection = selectGroupParticipants(currentCard.id, userId, connections);
+
+      updatedContext.metadata.groupCardSelection = selection;
+      setSessionDjState(sessionId, updatedContext);
+      void persistDjState(sessionId, serializeDJContext(updatedContext));
+
+      io.to(sessionId).emit(EVENTS.CARD_GROUP_ACTIVATED, {
+        cardId: payload.cardId,
+        cardType: 'group',
+        announcement: selection.announcement,
+        selectedUserIds: selection.selectedUserIds,
+        selectedDisplayNames: selection.selectedDisplayNames,
+        singerName: displayName,
+      });
+
+      appendEvent(sessionId, {
+        type: 'card:groupActivated',
+        ts: Date.now(),
+        userId,
+        data: { cardId: currentCard.id, selectedUserIds: selection.selectedUserIds, announcement: selection.announcement },
+      });
+    }
 
     // Broadcast acceptance to all participants so audience sees active challenge
     io.to(sessionId).emit(EVENTS.CARD_ACCEPTED, {

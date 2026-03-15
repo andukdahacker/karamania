@@ -79,6 +79,24 @@ vi.mock('../../src/socket-handlers/host-handlers.js', () => ({
   registerHostHandlers: vi.fn(),
 }));
 
+const mockGetActiveConnections = vi.fn();
+vi.mock('../../src/services/connection-tracker.js', () => ({
+  trackConnection: vi.fn(),
+  trackDisconnection: vi.fn(),
+  getActiveConnections: (...args: unknown[]) => mockGetActiveConnections(...args),
+  getActiveCount: vi.fn(),
+  isUserConnected: vi.fn(),
+  getLongestConnected: vi.fn(),
+  removeDisconnectedEntry: vi.fn(),
+  removeSession: vi.fn(),
+  updateHostStatus: vi.fn(),
+}));
+
+const mockSelectGroupParticipants = vi.fn();
+vi.mock('../../src/services/group-card-selector.js', () => ({
+  selectGroupParticipants: (...args: unknown[]) => mockSelectGroupParticipants(...args),
+}));
+
 vi.mock('../../src/services/timer-scheduler.js', () => ({
   scheduleSessionTimer: vi.fn(),
   cancelSessionTimer: vi.fn(),
@@ -311,6 +329,145 @@ describe('card-handlers', () => {
       });
     });
   });
+
+    describe('group card acceptance', () => {
+      const groupCardMetadata = {
+        currentCard: {
+          id: 'tag-team',
+          title: 'Tag Team',
+          description: 'A random participant joins you',
+          type: 'group',
+          emoji: '🏷️',
+        },
+        redrawUsed: false,
+      };
+
+      const mockConnections = [
+        { socketId: 's1', userId: 'user-1', displayName: 'Test User', connectedAt: 1, isHost: false },
+        { socketId: 's2', userId: 'user-2', displayName: 'Bob', connectedAt: 2, isHost: false },
+        { socketId: 's3', userId: 'user-3', displayName: 'Carol', connectedAt: 3, isHost: true },
+      ];
+
+      const mockSelection = {
+        selectedUserIds: ['user-2'],
+        selectedDisplayNames: ['Bob'],
+        cardId: 'tag-team',
+        announcement: 'TAG TEAM: Bob takes over at the chorus!',
+      };
+
+      beforeEach(() => {
+        const context = createTestDJContext({
+          sessionId: 'session-1',
+          state: 'partyCardDeal' as never,
+          currentPerformer: 'user-1',
+          metadata: groupCardMetadata,
+        });
+        mockGetSessionDjState.mockReturnValue(context);
+        mockGetActiveConnections.mockReturnValue(mockConnections);
+        mockSelectGroupParticipants.mockReturnValue(mockSelection);
+      });
+
+      it('emits CARD_GROUP_ACTIVATED event for group card', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io, emittedToRoom } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:accepted')!({ cardId: 'tag-team' });
+
+        expect(emittedToRoom).toContainEqual({
+          room: 'session-1',
+          event: 'card:groupActivated',
+          data: expect.objectContaining({
+            cardId: 'tag-team',
+            cardType: 'group',
+            announcement: 'TAG TEAM: Bob takes over at the chorus!',
+            selectedUserIds: ['user-2'],
+            selectedDisplayNames: ['Bob'],
+            singerName: 'Test User',
+          }),
+        });
+      });
+
+      it('persists groupCardSelection in DJ context metadata', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:accepted')!({ cardId: 'tag-team' });
+
+        // Second call to setSessionDjState (after group selection)
+        const secondCall = mockSetSessionDjState.mock.calls[1];
+        expect(secondCall).toBeDefined();
+        expect(secondCall[1].metadata.groupCardSelection).toEqual(mockSelection);
+      });
+
+      it('logs card:groupActivated to event stream', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:accepted')!({ cardId: 'tag-team' });
+
+        expect(mockAppendEvent).toHaveBeenCalledWith(
+          'session-1',
+          expect.objectContaining({
+            type: 'card:groupActivated',
+            userId: 'user-1',
+            data: {
+              cardId: 'tag-team',
+              selectedUserIds: ['user-2'],
+              announcement: 'TAG TEAM: Bob takes over at the chorus!',
+            },
+          }),
+        );
+      });
+
+      it('does NOT emit CARD_GROUP_ACTIVATED for non-group card', async () => {
+        const context = createTestDJContext({
+          sessionId: 'session-1',
+          state: 'partyCardDeal' as never,
+          currentPerformer: 'user-1',
+          metadata: testCardMetadata, // vocal card
+        });
+        mockGetSessionDjState.mockReturnValue(context);
+
+        const { socket, handlers } = createMockSocket();
+        const { io, emittedToRoom } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:accepted')!({ cardId: 'chipmunk-mode' });
+
+        const groupEvents = emittedToRoom.filter(e => e.event === 'card:groupActivated');
+        expect(groupEvents).toHaveLength(0);
+        expect(mockSelectGroupParticipants).not.toHaveBeenCalled();
+      });
+
+      it('works with minimal participants (exactly 3)', async () => {
+        const { socket, handlers } = createMockSocket();
+        const { io, emittedToRoom } = createMockIo();
+
+        const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+        registerCardHandlers(socket as never, io as never);
+
+        await handlers.get('card:accepted')!({ cardId: 'tag-team' });
+
+        // Verify selectGroupParticipants was called with correct args
+        expect(mockSelectGroupParticipants).toHaveBeenCalledWith(
+          'tag-team',
+          'user-1',
+          mockConnections,
+        );
+        expect(emittedToRoom.some(e => e.event === 'card:groupActivated')).toBe(true);
+      });
+    });
 
   describe('card:dismissed', () => {
     it('rejects if not in partyCardDeal state', async () => {

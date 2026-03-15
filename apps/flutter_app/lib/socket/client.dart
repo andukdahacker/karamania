@@ -345,6 +345,28 @@ class SocketClient {
       }
     });
 
+    // Group card activation — participant selection for group cards
+    on('card:groupActivated', (data) {
+      final payload = data as Map<String, dynamic>;
+      final announcement = payload['announcement'] as String? ?? '';
+      final selectedUserIds = (payload['selectedUserIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [];
+      final selectedDisplayNames =
+          (payload['selectedDisplayNames'] as List<dynamic>?)
+                  ?.map((e) => e as String)
+                  .toList() ??
+              [];
+      final cardId = payload['cardId'] as String? ?? '';
+      _partyProvider?.onGroupCardActivated(
+        announcement,
+        selectedUserIds,
+        selectedDisplayNames,
+        cardId,
+      );
+    });
+
     // Card accepted broadcast — audience sees the active challenge
     on('card:accepted', (data) {
       final payload = data as Map<String, dynamic>;

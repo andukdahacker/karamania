@@ -39,6 +39,7 @@ export const EVENTS = {
   CARD_ACCEPTED: 'card:accepted',
   CARD_DISMISSED: 'card:dismissed',
   CARD_REDRAW: 'card:redraw',
+  CARD_GROUP_ACTIVATED: 'card:groupActivated',
 
   // Song events
   SONG_DETECTED: 'song:detected',

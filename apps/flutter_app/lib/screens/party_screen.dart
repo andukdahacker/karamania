@@ -24,6 +24,8 @@ import 'package:karamania/widgets/reaction_feed.dart';
 import 'package:karamania/widgets/streak_milestone_overlay.dart';
 import 'package:karamania/widgets/quick_ceremony_display.dart';
 import 'package:karamania/widgets/song_over_button.dart';
+import 'package:karamania/widgets/group_card_announcement_overlay.dart';
+import 'package:karamania/widgets/tag_team_flash_widget.dart';
 import 'package:go_router/go_router.dart';
 
 class PartyScreen extends StatefulWidget {
@@ -218,6 +220,23 @@ class _PartyScreenState extends State<PartyScreen>
                   },
                 ),
               ),
+            // Group card announcement overlay — appears after card accepted broadcast
+            if (partyProvider.groupCardAnnouncement != null)
+              Positioned.fill(
+                child: GroupCardAnnouncementOverlay(
+                  announcement: partyProvider.groupCardAnnouncement!,
+                  selectedDisplayNames:
+                      partyProvider.groupCardSelectedDisplayNames,
+                  isSelectedForGroupCard:
+                      partyProvider.isSelectedForGroupCard,
+                  onDismiss: () =>
+                      partyProvider.clearGroupCardAnnouncement(),
+                ),
+              ),
+            // Tag Team "YOUR TURN!" flash — during song state for tag-team partner
+            if (partyProvider.isTagTeamPartner &&
+                partyProvider.djState == DJState.song)
+              const TagTeamFlashWidget(),
             // Reaction feed overlay (floating emojis) — only during song state
             if (partyProvider.djState == DJState.song)
               Positioned.fill(

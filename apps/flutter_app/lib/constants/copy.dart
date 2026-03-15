@@ -181,6 +181,11 @@ class Copy {
     }
   }
 
+  // Group card copy
+  static const String groupCardAnnouncementPrefix = 'GROUP CHALLENGE';
+  static const String groupCardYouWereSelected = "You've been selected!";
+  static const String tagTeamYourTurn = 'YOUR TURN!';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

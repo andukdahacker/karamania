@@ -88,6 +88,14 @@ class PartyProvider extends ChangeNotifier {
   String? _acceptedCardTitle;
   String? _acceptedCardType;
 
+  // Group card state — populated by card:groupActivated event
+  String? _groupCardAnnouncement;
+  List<String> _groupCardSelectedUserIds = [];
+  List<String> _groupCardSelectedDisplayNames = [];
+  bool _isSelectedForGroupCard = false;
+  bool _isTagTeamPartner = false;
+  bool _showTagTeamFlash = false;
+
   // Reaction state
   final List<ReactionEvent> _reactionFeed = [];
   static const int _maxReactionFeedSize = 50;
@@ -135,6 +143,12 @@ class PartyProvider extends ChangeNotifier {
   int? get streakMilestone => _streakMilestone;
   String? get streakEmoji => _streakEmoji;
   String? get streakDisplayName => _streakDisplayName;
+  String? get groupCardAnnouncement => _groupCardAnnouncement;
+  List<String> get groupCardSelectedUserIds => _groupCardSelectedUserIds;
+  List<String> get groupCardSelectedDisplayNames => _groupCardSelectedDisplayNames;
+  bool get isSelectedForGroupCard => _isSelectedForGroupCard;
+  bool get isTagTeamPartner => _isTagTeamPartner;
+  bool get showTagTeamFlash => _showTagTeamFlash;
   List<ReactionEvent> get reactionFeed => List.unmodifiable(_reactionFeed);
 
   /// Whether this client is the current singer (performer).
@@ -259,6 +273,30 @@ class PartyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void onGroupCardActivated(
+    String announcement,
+    List<String> selectedUserIds,
+    List<String> selectedDisplayNames,
+    String cardId,
+  ) {
+    _groupCardAnnouncement = announcement;
+    _groupCardSelectedUserIds = selectedUserIds;
+    _groupCardSelectedDisplayNames = selectedDisplayNames;
+    _isSelectedForGroupCard = selectedUserIds.contains(_localUserId);
+    _isTagTeamPartner = cardId == 'tag-team' && _isSelectedForGroupCard;
+    notifyListeners();
+  }
+
+  void clearGroupCardAnnouncement() {
+    _groupCardAnnouncement = null;
+    notifyListeners();
+  }
+
+  void setShowTagTeamFlash(bool show) {
+    _showTagTeamFlash = show;
+    notifyListeners();
+  }
+
   void _clearCeremonyState() {
     _ceremonyPerformerName = null;
     _ceremonyRevealAt = null;
@@ -296,13 +334,19 @@ class PartyProvider extends ChangeNotifier {
       _redrawUsed = false;
       _acceptedCardTitle = null;
       _acceptedCardType = null;
+      // Reset group card selection fields (NOT announcement — it auto-dismisses via timer)
+      _groupCardSelectedUserIds = [];
+      _groupCardSelectedDisplayNames = [];
+      _isSelectedForGroupCard = false;
     }
-    // Clear reaction feed and streak state when leaving song state (AC #4)
+    // Clear reaction feed, streak state, and tag team when leaving song state (AC #4)
     if (_djState == DJState.song && state != DJState.song) {
       _reactionFeed.clear();
       _streakMilestone = null;
       _streakEmoji = null;
       _streakDisplayName = null;
+      _isTagTeamPartner = false;
+      _showTagTeamFlash = false;
     }
     _djState = state;
     _ceremonyType = ceremonyType;
