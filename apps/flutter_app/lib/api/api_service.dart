@@ -112,18 +112,20 @@ class ApiService {
       );
     }
 
-    Object? parsedError;
     try {
       final errorJson = jsonDecode(response.body) as Map<String, dynamic>;
-      parsedError = ErrorResponse.fromJson(errorJson);
-    } catch (_) {}
-
-    throw runtime.ApiException(
-      statusCode: response.statusCode,
-      body: response.body,
-      headers: response.headers,
-      parsedBody: parsedError,
-    );
+      final parsed = ErrorResponse.fromJson(errorJson);
+      throw ApiException(
+        code: parsed.error.code,
+        message: parsed.error.message,
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(
+        code: 'UNKNOWN',
+        message: 'Request failed (status ${response.statusCode})',
+      );
+    }
   }
 
   ApiException _mapException(runtime.ApiException e) {

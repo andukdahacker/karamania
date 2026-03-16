@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:karamania/api/api_service.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/party_provider.dart';
+import 'package:karamania/constants/copy.dart';
 import 'package:karamania/widgets/playlist_import_card.dart';
 
 class MockApiService extends ApiService {
@@ -152,6 +153,138 @@ void main() {
       await tester.pump();
 
       expect(partyProvider.playlistImportState, LoadingState.idle);
+    });
+
+    testWidgets('detects Spotify URL and shows Spotify label', (tester) async {
+      await tester.pumpWidget(_wrapWithProviders(
+        partyProvider: partyProvider,
+        apiService: mockApiService,
+      ));
+
+      await tester.enterText(
+        find.byKey(const Key('playlist-url-field')),
+        'https://open.spotify.com/playlist/abc123',
+      );
+      await tester.pump();
+
+      expect(find.byKey(const Key('playlist-detected-label')), findsOneWidget);
+      expect(find.text(Copy.playlistImportDetectedSpotify), findsOneWidget);
+    });
+
+    testWidgets('import button enabled with valid Spotify URL', (tester) async {
+      await tester.pumpWidget(_wrapWithProviders(
+        partyProvider: partyProvider,
+        apiService: mockApiService,
+      ));
+
+      await tester.enterText(
+        find.byKey(const Key('playlist-url-field')),
+        'https://open.spotify.com/playlist/abc123',
+      );
+      await tester.pump();
+
+      final importBtn = tester.widget<ElevatedButton>(
+        find.byKey(const Key('playlist-import-btn')),
+      );
+      expect(importBtn.onPressed, isNotNull);
+    });
+
+    testWidgets('SpotifyGuide retry resets state and re-triggers import', (tester) async {
+      mockApiService.mockError = const ApiException(
+        code: 'PLAYLIST_PRIVATE',
+        message: 'This playlist is private',
+      );
+
+      await tester.pumpWidget(_wrapWithProviders(
+        partyProvider: partyProvider,
+        apiService: mockApiService,
+      ));
+
+      // Enter Spotify URL, trigger import to get SpotifyGuide
+      await tester.enterText(
+        find.byKey(const Key('playlist-url-field')),
+        'https://open.spotify.com/playlist/private123',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('playlist-import-btn')));
+      await tester.pump();
+
+      expect(find.byKey(const Key('spotify-guide')), findsOneWidget);
+
+      // Now make the next import succeed
+      mockApiService.mockError = null;
+      mockApiService.mockResult = const PlaylistImportResult(
+        tracks: [],
+        matched: [],
+        unmatchedCount: 0,
+        totalFetched: 0,
+      );
+
+      // Tap retry in SpotifyGuide
+      await tester.tap(find.byKey(const Key('spotify-guide-retry-btn')));
+      await tester.pump();
+
+      // SpotifyGuide should be gone, import re-triggered (loading or success)
+      expect(find.byKey(const Key('spotify-guide')), findsNothing);
+    });
+
+    testWidgets('changing URL resets private error state', (tester) async {
+      mockApiService.mockError = const ApiException(
+        code: 'PLAYLIST_PRIVATE',
+        message: 'This playlist is private',
+      );
+
+      await tester.pumpWidget(_wrapWithProviders(
+        partyProvider: partyProvider,
+        apiService: mockApiService,
+      ));
+
+      // Enter Spotify URL, trigger import to get SpotifyGuide
+      await tester.enterText(
+        find.byKey(const Key('playlist-url-field')),
+        'https://open.spotify.com/playlist/private123',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('playlist-import-btn')));
+      await tester.pump();
+
+      expect(find.byKey(const Key('spotify-guide')), findsOneWidget);
+
+      // Change URL — should reset _isPrivateError
+      await tester.enterText(
+        find.byKey(const Key('playlist-url-field')),
+        'https://open.spotify.com/playlist/different456',
+      );
+      await tester.pump();
+
+      // Provider state is still error, but _isPrivateError is reset
+      // so we should see generic error, not SpotifyGuide
+      expect(find.byKey(const Key('spotify-guide')), findsNothing);
+    });
+
+    testWidgets('shows SpotifyGuide on PLAYLIST_PRIVATE error', (tester) async {
+      mockApiService.mockError = const ApiException(
+        code: 'PLAYLIST_PRIVATE',
+        message: 'This playlist is private',
+      );
+
+      await tester.pumpWidget(_wrapWithProviders(
+        partyProvider: partyProvider,
+        apiService: mockApiService,
+      ));
+
+      // Enter Spotify URL and trigger import
+      await tester.enterText(
+        find.byKey(const Key('playlist-url-field')),
+        'https://open.spotify.com/playlist/private123',
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('playlist-import-btn')));
+      await tester.pump();
+
+      expect(find.byKey(const Key('spotify-guide')), findsOneWidget);
+      expect(find.text(Copy.spotifyGuideTitle), findsOneWidget);
     });
   });
 }

@@ -194,8 +194,16 @@ class Copy {
 
   // Playlist import
   static const String playlistImportTitle = 'Import Playlist';
-  static const String playlistImportHint = 'Paste YouTube Music playlist URL';
+  static const String playlistImportHint = 'Paste YouTube Music or Spotify playlist URL';
   static const String playlistImportDetected = 'YouTube Music playlist detected';
+  static const String playlistImportDetectedSpotify = 'Spotify playlist detected';
+
+  // Spotify guide
+  static const String spotifyGuideTitle = 'This playlist is private';
+  static const String spotifyGuideStep1 = 'Open your Spotify app';
+  static const String spotifyGuideStep2 = 'Tap ••• on your playlist \u2192 Make Public';
+  static const String spotifyGuideStep3 = 'Come back and paste the link again';
+  static const String spotifyGuideRetry = 'Try Again';
   static const String playlistImportButton = 'Import';
   static const String playlistImportLoading = 'Importing playlist...';
   static const String playlistImportRetry = 'Retry';

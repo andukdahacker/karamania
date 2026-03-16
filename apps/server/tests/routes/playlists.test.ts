@@ -31,6 +31,14 @@ vi.mock('../../src/integrations/youtube-data.js', () => ({
   fetchPlaylistTracks: mockFetchPlaylistTracks,
 }));
 
+const mockExtractSpotifyId = vi.fn();
+const mockFetchSpotifyTracks = vi.fn();
+
+vi.mock('../../src/integrations/spotify-data.js', () => ({
+  extractPlaylistId: mockExtractSpotifyId,
+  fetchPlaylistTracks: mockFetchSpotifyTracks,
+}));
+
 const mockIntersectWithSongs = vi.fn();
 
 vi.mock('../../src/persistence/catalog-repository.js', () => ({
@@ -58,6 +66,7 @@ describe('playlist routes', () => {
   describe('POST /api/playlists/import', () => {
     it('returns 400 for invalid playlist URL', async () => {
       mockExtractPlaylistId.mockReturnValue(null);
+      mockExtractSpotifyId.mockReturnValue(null);
 
       const response = await app.inject({
         method: 'POST',
@@ -84,6 +93,7 @@ describe('playlist routes', () => {
 
     it('returns successful import with matched tracks', async () => {
       mockExtractPlaylistId.mockReturnValue('PLtest123');
+      mockExtractSpotifyId.mockReturnValue(null);
       mockFetchPlaylistTracks.mockResolvedValue({
         tracks: [
           { songTitle: 'Bohemian Rhapsody', artist: 'Queen', youtubeVideoId: 'vid1' },
@@ -122,6 +132,7 @@ describe('playlist routes', () => {
 
     it('returns 502 when YouTube API fails', async () => {
       mockExtractPlaylistId.mockReturnValue('PLtest123');
+      mockExtractSpotifyId.mockReturnValue(null);
       mockFetchPlaylistTracks.mockRejectedValue(new Error('YouTube API error: 403 Forbidden'));
 
       const response = await app.inject({
@@ -139,6 +150,7 @@ describe('playlist routes', () => {
 
     it('handles empty playlist', async () => {
       mockExtractPlaylistId.mockReturnValue('PLempty');
+      mockExtractSpotifyId.mockReturnValue(null);
       mockFetchPlaylistTracks.mockResolvedValue({
         tracks: [],
         unparseable: 0,
@@ -162,6 +174,7 @@ describe('playlist routes', () => {
 
     it('response shape matches { data: { tracks, matched, unmatchedCount, totalFetched } }', async () => {
       mockExtractPlaylistId.mockReturnValue('PLtest');
+      mockExtractSpotifyId.mockReturnValue(null);
       mockFetchPlaylistTracks.mockResolvedValue({
         tracks: [{ songTitle: 'Hello', artist: 'Adele', youtubeVideoId: 'vid1' }],
         unparseable: 0,
@@ -187,6 +200,7 @@ describe('playlist routes', () => {
 
     it('error response shape matches { error: { code, message } }', async () => {
       mockExtractPlaylistId.mockReturnValue(null);
+      mockExtractSpotifyId.mockReturnValue(null);
 
       const response = await app.inject({
         method: 'POST',
@@ -204,6 +218,7 @@ describe('playlist routes', () => {
 
     it('calls intersectWithSongs with correct parallel arrays', async () => {
       mockExtractPlaylistId.mockReturnValue('PLtest');
+      mockExtractSpotifyId.mockReturnValue(null);
       mockFetchPlaylistTracks.mockResolvedValue({
         tracks: [
           { songTitle: 'Bohemian Rhapsody', artist: 'Queen', youtubeVideoId: 'vid1' },
@@ -224,6 +239,86 @@ describe('playlist routes', () => {
         ['Bohemian Rhapsody', 'Hello'],
         ['Queen', 'Adele'],
       );
+    });
+
+    it('returns successful import for Spotify URL', async () => {
+      mockExtractPlaylistId.mockReturnValue(null);
+      mockExtractSpotifyId.mockReturnValue('spotify123');
+      mockFetchSpotifyTracks.mockResolvedValue({
+        tracks: [
+          { songTitle: 'Blinding Lights', artist: 'The Weeknd', youtubeVideoId: '' },
+        ],
+        unparseable: 0,
+        totalFetched: 1,
+      });
+      mockIntersectWithSongs.mockResolvedValue([]);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/playlists/import',
+        payload: { playlistUrl: 'https://open.spotify.com/playlist/spotify123' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body) as Record<string, unknown>;
+      const data = body['data'] as Record<string, unknown>;
+      const tracks = data['tracks'] as Array<Record<string, unknown>>;
+      expect(tracks).toHaveLength(1);
+      expect(tracks[0]!['songTitle']).toBe('Blinding Lights');
+      expect(mockFetchSpotifyTracks).toHaveBeenCalledWith('spotify123', 'test-id', 'test-secret');
+    });
+
+    it('returns 403 with PLAYLIST_PRIVATE for private Spotify playlist', async () => {
+      mockExtractPlaylistId.mockReturnValue(null);
+      mockExtractSpotifyId.mockReturnValue('private123');
+      mockFetchSpotifyTracks.mockRejectedValue(new Error('This Spotify playlist is private. Make it public in your Spotify app and try again.'));
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/playlists/import',
+        payload: { playlistUrl: 'https://open.spotify.com/playlist/private123' },
+      });
+
+      expect(response.statusCode).toBe(403);
+      const body = JSON.parse(response.body) as Record<string, unknown>;
+      const error = body['error'] as Record<string, unknown>;
+      expect(error['code']).toBe('PLAYLIST_PRIVATE');
+    });
+
+    it('returns 502 with SPOTIFY_API_FAILED for Spotify API errors', async () => {
+      mockExtractPlaylistId.mockReturnValue(null);
+      mockExtractSpotifyId.mockReturnValue('spotify123');
+      mockFetchSpotifyTracks.mockRejectedValue(new Error('Spotify API error: 500 Internal Server Error'));
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/playlists/import',
+        payload: { playlistUrl: 'https://open.spotify.com/playlist/spotify123' },
+      });
+
+      expect(response.statusCode).toBe(502);
+      const body = JSON.parse(response.body) as Record<string, unknown>;
+      const error = body['error'] as Record<string, unknown>;
+      expect(error['code']).toBe('SPOTIFY_API_FAILED');
+    });
+
+    it('prefers YouTube detection over Spotify', async () => {
+      mockExtractPlaylistId.mockReturnValue('PLtest');
+      mockExtractSpotifyId.mockReturnValue('spotify123');
+      mockFetchPlaylistTracks.mockResolvedValue({
+        tracks: [],
+        unparseable: 0,
+        totalFetched: 0,
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/playlists/import',
+        payload: { playlistUrl: 'https://music.youtube.com/playlist?list=PLtest' },
+      });
+
+      expect(mockFetchPlaylistTracks).toHaveBeenCalled();
+      expect(mockFetchSpotifyTracks).not.toHaveBeenCalled();
     });
   });
 });

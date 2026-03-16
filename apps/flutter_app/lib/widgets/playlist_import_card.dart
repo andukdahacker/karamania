@@ -5,6 +5,7 @@ import 'package:karamania/constants/copy.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_tokens.dart';
+import 'package:karamania/widgets/spotify_guide.dart';
 
 class PlaylistImportCard extends StatefulWidget {
   const PlaylistImportCard({super.key = const Key('playlist-import-card')});
@@ -15,7 +16,8 @@ class PlaylistImportCard extends StatefulWidget {
 
 class _PlaylistImportCardState extends State<PlaylistImportCard> {
   final _urlController = TextEditingController();
-  bool _isYouTubeMusicDetected = false;
+  String? _detectedPlatform;
+  bool _isPrivateError = false;
 
   @override
   void dispose() {
@@ -24,11 +26,26 @@ class _PlaylistImportCardState extends State<PlaylistImportCard> {
   }
 
   void _onUrlChanged(String value) {
-    final detected = value.contains('music.youtube.com') ||
-        (value.contains('youtube.com') && value.contains('list='));
-    if (detected != _isYouTubeMusicDetected) {
-      setState(() => _isYouTubeMusicDetected = detected);
+    String? platform;
+    if (value.contains('open.spotify.com/playlist') ||
+        value.contains('spotify.com/playlist')) {
+      platform = 'spotify';
+    } else if (value.contains('music.youtube.com') ||
+        (value.contains('youtube.com') && value.contains('list='))) {
+      platform = 'youtube';
     }
+    if (platform != _detectedPlatform || _isPrivateError) {
+      setState(() {
+        _detectedPlatform = platform;
+        _isPrivateError = false;
+      });
+    }
+  }
+
+  void _onRetryFromGuide() {
+    setState(() => _isPrivateError = false);
+    context.read<PartyProvider>().resetPlaylistImport();
+    _onImport();
   }
 
   Future<void> _onImport() async {
@@ -47,7 +64,10 @@ class _PlaylistImportCardState extends State<PlaylistImportCard> {
         result.matched,
         result.unmatchedCount,
       );
-    } on ApiException {
+    } on ApiException catch (e) {
+      if (e.code == 'PLAYLIST_PRIVATE') {
+        setState(() => _isPrivateError = true);
+      }
       partyProvider.onPlaylistImportError();
     } catch (_) {
       partyProvider.onPlaylistImportError();
@@ -89,10 +109,12 @@ class _PlaylistImportCardState extends State<PlaylistImportCard> {
               ),
               style: TextStyle(color: DJTokens.textPrimary),
             ),
-            if (_isYouTubeMusicDetected) ...[
+            if (_detectedPlatform != null) ...[
               const SizedBox(height: DJTokens.spaceXs),
               Text(
-                Copy.playlistImportDetected,
+                _detectedPlatform == 'youtube'
+                    ? Copy.playlistImportDetected
+                    : Copy.playlistImportDetectedSpotify,
                 key: const Key('playlist-detected-label'),
                 style: TextStyle(
                   color: DJTokens.actionConfirm,
@@ -120,13 +142,15 @@ class _PlaylistImportCardState extends State<PlaylistImportCard> {
             else if (importState == LoadingState.success)
               _buildResults(partyProvider)
             else if (importState == LoadingState.error)
-              _buildError()
+              _isPrivateError
+                  ? SpotifyGuide(onRetry: _onRetryFromGuide)
+                  : _buildError()
             else
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   key: const Key('playlist-import-btn'),
-                  onPressed: _isYouTubeMusicDetected ? _onImport : null,
+                  onPressed: _detectedPlatform != null ? _onImport : null,
                   child: const Text(Copy.playlistImportButton),
                 ),
               ),

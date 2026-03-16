@@ -87,7 +87,7 @@ development_status:
   epic-5: in-progress
   5-1-karaoke-catalog-index: done
   5-2-playlist-import-youtube-music: review
-  5-3-playlist-import-spotify: backlog
+  5-3-playlist-import-spotify: done
   5-4-song-normalization-and-suggestion-engine: backlog
   5-5-quick-pick-mode: backlog
   5-6-spin-the-wheel-mode: backlog

@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import * as catalogRepository from '../persistence/catalog-repository.js';
 import type { KaraokeCatalogTable } from '../db/types.js';
 import { extractPlaylistId, fetchPlaylistTracks } from '../integrations/youtube-data.js';
+import { extractPlaylistId as extractSpotifyId, fetchPlaylistTracks as fetchSpotifyTracks } from '../integrations/spotify-data.js';
 import { config } from '../config.js';
 import {
   playlistImportRequestSchema,
@@ -29,21 +30,25 @@ export async function playlistRoutes(fastify: FastifyInstance): Promise<void> {
       response: {
         200: playlistImportResponseSchema,
         400: errorResponseSchema,
+        403: errorResponseSchema,
         502: errorResponseSchema,
       },
     },
   }, async (request, reply) => {
     const { playlistUrl } = request.body as { playlistUrl: string };
-    const playlistId = extractPlaylistId(playlistUrl);
+    const youtubeId = extractPlaylistId(playlistUrl);
+    const spotifyId = extractSpotifyId(playlistUrl);
 
-    if (!playlistId) {
+    if (!youtubeId && !spotifyId) {
       return reply.status(400).send({
-        error: { code: 'INVALID_PLAYLIST_URL', message: 'URL must be a YouTube Music or YouTube playlist URL' },
+        error: { code: 'INVALID_PLAYLIST_URL', message: 'URL must be a YouTube Music, YouTube, or Spotify playlist URL' },
       });
     }
 
     try {
-      const result = await fetchPlaylistTracks(playlistId, config.YOUTUBE_API_KEY);
+      const result = youtubeId
+        ? await fetchPlaylistTracks(youtubeId, config.YOUTUBE_API_KEY)
+        : await fetchSpotifyTracks(spotifyId!, config.SPOTIFY_CLIENT_ID, config.SPOTIFY_CLIENT_SECRET);
 
       const titles = result.tracks.map((t) => t.songTitle);
       const artists = result.tracks.map((t) => t.artist);
@@ -60,8 +65,15 @@ export async function playlistRoutes(fastify: FastifyInstance): Promise<void> {
         },
       });
     } catch (error) {
+      const msg = (error as Error).message;
+      if (msg.includes('private')) {
+        return reply.status(403).send({
+          error: { code: 'PLAYLIST_PRIVATE', message: msg },
+        });
+      }
+      const code = youtubeId ? 'YOUTUBE_API_FAILED' : 'SPOTIFY_API_FAILED';
       return reply.status(502).send({
-        error: { code: 'YOUTUBE_API_FAILED', message: (error as Error).message },
+        error: { code, message: msg },
       });
     }
   });
