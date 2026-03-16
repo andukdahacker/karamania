@@ -15,6 +15,7 @@ export async function suggestionRoutes(fastify: FastifyInstance): Promise<void> 
       response: {
         200: suggestionsResponseSchema,
         401: errorResponseSchema,
+        403: errorResponseSchema,
         404: errorResponseSchema,
       },
     },
@@ -28,20 +29,30 @@ export async function suggestionRoutes(fastify: FastifyInstance): Promise<void> 
       return reply.status(401).send({ error: { code: 'AUTH_REQUIRED', message: 'Authorization required' } });
     }
     const token = authHeader.slice(7);
+    let userId: string;
     try {
-      await verifyFirebaseToken(token);
+      const decoded = await verifyFirebaseToken(token);
+      userId = decoded.uid;
     } catch {
       try {
-        await verifyGuestToken(token);
+        const guest = await verifyGuestToken(token);
+        userId = guest.guestId;
       } catch {
         return reply.status(401).send({ error: { code: 'AUTH_INVALID', message: 'Invalid token' } });
       }
     }
 
-    // Verify session exists and is active
+    // Verify session exists and is active or lobby (lobby allowed for pre-game browsing)
     const session = await sessionRepo.findById(sessionId);
-    if (!session || session.status === 'ended') {
+    if (!session || (session.status !== 'lobby' && session.status !== 'active')) {
       return reply.status(404).send({ error: { code: 'SESSION_NOT_FOUND', message: 'Session not found or ended' } });
+    }
+
+    // Verify requester is a participant
+    const participants = await sessionRepo.getParticipants(sessionId);
+    const isParticipant = participants.some(p => (p.user_id ?? p.id) === userId);
+    if (!isParticipant) {
+      return reply.status(403).send({ error: { code: 'NOT_PARTICIPANT', message: 'You are not a participant of this session' } });
     }
 
     const suggestions = await computeSuggestions(sessionId, count);

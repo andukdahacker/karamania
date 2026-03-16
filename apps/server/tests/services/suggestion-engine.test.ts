@@ -162,6 +162,27 @@ describe('suggestion-engine', () => {
     });
   });
 
+  describe('markSongSung integration', () => {
+    it('markSongSung deprioritizes songs in subsequent computeSuggestions call', async () => {
+      const trackA = createTestCatalogTrack({ song_title: 'Song A', artist: 'Artist A' });
+      const trackB = createTestCatalogTrack({ song_title: 'Song B', artist: 'Artist B' });
+
+      addImportedSongs(SESSION_ID, USER_A, [trackA, trackB]);
+
+      // Before singing: both unsung, same overlap, ordering varies by jitter
+      const before = await computeSuggestions(SESSION_ID, 2);
+      expect(before).toHaveLength(2);
+
+      // Mark Song A as sung via markSongSung
+      markSongSung(SESSION_ID, 'Song A', 'Artist A');
+
+      // After singing: Song B (unsung bonus) should consistently outrank Song A (sung penalty)
+      const after = await computeSuggestions(SESSION_ID, 2);
+      expect(after[0]!.songTitle).toBe('Song B');
+      expect(after[1]!.songTitle).toBe('Song A');
+    });
+  });
+
   describe('rankSong', () => {
     it('base score is overlapCount * 100', () => {
       const song: PooledSong = {

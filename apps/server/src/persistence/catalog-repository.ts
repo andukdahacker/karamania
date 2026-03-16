@@ -75,11 +75,12 @@ export async function getClassicsCount(): Promise<number> {
   return result.count;
 }
 
-export async function findClassics(): Promise<KaraokeCatalogTable[]> {
+export async function findClassics(limit: number = 200): Promise<KaraokeCatalogTable[]> {
   return db
     .selectFrom('karaoke_catalog')
     .selectAll()
     .where('is_classic', '=', true)
+    .limit(limit)
     .execute();
 }
 

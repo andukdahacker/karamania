@@ -32,6 +32,7 @@ vi.mock('../../src/services/guest-token.js', () => ({
 
 vi.mock('../../src/persistence/session-repository.js', () => ({
   findById: vi.fn(),
+  getParticipants: vi.fn(),
 }));
 
 vi.mock('../../src/persistence/catalog-repository.js', () => ({
@@ -52,6 +53,7 @@ import * as songPool from '../../src/services/song-pool.js';
 const mockVerifyFirebase = vi.mocked(verifyFirebaseToken);
 const mockVerifyGuest = vi.mocked(verifyGuestToken);
 const mockFindById = vi.mocked(sessionRepo.findById);
+const mockGetParticipants = vi.mocked(sessionRepo.getParticipants);
 const mockFindClassics = vi.mocked(catalogRepository.findClassics);
 const mockGetPooledSongs = vi.mocked(songPool.getPooledSongs);
 const mockGetSungSongKeys = vi.mocked(songPool.getSungSongKeys);
@@ -80,6 +82,7 @@ describe('suggestion routes', () => {
     it('returns suggestions with valid auth and active session', async () => {
       mockVerifyFirebase.mockResolvedValue({ uid: 'user-1' } as any);
       mockFindById.mockResolvedValue({ id: VALID_SESSION_ID, status: 'active' } as any);
+      mockGetParticipants.mockResolvedValue([{ id: 'p1', user_id: 'user-1', guest_name: null, display_name: 'User 1', joined_at: new Date() }] as any);
       mockGetPooledSongs.mockReturnValue([
         {
           catalogTrackId: 'cat-1',
@@ -169,9 +172,27 @@ describe('suggestion routes', () => {
       expect(error['code']).toBe('SESSION_NOT_FOUND');
     });
 
+    it('returns 403 when authenticated user is not a session participant', async () => {
+      mockVerifyFirebase.mockResolvedValue({ uid: 'outsider-user' } as any);
+      mockFindById.mockResolvedValue({ id: VALID_SESSION_ID, status: 'active' } as any);
+      mockGetParticipants.mockResolvedValue([{ id: 'p1', user_id: 'user-1', guest_name: null, display_name: 'User 1', joined_at: new Date() }] as any);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/sessions/${VALID_SESSION_ID}/suggestions`,
+        headers: { authorization: 'Bearer valid-token' },
+      });
+
+      expect(response.statusCode).toBe(403);
+      const body = JSON.parse(response.body) as Record<string, unknown>;
+      const error = body['error'] as Record<string, unknown>;
+      expect(error['code']).toBe('NOT_PARTICIPANT');
+    });
+
     it('count query parameter controls suggestion count', async () => {
       mockVerifyFirebase.mockResolvedValue({ uid: 'user-1' } as any);
       mockFindById.mockResolvedValue({ id: VALID_SESSION_ID, status: 'active' } as any);
+      mockGetParticipants.mockResolvedValue([{ id: 'p1', user_id: 'user-1', guest_name: null, display_name: 'User 1', joined_at: new Date() }] as any);
 
       const songs = Array.from({ length: 10 }, (_, i) => ({
         catalogTrackId: `cat-${i}`,
@@ -202,6 +223,7 @@ describe('suggestion routes', () => {
     it('cold start session: returns classic songs', async () => {
       mockVerifyFirebase.mockResolvedValue({ uid: 'user-1' } as any);
       mockFindById.mockResolvedValue({ id: VALID_SESSION_ID, status: 'active' } as any);
+      mockGetParticipants.mockResolvedValue([{ id: 'p1', user_id: 'user-1', guest_name: null, display_name: 'User 1', joined_at: new Date() }] as any);
       mockGetPooledSongs.mockReturnValue([]);
       mockFindClassics.mockResolvedValue([
         { id: 'classic-1', song_title: 'Bohemian Rhapsody', artist: 'Queen', youtube_video_id: 'yt1', channel: null, is_classic: true, created_at: new Date(), updated_at: new Date() },

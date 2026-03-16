@@ -1,6 +1,6 @@
 # Story 5.4: Song Normalization & Suggestion Engine
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -333,10 +333,18 @@ Claude Opus 4.6 (1M context)
 - `apps/server/src/routes/playlists.ts` — auth extraction, session validation, pool storage
 - `apps/server/src/services/session-manager.ts` — clearPool import + endSession cleanup
 - `apps/server/src/index.ts` — suggestion route + schema registration
+- `apps/server/src/persistence/catalog-repository.ts` — added limit param to findClassics (code review fix)
 - `apps/server/tests/routes/playlists.test.ts` — 6 new tests for sessionId/auth/pool
 - `apps/flutter_app/lib/api/api_service.dart` — optional sessionId param
 - `apps/flutter_app/lib/widgets/playlist_import_card.dart` — passes sessionId from PartyProvider
 
+**Also in commit (Story 5.2 code review fixes):**
+- `apps/server/src/integrations/youtube-data.ts` — 404 handling + 5s fetch timeout
+- `apps/server/src/shared/title-parser.ts` — fixed hyphenated artist regex
+- `apps/server/tests/integrations/youtube-data.test.ts` — 404 test
+- `apps/server/tests/shared/title-parser.test.ts` — NEW, direct title-parser tests
+
 ### Change Log
 
 - 2026-03-16: Implemented Story 5.4 — Song Normalization & Suggestion Engine. Added cross-platform song matching, session song pool, suggestion ranking (overlap + not-yet-sung), REST endpoint, playlist import integration with pool storage, Flutter sessionId passing. 856 server tests pass.
+- 2026-03-16: Code review fixes applied (H1: findClassics limit 200, H2: participant verification on suggestions route + 403, H3: regex safety comment, M1: File List updated with 5.2 bundled files, M2: aligned status check to lobby/active, M3: markSongSung integration test, M4: fixed misleading comment). 868 server tests pass.

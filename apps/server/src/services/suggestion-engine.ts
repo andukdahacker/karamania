@@ -1,5 +1,5 @@
-// Suggestion engine — pure computation, no Socket.io or persistence imports
-// Reads from song-pool (in-memory) and catalog-repository (persistence)
+// Suggestion engine — ranking logic with cold-start fallback via catalog-repository
+// Reads from song-pool (in-memory) and catalog-repository (persistence for classics)
 
 import * as catalogRepository from '../persistence/catalog-repository.js';
 import { getPooledSongs, getSungSongKeys } from './song-pool.js';

@@ -1,6 +1,8 @@
 // Song normalization for cross-platform matching (YouTube ↔ Spotify)
 // Used ONLY for overlap counting in the song pool — NOT for catalog ILIKE queries
 
+// Note: `g` flag is safe here — these are only used with String.prototype.replace(),
+// which does not persist lastIndex. Do NOT use with .test() or .exec() directly.
 const SUFFIX_PATTERNS = [
   /\s*\(karaoke\s*(version)?\)\s*/gi,
   /\s*\(instrumental\)\s*/gi,
