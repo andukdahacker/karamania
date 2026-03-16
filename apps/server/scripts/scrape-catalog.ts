@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import { db } from '../src/db/connection.js';
 import * as catalogRepository from '../src/persistence/catalog-repository.js';
+import { parseKaraokeTitle } from '../src/shared/title-parser.js';
+
+export { parseKaraokeTitle };
 
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
 const MAX_RESULTS_PER_PAGE = 50;
@@ -13,30 +16,6 @@ const KARAOKE_PLAYLISTS: Array<{ name: string; playlistId: string }> = [
   { name: 'Karaoke Version', playlistId: 'PLACEHOLDER_KARAOKE_VERSION' },
   { name: 'KaraFun', playlistId: 'PLACEHOLDER_KARAFUN' },
 ];
-
-export function parseKaraokeTitle(title: string): { songTitle: string; artist: string } | null {
-  // Strip common karaoke suffixes first
-  let cleaned = title
-    .replace(/\s*\|\s*Karaoke\s*(Version|With Lyrics|Instrumental)?\s*/gi, '')
-    .replace(/\s*\(Karaoke\s*(Version)?\)\s*/gi, '')
-    .replace(/\s*\(Instrumental\)\s*/gi, '')
-    .replace(/\s*\(With Lyrics\)\s*/gi, '')
-    .replace(/\s*\(Sing Along\)\s*/gi, '')
-    .replace(/\s*-\s*Karaoke\s*(Version)?\s*$/gi, '')
-    .trim();
-
-  // Pattern 1: "Artist - Song"
-  let match = cleaned.match(/^(.+?)\s*-\s*(.+)$/);
-  if (match) {
-    const part1 = match[1]!.trim();
-    const part2 = match[2]!.trim();
-    if (part1 && part2) {
-      return { artist: part1, songTitle: part2 };
-    }
-  }
-
-  return null;
-}
 
 async function fetchPlaylistPage(
   playlistId: string,

@@ -16,6 +16,7 @@ import { healthRoutes } from './routes/health.js';
 import { sessionRoutes } from './routes/sessions.js';
 import { webLandingRoutes } from './routes/web-landing.js';
 import { catalogRoutes } from './routes/catalog.js';
+import { playlistRoutes } from './routes/playlists.js';
 import { errorHandler } from './shared/errors.js';
 import { setupSocketHandlers } from './socket-handlers/connection-handler.js';
 import { recoverActiveSessions } from './services/session-manager.js';
@@ -35,6 +36,7 @@ await import('./shared/schemas/common-schemas.js');
 await import('./shared/schemas/auth-schemas.js');
 await import('./shared/schemas/session-schemas.js');
 await import('./shared/schemas/catalog-schemas.js');
+await import('./shared/schemas/playlist-schemas.js');
 
 await fastify.register(swagger, {
   openapi: {
@@ -54,6 +56,7 @@ await fastify.register(authRoutes);
 await fastify.register(sessionRoutes);
 await fastify.register(webLandingRoutes);
 await fastify.register(catalogRoutes);
+await fastify.register(playlistRoutes);
 
 const io = new SocketIOServer(fastify.server, {
   cors: {

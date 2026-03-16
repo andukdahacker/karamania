@@ -96,6 +96,12 @@ class PartyProvider extends ChangeNotifier {
   bool _isTagTeamPartner = false;
   bool _showTagTeamFlash = false;
 
+  // Playlist import state
+  LoadingState _playlistImportState = LoadingState.idle;
+  List<Map<String, dynamic>> _importedTracks = [];
+  List<Map<String, dynamic>> _matchedTracks = [];
+  int _unmatchedCount = 0;
+
   // Lightstick & hype state
   bool _isLightstickMode = false;
   Color _lightstickColor = const Color(0xFFFFD700); // default: vibe accent
@@ -159,6 +165,10 @@ class PartyProvider extends ChangeNotifier {
   Color get lightstickColor => _lightstickColor;
   bool get isHypeCooldown => _isHypeCooldown;
   DateTime? get hypeCooldownEnd => _hypeCooldownEnd;
+  LoadingState get playlistImportState => _playlistImportState;
+  List<Map<String, dynamic>> get importedTracks => _importedTracks;
+  List<Map<String, dynamic>> get matchedTracks => _matchedTracks;
+  int get unmatchedCount => _unmatchedCount;
   List<ReactionEvent> get reactionFeed => List.unmodifiable(_reactionFeed);
 
   /// Whether this client is the current singer (performer).
@@ -332,6 +342,36 @@ class PartyProvider extends ChangeNotifier {
   void clearHypeCooldown() {
     _isHypeCooldown = false;
     _hypeCooldownEnd = null;
+    notifyListeners();
+  }
+
+  void onPlaylistImportStarted() {
+    _playlistImportState = LoadingState.loading;
+    notifyListeners();
+  }
+
+  void onPlaylistImportSuccess(
+    List<Map<String, dynamic>> tracks,
+    List<Map<String, dynamic>> matched,
+    int unmatchedCount,
+  ) {
+    _playlistImportState = LoadingState.success;
+    _importedTracks = tracks;
+    _matchedTracks = matched;
+    _unmatchedCount = unmatchedCount;
+    notifyListeners();
+  }
+
+  void onPlaylistImportError() {
+    _playlistImportState = LoadingState.error;
+    notifyListeners();
+  }
+
+  void resetPlaylistImport() {
+    _playlistImportState = LoadingState.idle;
+    _importedTracks = [];
+    _matchedTracks = [];
+    _unmatchedCount = 0;
     notifyListeners();
   }
 

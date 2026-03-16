@@ -13,6 +13,7 @@ import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
 import 'package:karamania/widgets/dj_tap_button.dart';
+import 'package:karamania/widgets/playlist_import_card.dart';
 import 'package:karamania/widgets/reconnecting_banner.dart';
 
 const double _qrSize = 280.0;
@@ -267,6 +268,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           style: Theme.of(context).textTheme.labelLarge,
                         ),
                       ),
+                      const SizedBox(height: DJTokens.spaceMd),
+                      // Playlist import — all participants
+                      const PlaylistImportCard(),
                       // "Need X more" hint
                       if (isHost && partyProvider.participantCount < 3) ...[
                         const SizedBox(height: DJTokens.spaceXs),

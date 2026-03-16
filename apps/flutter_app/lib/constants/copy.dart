@@ -192,6 +192,17 @@ class Copy {
   static const String hypeSignalButton = 'Hype';
   static const String hypeSignalCooldown = 'Recharging...';
 
+  // Playlist import
+  static const String playlistImportTitle = 'Import Playlist';
+  static const String playlistImportHint = 'Paste YouTube Music playlist URL';
+  static const String playlistImportDetected = 'YouTube Music playlist detected';
+  static const String playlistImportButton = 'Import';
+  static const String playlistImportLoading = 'Importing playlist...';
+  static const String playlistImportRetry = 'Retry';
+  static const String playlistImportFailed = 'Import failed. Please try again.';
+  static String playlistImportResults(int imported, int matched, int unmatched) =>
+      '$imported tracks imported, $matched matched to catalog, $unmatched unmatched';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';
