@@ -17,6 +17,7 @@ import { appendEvent, flushEventStream, getEventStream, type SessionEvent } from
 import { calculateScoreIncrement, ACTION_TIER_MAP } from '../services/participation-scoring.js';
 import { generateAward, AWARD_TEMPLATES, AwardTone, type AwardContext } from '../services/award-generator.js';
 import { clearSessionStreaks } from '../services/streak-tracker.js';
+import { clearPool } from '../services/song-pool.js';
 
 // In-memory card stats per session — tracks dealt/accepted counts (AC #6)
 const cardStatsCache = new Map<string, { dealt: number; accepted: number }>();
@@ -807,6 +808,7 @@ export async function endSession(
   clearSessionAwards(sessionId);
   clearCardStats(sessionId);
   clearDealtCards(sessionId);
+  clearPool(sessionId);
 
   return newContext;
 }

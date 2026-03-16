@@ -45,6 +45,36 @@ vi.mock('../../src/persistence/catalog-repository.js', () => ({
   intersectWithSongs: mockIntersectWithSongs,
 }));
 
+vi.mock('../../src/integrations/firebase-admin.js', () => ({
+  verifyFirebaseToken: vi.fn(),
+}));
+
+vi.mock('../../src/services/guest-token.js', () => ({
+  verifyGuestToken: vi.fn(),
+}));
+
+vi.mock('../../src/persistence/session-repository.js', () => ({
+  findById: vi.fn(),
+}));
+
+vi.mock('../../src/services/song-pool.js', () => ({
+  addImportedSongs: vi.fn(),
+  getPooledSongs: vi.fn(),
+}));
+
+import { verifyFirebaseToken } from '../../src/integrations/firebase-admin.js';
+import { verifyGuestToken } from '../../src/services/guest-token.js';
+import * as sessionRepo from '../../src/persistence/session-repository.js';
+import * as songPool from '../../src/services/song-pool.js';
+
+const mockVerifyFirebase = vi.mocked(verifyFirebaseToken);
+const mockVerifyGuest = vi.mocked(verifyGuestToken);
+const mockFindById = vi.mocked(sessionRepo.findById);
+const mockAddImportedSongs = vi.mocked(songPool.addImportedSongs);
+const mockGetPooledSongs = vi.mocked(songPool.getPooledSongs);
+
+const VALID_SESSION_ID = 'a0000000-0000-4000-a000-000000000001';
+
 describe('playlist routes', () => {
   let app: ReturnType<typeof Fastify>;
 
@@ -146,6 +176,23 @@ describe('playlist routes', () => {
       const error = body['error'] as Record<string, unknown>;
       expect(error['code']).toBe('YOUTUBE_API_FAILED');
       expect(error['message']).toBe('YouTube API error: 403 Forbidden');
+    });
+
+    it('returns 404 with PLAYLIST_NOT_FOUND when playlist does not exist', async () => {
+      mockExtractPlaylistId.mockReturnValue('PLbadid');
+      mockExtractSpotifyId.mockReturnValue(null);
+      mockFetchPlaylistTracks.mockRejectedValue(new Error('Playlist not found or is private'));
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/playlists/import',
+        payload: { playlistUrl: 'https://music.youtube.com/playlist?list=PLbadid' },
+      });
+
+      expect(response.statusCode).toBe(404);
+      const body = JSON.parse(response.body) as Record<string, unknown>;
+      const error = body['error'] as Record<string, unknown>;
+      expect(error['code']).toBe('PLAYLIST_NOT_FOUND');
     });
 
     it('handles empty playlist', async () => {
@@ -319,6 +366,150 @@ describe('playlist routes', () => {
 
       expect(mockFetchPlaylistTracks).toHaveBeenCalled();
       expect(mockFetchSpotifyTracks).not.toHaveBeenCalled();
+    });
+
+    // --- New tests for sessionId + auth + pool ---
+
+    it('import with sessionId + valid Firebase auth: calls addImportedSongs and returns poolStats', async () => {
+      mockExtractPlaylistId.mockReturnValue('PLtest');
+      mockExtractSpotifyId.mockReturnValue(null);
+      mockFetchPlaylistTracks.mockResolvedValue({
+        tracks: [{ songTitle: 'Hello', artist: 'Adele', youtubeVideoId: 'vid1' }],
+        unparseable: 0,
+        totalFetched: 1,
+      });
+      const catalogTrack = createTestCatalogTrack({ song_title: 'Hello', artist: 'Adele' });
+      mockIntersectWithSongs.mockResolvedValue([catalogTrack]);
+      mockVerifyFirebase.mockResolvedValue({ uid: 'firebase-user-1' } as any);
+      mockFindById.mockResolvedValue({ id: VALID_SESSION_ID, status: 'active' } as any);
+      mockAddImportedSongs.mockReturnValue({ newSongs: 1, updatedOverlaps: 0 });
+      mockGetPooledSongs.mockReturnValue([{ catalogTrackId: catalogTrack.id }] as any);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/playlists/import',
+        headers: { authorization: 'Bearer valid-firebase-token' },
+        payload: { playlistUrl: 'https://music.youtube.com/playlist?list=PLtest', sessionId: VALID_SESSION_ID },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body) as Record<string, unknown>;
+      const data = body['data'] as Record<string, unknown>;
+      const poolStats = data['poolStats'] as Record<string, unknown>;
+      expect(poolStats).toBeDefined();
+      expect(poolStats['newSongs']).toBe(1);
+      expect(poolStats['updatedOverlaps']).toBe(0);
+      expect(poolStats['totalPoolSize']).toBe(1);
+      expect(mockAddImportedSongs).toHaveBeenCalledWith(VALID_SESSION_ID, 'firebase-user-1', [catalogTrack]);
+    });
+
+    it('import with sessionId + NO auth header: returns 401 AUTH_REQUIRED', async () => {
+      mockExtractPlaylistId.mockReturnValue('PLtest');
+      mockExtractSpotifyId.mockReturnValue(null);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/playlists/import',
+        payload: { playlistUrl: 'https://music.youtube.com/playlist?list=PLtest', sessionId: VALID_SESSION_ID },
+      });
+
+      expect(response.statusCode).toBe(401);
+      const body = JSON.parse(response.body) as Record<string, unknown>;
+      const error = body['error'] as Record<string, unknown>;
+      expect(error['code']).toBe('AUTH_REQUIRED');
+    });
+
+    it('import with sessionId + invalid token: returns 401 AUTH_INVALID', async () => {
+      mockExtractPlaylistId.mockReturnValue('PLtest');
+      mockExtractSpotifyId.mockReturnValue(null);
+      mockVerifyFirebase.mockRejectedValue(new Error('Invalid'));
+      mockVerifyGuest.mockRejectedValue(new Error('Invalid'));
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/playlists/import',
+        headers: { authorization: 'Bearer bad-token' },
+        payload: { playlistUrl: 'https://music.youtube.com/playlist?list=PLtest', sessionId: VALID_SESSION_ID },
+      });
+
+      expect(response.statusCode).toBe(401);
+      const body = JSON.parse(response.body) as Record<string, unknown>;
+      const error = body['error'] as Record<string, unknown>;
+      expect(error['code']).toBe('AUTH_INVALID');
+    });
+
+    it('import with sessionId pointing to ended session: returns 400 INVALID_SESSION', async () => {
+      mockExtractPlaylistId.mockReturnValue('PLtest');
+      mockExtractSpotifyId.mockReturnValue(null);
+      mockFetchPlaylistTracks.mockResolvedValue({
+        tracks: [{ songTitle: 'Hello', artist: 'Adele', youtubeVideoId: 'vid1' }],
+        unparseable: 0,
+        totalFetched: 1,
+      });
+      mockIntersectWithSongs.mockResolvedValue([]);
+      mockVerifyFirebase.mockResolvedValue({ uid: 'firebase-user-1' } as any);
+      mockFindById.mockResolvedValue({ id: VALID_SESSION_ID, status: 'ended' } as any);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/playlists/import',
+        headers: { authorization: 'Bearer valid-token' },
+        payload: { playlistUrl: 'https://music.youtube.com/playlist?list=PLtest', sessionId: VALID_SESSION_ID },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.body) as Record<string, unknown>;
+      const error = body['error'] as Record<string, unknown>;
+      expect(error['code']).toBe('INVALID_SESSION');
+    });
+
+    it('import without sessionId: backward compatible, no auth required, poolStats absent', async () => {
+      mockExtractPlaylistId.mockReturnValue('PLtest');
+      mockExtractSpotifyId.mockReturnValue(null);
+      mockFetchPlaylistTracks.mockResolvedValue({
+        tracks: [{ songTitle: 'Hello', artist: 'Adele', youtubeVideoId: 'vid1' }],
+        unparseable: 0,
+        totalFetched: 1,
+      });
+      mockIntersectWithSongs.mockResolvedValue([]);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/playlists/import',
+        payload: { playlistUrl: 'https://music.youtube.com/playlist?list=PLtest' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body) as Record<string, unknown>;
+      const data = body['data'] as Record<string, unknown>;
+      expect(data['poolStats']).toBeUndefined();
+      expect(mockAddImportedSongs).not.toHaveBeenCalled();
+    });
+
+    it('import with sessionId + valid guest auth: calls addImportedSongs', async () => {
+      mockExtractPlaylistId.mockReturnValue('PLtest');
+      mockExtractSpotifyId.mockReturnValue(null);
+      mockFetchPlaylistTracks.mockResolvedValue({
+        tracks: [{ songTitle: 'Hello', artist: 'Adele', youtubeVideoId: 'vid1' }],
+        unparseable: 0,
+        totalFetched: 1,
+      });
+      mockIntersectWithSongs.mockResolvedValue([]);
+      mockVerifyFirebase.mockRejectedValue(new Error('Not Firebase'));
+      mockVerifyGuest.mockResolvedValue({ guestId: 'guest-user-1', sessionId: VALID_SESSION_ID, role: 'guest' as const });
+      mockFindById.mockResolvedValue({ id: VALID_SESSION_ID, status: 'lobby' } as any);
+      mockAddImportedSongs.mockReturnValue({ newSongs: 0, updatedOverlaps: 0 });
+      mockGetPooledSongs.mockReturnValue([]);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/playlists/import',
+        headers: { authorization: 'Bearer guest-token' },
+        payload: { playlistUrl: 'https://music.youtube.com/playlist?list=PLtest', sessionId: VALID_SESSION_ID },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(mockAddImportedSongs).toHaveBeenCalledWith(VALID_SESSION_ID, 'guest-user-1', []);
     });
   });
 });

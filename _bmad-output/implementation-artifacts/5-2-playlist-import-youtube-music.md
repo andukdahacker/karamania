@@ -1,6 +1,6 @@
 # Story 5.2: Playlist Import - YouTube Music
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -326,6 +326,7 @@ Claude Opus 4.6 (1M context)
 ### Change Log
 
 - 2026-03-15: Story 5.2 implementation complete — all 7 tasks with 10 subtask groups implemented and tested.
+- 2026-03-16: Code review fixes applied (H1: regex split on hyphenated artists, M1: PLAYLIST_NOT_FOUND 404 handling, M2: 5s fetch timeout, M4: File List updated, L1: direct title-parser tests, L2: .cast<>() → .map().toList()). 866 server tests pass.
 
 ### File List
 
@@ -343,7 +344,9 @@ New files:
 Modified files:
 - apps/server/scripts/scrape-catalog.ts (parseKaraokeTitle moved to shared/title-parser.ts, re-exported)
 - apps/server/src/index.ts (registered playlist schemas + routes)
+- apps/server/src/shared/schemas/catalog-schemas.ts (removed querystring schema from globalRegistry to fix OpenAPI bug)
 - apps/flutter_app/lib/api/api_service.dart (added importPlaylist method + PlaylistImportResult class)
+- apps/flutter_app/lib/api/generated/* (regenerated Dart types from updated OpenAPI spec)
 - apps/flutter_app/lib/state/party_provider.dart (added playlist import state + mutation methods)
 - apps/flutter_app/lib/constants/copy.dart (added playlist import copy strings)
 - apps/flutter_app/lib/screens/lobby_screen.dart (added PlaylistImportCard widget)

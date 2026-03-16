@@ -58,7 +58,7 @@ class _PlaylistImportCardState extends State<PlaylistImportCard> {
     partyProvider.onPlaylistImportStarted();
 
     try {
-      final result = await apiService.importPlaylist(url);
+      final result = await apiService.importPlaylist(url, sessionId: partyProvider.sessionId);
       partyProvider.onPlaylistImportSuccess(
         result.tracks,
         result.matched,

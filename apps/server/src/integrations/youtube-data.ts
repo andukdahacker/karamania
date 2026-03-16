@@ -58,10 +58,14 @@ async function fetchPlaylistPage(
   const url = `${YOUTUBE_API_BASE}/playlistItems?${params.toString()}`;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
 
     if (response.ok) {
       return response.json() as Promise<{ items: Array<{ snippet: { title: string; resourceId: { videoId: string } } }>; nextPageToken?: string }>;
+    }
+
+    if (response.status === 404) {
+      throw new Error('Playlist not found or is private');
     }
 
     if (response.status === 429 || response.status >= 500) {

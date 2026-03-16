@@ -183,6 +183,16 @@ describe('fetchPlaylistTracks', () => {
     await expect(fetchPlaylistTracks('PLtest', 'api-key')).rejects.toThrow('YouTube API error: 403 Forbidden');
   });
 
+  it('throws "not found" error on 404 (playlist does not exist)', async () => {
+    mockFetch([{
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+    }]);
+
+    await expect(fetchPlaylistTracks('PLbadid', 'api-key')).rejects.toThrow('Playlist not found or is private');
+  });
+
   it('retries on 429 and succeeds', async () => {
     mockFetch([
       { ok: false, status: 429, statusText: 'Too Many Requests' },

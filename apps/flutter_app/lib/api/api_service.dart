@@ -88,16 +88,20 @@ class ApiService {
     }
   }
 
-  Future<PlaylistImportResult> importPlaylist(String playlistUrl) async {
+  Future<PlaylistImportResult> importPlaylist(String playlistUrl, {String? sessionId}) async {
     final basePath = _baseUrl.endsWith('/')
         ? _baseUrl.substring(0, _baseUrl.length - 1)
         : _baseUrl;
     final url = Uri.parse('$basePath/api/playlists/import');
+    final bodyMap = <String, dynamic>{'playlistUrl': playlistUrl};
+    if (sessionId != null) {
+      bodyMap['sessionId'] = sessionId;
+    }
     final request = runtime.HttpRequest(
       method: 'POST',
       url: url,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'playlistUrl': playlistUrl}),
+      body: jsonEncode(bodyMap),
     );
 
     final response = await _chain.send(request);
@@ -105,8 +109,8 @@ class ApiService {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       final data = json['data'] as Map<String, dynamic>;
       return PlaylistImportResult(
-        tracks: (data['tracks'] as List).cast<Map<String, dynamic>>(),
-        matched: (data['matched'] as List).cast<Map<String, dynamic>>(),
+        tracks: (data['tracks'] as List).map((e) => e as Map<String, dynamic>).toList(),
+        matched: (data['matched'] as List).map((e) => e as Map<String, dynamic>).toList(),
         unmatchedCount: data['unmatchedCount'] as int,
         totalFetched: data['totalFetched'] as int,
       );
