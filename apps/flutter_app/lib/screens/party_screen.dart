@@ -27,6 +27,7 @@ import 'package:karamania/widgets/song_over_button.dart';
 import 'package:karamania/widgets/group_card_announcement_overlay.dart';
 import 'package:karamania/widgets/tag_team_flash_widget.dart';
 import 'package:karamania/widgets/lightstick_mode.dart';
+import 'package:karamania/widgets/quick_pick_overlay.dart';
 import 'package:karamania/widgets/hype_signal_button.dart';
 import 'package:go_router/go_router.dart';
 
@@ -197,6 +198,22 @@ class _PartyScreenState extends State<PartyScreen>
                   performerName: partyProvider.ceremonyPerformerName,
                   songTitle: partyProvider.ceremonySongTitle,
                   onDismiss: () => partyProvider.dismissMomentCard(),
+                ),
+              ),
+            // Quick Pick overlay — during songSelection OR showing winner
+            if (partyProvider.quickPickSongs.isNotEmpty &&
+                (partyProvider.djState == DJState.songSelection ||
+                    partyProvider.quickPickWinnerId != null))
+              Positioned.fill(
+                child: QuickPickOverlay(
+                  songs: partyProvider.quickPickSongs,
+                  votes: partyProvider.quickPickVotes,
+                  myVotes: partyProvider.myQuickPickVotes,
+                  winnerId: partyProvider.quickPickWinnerId,
+                  participantCount: partyProvider.quickPickParticipantCount,
+                  timerDurationMs: partyProvider.quickPickTimerDurationMs,
+                  onVote: (catalogTrackId, vote) =>
+                      SocketClient.instance.emitQuickPickVote(catalogTrackId, vote),
                 ),
               ),
             // Party card deal overlay — during partyCardDeal state with dealt card

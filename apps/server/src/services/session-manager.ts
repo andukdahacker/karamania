@@ -8,7 +8,8 @@ import { calculateRemainingMs } from '../dj-engine/timers.js';
 import type { DJContext, DJTransition, DJSideEffect } from '../dj-engine/types.js';
 import { getSessionDjState, setSessionDjState, removeSessionDjState } from '../services/dj-state-store.js';
 import { scheduleSessionTimer, cancelSessionTimer, pauseSessionTimer, resumeSessionTimer } from '../services/timer-scheduler.js';
-import { broadcastDjState, broadcastDjPause, broadcastDjResume, broadcastCeremonyAnticipation, broadcastCeremonyReveal, broadcastCeremonyQuick, broadcastCardDealt } from '../services/dj-broadcaster.js';
+import { broadcastDjState, broadcastDjPause, broadcastDjResume, broadcastCeremonyAnticipation, broadcastCeremonyReveal, broadcastCeremonyQuick, broadcastCardDealt, getIO } from '../services/dj-broadcaster.js';
+import { EVENTS } from '../shared/events.js';
 import { dealCard, clearDealtCards } from '../services/card-dealer.js';
 import { getActiveConnections, removeSession } from '../services/connection-tracker.js';
 import { removeSession as removeActivitySession } from '../services/activity-tracker.js';
@@ -17,7 +18,11 @@ import { appendEvent, flushEventStream, getEventStream, type SessionEvent } from
 import { calculateScoreIncrement, ACTION_TIER_MAP } from '../services/participation-scoring.js';
 import { generateAward, AWARD_TEMPLATES, AwardTone, type AwardContext } from '../services/award-generator.js';
 import { clearSessionStreaks } from '../services/streak-tracker.js';
-import { clearPool } from '../services/song-pool.js';
+import { clearPool, markSongSung } from '../services/song-pool.js';
+import { startRound, getRound, resolveByTimeout, clearRound } from '../services/quick-pick.js';
+import { computeSuggestions } from '../services/suggestion-engine.js';
+import { broadcastQuickPickStarted } from '../services/dj-broadcaster.js';
+import type { QuickPickSong } from '../services/quick-pick.js';
 
 // In-memory card stats per session — tracks dealt/accepted counts (AC #6)
 const cardStatsCache = new Map<string, { dealt: number; accepted: number }>();
@@ -475,9 +480,111 @@ export async function recoverActiveSessions(
   return { recovered, failed };
 }
 
+/**
+ * Initialize Quick Pick round when entering songSelection state.
+ * Fetches suggestions, creates round, stores metadata, broadcasts.
+ */
+async function initializeQuickPick(sessionId: string, context: DJContext): Promise<void> {
+  try {
+    const suggestions = await computeSuggestions(sessionId, 5);
+    if (suggestions.length === 0) return;
+
+    const songs: QuickPickSong[] = suggestions.map((s) => ({
+      catalogTrackId: s.catalogTrackId,
+      songTitle: s.songTitle,
+      artist: s.artist,
+      youtubeVideoId: s.youtubeVideoId,
+      overlapCount: s.overlapCount,
+    }));
+
+    startRound(sessionId, songs, context.participantCount);
+
+    // Store in metadata for persistence
+    const updatedContext = {
+      ...context,
+      metadata: {
+        ...context.metadata,
+        quickPickSongs: songs,
+      },
+    };
+    setSessionDjState(sessionId, updatedContext);
+
+    // Broadcast via dedicated event (NOT dj:stateChanged metadata)
+    broadcastQuickPickStarted(sessionId, {
+      songs,
+      participantCount: context.participantCount,
+      timerDurationMs: 15_000,
+    });
+  } catch (error) {
+    console.error(`[session-manager] Failed to initialize Quick Pick for ${sessionId}:`, error);
+  }
+}
+
+/**
+ * Handle Quick Pick song selection — called from both majority vote path and timeout path.
+ * Orchestration function: marks song sung, clears round, cancels timer, triggers DJ transition, broadcasts.
+ */
+export async function handleQuickPickSongSelected(
+  sessionId: string,
+  song: QuickPickSong,
+): Promise<void> {
+  markSongSung(sessionId, song.songTitle, song.artist);
+
+  clearRound(sessionId);
+  cancelSessionTimer(sessionId);
+
+  const context = getSessionDjState(sessionId);
+  if (!context) return;
+
+  // Broadcast song selected BEFORE DJ transition so clients see the winner
+  // while QuickPickOverlay is still mounted (songSelection state)
+  const io = getIO();
+  if (io) {
+    io.to(sessionId).emit(EVENTS.SONG_QUEUED, {
+      catalogTrackId: song.catalogTrackId,
+      songTitle: song.songTitle,
+      artist: song.artist,
+      youtubeVideoId: song.youtubeVideoId,
+    });
+  }
+
+  appendEvent(sessionId, {
+    type: 'quickpick:selected',
+    ts: Date.now(),
+    data: { song },
+  });
+
+  const updatedContext = {
+    ...context,
+    metadata: {
+      ...context.metadata,
+      selectedSong: {
+        catalogTrackId: song.catalogTrackId,
+        songTitle: song.songTitle,
+        artist: song.artist,
+        youtubeVideoId: song.youtubeVideoId,
+      },
+    },
+  };
+
+  await processDjTransition(sessionId, updatedContext, { type: 'SONG_SELECTED' });
+}
+
 async function handleRecoveryTimeout(sessionId: string): Promise<void> {
   const context = getSessionDjState(sessionId);
   if (!context) return;
+
+  // Quick Pick resolution: when songSelection timer fires, resolve by timeout
+  if (context.state === DJState.songSelection) {
+    const round = getRound(sessionId);
+    if (round && !round.resolved) {
+      const winner = resolveByTimeout(sessionId);
+      if (winner) {
+        await handleQuickPickSongSelected(sessionId, winner);
+        return;
+      }
+    }
+  }
 
   await processDjTransition(sessionId, context, { type: 'TIMEOUT' });
 }
@@ -594,6 +701,11 @@ export async function processDjTransition(
       // Quick ceremony — immediate award flash, auto-advances after 10s
       void orchestrateQuickCeremony(sessionId, newContext);
     }
+  }
+
+  // Quick Pick initialization when entering songSelection
+  if (newContext.state === DJState.songSelection) {
+    void initializeQuickPick(sessionId, newContext);
   }
 
   // Orchestrate card dealing when entering partyCardDeal state
@@ -809,6 +921,7 @@ export async function endSession(
   clearCardStats(sessionId);
   clearDealtCards(sessionId);
   clearPool(sessionId);
+  clearRound(sessionId);
 
   return newContext;
 }
@@ -863,10 +976,7 @@ export async function resumeSession(sessionId: string, userId?: string): Promise
 
   if (context.timerRemainingMs !== null && context.timerRemainingMs > 0) {
     resumeSessionTimer(sessionId, context.timerRemainingMs, () => {
-      const ctx = getSessionDjState(sessionId);
-      if (ctx) {
-        void processDjTransition(sessionId, ctx, { type: 'TIMEOUT' });
-      }
+      void handleRecoveryTimeout(sessionId);
     });
   }
 

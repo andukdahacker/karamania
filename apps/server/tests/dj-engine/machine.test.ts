@@ -79,7 +79,7 @@ describe('processTransition', () => {
       const { sideEffects } = processTransition(ctx, { type: 'SESSION_STARTED' }, NOW);
       const timer = sideEffects.find((e): e is Extract<DJSideEffect, { type: 'scheduleTimer' }> => e.type === 'scheduleTimer');
       expect(timer).toBeDefined();
-      expect(timer!.data.durationMs).toBe(30_000); // songSelection default
+      expect(timer!.data.durationMs).toBe(15_000); // songSelection default (15s Quick Pick)
       expect(timer!.data.transitionEvent).toBe('TIMEOUT');
     });
 
@@ -112,7 +112,7 @@ describe('processTransition', () => {
     const ctx = createTestDJContext();
     const { newContext } = processTransition(ctx, { type: 'SESSION_STARTED' }, NOW);
     expect(newContext.timerStartedAt).toBe(NOW);
-    expect(newContext.timerDurationMs).toBe(30_000);
+    expect(newContext.timerDurationMs).toBe(15_000);
   });
 
   it('throws DJEngineError for invalid transitions', () => {

@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/constants/party_cards.dart';
-import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus, ReactionEvent;
+import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus, ReactionEvent, QuickPickSong, VoteTally;
 import 'package:karamania/theme/dj_theme.dart';
 
 void main() {
@@ -1351,6 +1351,97 @@ void main() {
 
       expect(provider.isHypeCooldown, isFalse);
       expect(provider.hypeCooldownEnd, isNull);
+    });
+
+    // Quick Pick state tests
+    test('onQuickPickStarted sets songs and clears votes', () {
+      final songs = [
+        const QuickPickSong(catalogTrackId: 's1', songTitle: 'Song 1', artist: 'A1', youtubeVideoId: 'yt1', overlapCount: 3),
+        const QuickPickSong(catalogTrackId: 's2', songTitle: 'Song 2', artist: 'A2', youtubeVideoId: 'yt2', overlapCount: 1),
+      ];
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onQuickPickStarted(songs, 5, 15000);
+
+      expect(provider.quickPickSongs, hasLength(2));
+      expect(provider.quickPickSongs[0].catalogTrackId, 's1');
+      expect(provider.quickPickVotes, isEmpty);
+      expect(provider.quickPickWinnerId, isNull);
+      expect(provider.myQuickPickVotes, isEmpty);
+      expect(provider.quickPickParticipantCount, 5);
+      expect(provider.quickPickTimerDurationMs, 15000);
+      expect(notifyCount, 1);
+    });
+
+    test('onQuickPickVoteReceived updates vote tally', () {
+      final songs = [
+        const QuickPickSong(catalogTrackId: 's1', songTitle: 'Song 1', artist: 'A1', youtubeVideoId: 'yt1', overlapCount: 3),
+      ];
+      provider.onQuickPickStarted(songs, 5, 15000);
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onQuickPickVoteReceived('s1', 'user-1', 'up', const VoteTally(up: 1, skip: 0));
+
+      expect(provider.quickPickVotes['s1']?.up, 1);
+      expect(provider.quickPickVotes['s1']?.skip, 0);
+      expect(notifyCount, 1);
+    });
+
+    test('onQuickPickResolved sets winner', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onQuickPickResolved('s1');
+
+      expect(provider.quickPickWinnerId, 's1');
+      expect(notifyCount, 1);
+    });
+
+    test('onQuickPickCleared resets all state', () {
+      final songs = [
+        const QuickPickSong(catalogTrackId: 's1', songTitle: 'Song 1', artist: 'A1', youtubeVideoId: 'yt1', overlapCount: 3),
+      ];
+      provider.onQuickPickStarted(songs, 5, 15000);
+      provider.onQuickPickResolved('s1');
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onQuickPickCleared();
+
+      expect(provider.quickPickSongs, isEmpty);
+      expect(provider.quickPickVotes, isEmpty);
+      expect(provider.quickPickWinnerId, isNull);
+      expect(provider.myQuickPickVotes, isEmpty);
+      expect(notifyCount, 1);
+    });
+
+    test('Quick Pick state clears when DJ state leaves songSelection', () {
+      provider.onDjStateUpdate(state: DJState.songSelection);
+      final songs = [
+        const QuickPickSong(catalogTrackId: 's1', songTitle: 'Song 1', artist: 'A1', youtubeVideoId: 'yt1', overlapCount: 3),
+      ];
+      provider.onQuickPickStarted(songs, 5, 15000);
+      expect(provider.quickPickSongs, hasLength(1));
+
+      provider.onDjStateUpdate(state: DJState.partyCardDeal);
+
+      expect(provider.quickPickSongs, isEmpty);
+      expect(provider.quickPickWinnerId, isNull);
+    });
+
+    test('updateMyVote stores local vote', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.updateMyVote('s1', 'up');
+
+      expect(provider.myQuickPickVotes['s1'], 'up');
+      expect(notifyCount, 1);
     });
   });
 }

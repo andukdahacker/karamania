@@ -10,6 +10,46 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 enum ConnectionStatus { connected, reconnecting }
 
+class QuickPickSong {
+  const QuickPickSong({
+    required this.catalogTrackId,
+    required this.songTitle,
+    required this.artist,
+    required this.youtubeVideoId,
+    required this.overlapCount,
+  });
+
+  final String catalogTrackId;
+  final String songTitle;
+  final String artist;
+  final String youtubeVideoId;
+  final int overlapCount;
+
+  factory QuickPickSong.fromJson(Map<String, dynamic> json) {
+    return QuickPickSong(
+      catalogTrackId: json['catalogTrackId'] as String,
+      songTitle: json['songTitle'] as String,
+      artist: json['artist'] as String,
+      youtubeVideoId: json['youtubeVideoId'] as String,
+      overlapCount: json['overlapCount'] as int,
+    );
+  }
+}
+
+class VoteTally {
+  const VoteTally({required this.up, required this.skip});
+
+  final int up;
+  final int skip;
+
+  factory VoteTally.fromJson(Map<String, dynamic> json) {
+    return VoteTally(
+      up: json['up'] as int,
+      skip: json['skip'] as int,
+    );
+  }
+}
+
 class ReactionEvent {
   const ReactionEvent({
     required this.id,
@@ -102,6 +142,14 @@ class PartyProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _matchedTracks = [];
   int _unmatchedCount = 0;
 
+  // Quick Pick state — populated by quickpick:started event
+  List<QuickPickSong> _quickPickSongs = [];
+  Map<String, VoteTally> _quickPickVotes = {};
+  String? _quickPickWinnerId;
+  Map<String, String> _myQuickPickVotes = {};
+  int _quickPickParticipantCount = 0;
+  int _quickPickTimerDurationMs = 15000;
+
   // Lightstick & hype state
   bool _isLightstickMode = false;
   Color _lightstickColor = const Color(0xFFFFD700); // default: vibe accent
@@ -170,6 +218,12 @@ class PartyProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get matchedTracks => _matchedTracks;
   int get unmatchedCount => _unmatchedCount;
   List<ReactionEvent> get reactionFeed => List.unmodifiable(_reactionFeed);
+  List<QuickPickSong> get quickPickSongs => _quickPickSongs;
+  Map<String, VoteTally> get quickPickVotes => _quickPickVotes;
+  String? get quickPickWinnerId => _quickPickWinnerId;
+  Map<String, String> get myQuickPickVotes => _myQuickPickVotes;
+  int get quickPickParticipantCount => _quickPickParticipantCount;
+  int get quickPickTimerDurationMs => _quickPickTimerDurationMs;
 
   /// Whether this client is the current singer (performer).
   bool get isCurrentSinger =>
@@ -367,6 +421,39 @@ class PartyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void onQuickPickStarted(List<QuickPickSong> songs, int participantCount, int timerDurationMs) {
+    _quickPickSongs = songs;
+    _quickPickVotes = {};
+    _quickPickWinnerId = null;
+    _myQuickPickVotes = {};
+    _quickPickParticipantCount = participantCount;
+    _quickPickTimerDurationMs = timerDurationMs;
+    notifyListeners();
+  }
+
+  void onQuickPickVoteReceived(String catalogTrackId, String votingUserId, String vote, VoteTally tally) {
+    _quickPickVotes = {..._quickPickVotes, catalogTrackId: tally};
+    notifyListeners();
+  }
+
+  void onQuickPickResolved(String winnerCatalogTrackId) {
+    _quickPickWinnerId = winnerCatalogTrackId;
+    notifyListeners();
+  }
+
+  void onQuickPickCleared() {
+    _quickPickSongs = [];
+    _quickPickVotes = {};
+    _quickPickWinnerId = null;
+    _myQuickPickVotes = {};
+    notifyListeners();
+  }
+
+  void updateMyVote(String catalogTrackId, String vote) {
+    _myQuickPickVotes = {..._myQuickPickVotes, catalogTrackId: vote};
+    notifyListeners();
+  }
+
   void resetPlaylistImport() {
     _playlistImportState = LoadingState.idle;
     _importedTracks = [];
@@ -399,6 +486,15 @@ class PartyProvider extends ChangeNotifier {
     // Clear ceremony data when transitioning OUT of ceremony state
     if (_djState == DJState.ceremony && state != DJState.ceremony) {
       _clearCeremonyState();
+    }
+    // Clear Quick Pick state when leaving songSelection — but preserve if winner
+    // is set so the overlay can show the winner highlight before delayed clear
+    if (_djState == DJState.songSelection && state != DJState.songSelection) {
+      if (_quickPickWinnerId == null) {
+        _quickPickSongs = [];
+        _quickPickVotes = {};
+        _myQuickPickVotes = {};
+      }
     }
     // Clear card state when leaving partyCardDeal state
     if (_djState == DJState.partyCardDeal && state != DJState.partyCardDeal) {

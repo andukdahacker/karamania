@@ -51,6 +51,7 @@ export const EVENTS = {
   SONG_QUEUED: 'song:queued',
   SONG_QUICKPICK: 'song:quickpick',
   SONG_SPINWHEEL: 'song:spinwheel',
+  QUICKPICK_STARTED: 'quickpick:started',
 
   // Capture events
   CAPTURE_BUBBLE: 'capture:bubble',

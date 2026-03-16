@@ -9,6 +9,10 @@ export function initDjBroadcaster(ioServer: SocketIOServer): void {
   io = ioServer;
 }
 
+export function getIO(): SocketIOServer | null {
+  return io;
+}
+
 export function buildDjStatePayload(context: DJContext): {
   state: string;
   sessionId: string;
@@ -112,6 +116,27 @@ export function broadcastCeremonyQuick(
     return;
   }
   io.to(sessionId).emit(EVENTS.CEREMONY_QUICK, data);
+}
+
+export function broadcastQuickPickStarted(
+  sessionId: string,
+  data: {
+    songs: Array<{
+      catalogTrackId: string;
+      songTitle: string;
+      artist: string;
+      youtubeVideoId: string;
+      overlapCount: number;
+    }>;
+    participantCount: number;
+    timerDurationMs: number;
+  },
+): void {
+  if (!io) {
+    console.warn('[dj-broadcaster] Cannot broadcast — io not initialized');
+    return;
+  }
+  io.to(sessionId).emit(EVENTS.QUICKPICK_STARTED, data);
 }
 
 export function broadcastCardDealt(

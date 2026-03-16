@@ -7,7 +7,7 @@ describe('createTimerConfig', () => {
   it('returns default durations for all states', () => {
     const config = createTimerConfig();
     expect(config[DJState.lobby]).toBe(0);
-    expect(config[DJState.songSelection]).toBe(30_000);
+    expect(config[DJState.songSelection]).toBe(15_000);
     expect(config[DJState.partyCardDeal]).toBe(15_000);
     expect(config[DJState.song]).toBe(180_000);
     expect(config[DJState.ceremony]).toBe(12_000);
@@ -18,7 +18,7 @@ describe('createTimerConfig', () => {
   it('applies overrides', () => {
     const config = createTimerConfig({ [DJState.song]: 60_000 });
     expect(config[DJState.song]).toBe(60_000);
-    expect(config[DJState.songSelection]).toBe(30_000); // unchanged
+    expect(config[DJState.songSelection]).toBe(15_000); // unchanged
   });
 });
 
@@ -70,9 +70,9 @@ describe('calculateRemainingMs', () => {
     const now = 5_000;
     const ctx = createTestDJContextInState(DJState.song, {
       timerStartedAt: 5_000,
-      timerDurationMs: 30_000,
+      timerDurationMs: 15_000,
     });
-    expect(calculateRemainingMs(ctx, now)).toBe(30_000);
+    expect(calculateRemainingMs(ctx, now)).toBe(15_000);
   });
 
   it('handles various elapsed times correctly', () => {

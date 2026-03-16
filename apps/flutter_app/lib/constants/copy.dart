@@ -211,6 +211,14 @@ class Copy {
   static String playlistImportResults(int imported, int matched, int unmatched) =>
       '$imported tracks imported, $matched matched to catalog, $unmatched unmatched';
 
+  // Quick Pick
+  static const String quickPickTitle = 'Quick Pick';
+  static const String quickPickVoteUp = 'Love It';
+  static const String quickPickSkip = 'Skip';
+  static const String quickPickSelected = 'Selected!';
+  static const String quickPickDeciding = 'Deciding...';
+  static const String quickPickOverlapBadge = 'know this';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

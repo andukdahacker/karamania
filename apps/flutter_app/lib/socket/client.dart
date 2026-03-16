@@ -375,6 +375,38 @@ class SocketClient {
       _partyProvider?.onCardAcceptedBroadcast(cardTitle, cardType);
     });
 
+    // Quick Pick events
+    on('quickpick:started', (data) {
+      final payload = data as Map<String, dynamic>;
+      final rawSongs = payload['songs'] as List<dynamic>;
+      final songs = rawSongs
+          .map((s) => QuickPickSong.fromJson(s as Map<String, dynamic>))
+          .toList();
+      final participantCount = payload['participantCount'] as int;
+      final timerDurationMs = payload['timerDurationMs'] as int;
+      _partyProvider?.onQuickPickStarted(songs, participantCount, timerDurationMs);
+    });
+
+    on('song:quickpick', (data) {
+      final payload = data as Map<String, dynamic>;
+      final catalogTrackId = payload['catalogTrackId'] as String;
+      final userId = payload['userId'] as String;
+      final vote = payload['vote'] as String;
+      final songVotesRaw = payload['songVotes'] as Map<String, dynamic>;
+      final tally = VoteTally.fromJson(songVotesRaw);
+      _partyProvider?.onQuickPickVoteReceived(catalogTrackId, userId, vote, tally);
+    });
+
+    on('song:queued', (data) {
+      final payload = data as Map<String, dynamic>;
+      final catalogTrackId = payload['catalogTrackId'] as String;
+      _partyProvider?.onQuickPickResolved(catalogTrackId);
+      // Delay clear to let UI show winner highlight before dismissing
+      Timer(const Duration(seconds: 2), () {
+        _partyProvider?.onQuickPickCleared();
+      });
+    });
+
     // Hype cooldown enforced by server
     on('hype:cooldown', (data) {
       final payload = data as Map<String, dynamic>;
@@ -453,6 +485,14 @@ class SocketClient {
 
   void emitHypeSignal() {
     _socket?.emit('hype:fired', {});
+  }
+
+  void emitQuickPickVote(String catalogTrackId, String vote) {
+    _socket?.emit('song:quickpick', {
+      'catalogTrackId': catalogTrackId,
+      'vote': vote,
+    });
+    _partyProvider?.updateMyVote(catalogTrackId, vote);
   }
 
   void emitMomentCardShared() {
