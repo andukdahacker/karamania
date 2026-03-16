@@ -21,8 +21,36 @@ import { clearSessionStreaks } from '../services/streak-tracker.js';
 import { clearPool, markSongSung } from '../services/song-pool.js';
 import { startRound, getRound, resolveByTimeout, clearRound } from '../services/quick-pick.js';
 import { computeSuggestions } from '../services/suggestion-engine.js';
-import { broadcastQuickPickStarted } from '../services/dj-broadcaster.js';
+import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged } from '../services/dj-broadcaster.js';
 import type { QuickPickSong } from '../services/quick-pick.js';
+import {
+  startRound as startSpinWheelRound,
+  initiateSpin as initiateSpinWheelSpin,
+  onSpinComplete,
+  startVetoWindow,
+  handleVeto as handleSpinWheelVeto,
+  resolveRound,
+  autoSpin,
+  getRound as getSpinWheelRound,
+  clearRound as clearSpinWheelRound,
+} from '../services/spin-wheel.js';
+import type { SpinWheelSegment } from '../services/spin-wheel.js';
+
+// Song selection mode tracking — default: quickPick
+type SongSelectionMode = 'quickPick' | 'spinWheel';
+const sessionModes = new Map<string, SongSelectionMode>();
+
+export function getSongSelectionMode(sessionId: string): SongSelectionMode {
+  return sessionModes.get(sessionId) ?? 'quickPick';
+}
+
+export function setSongSelectionMode(sessionId: string, mode: SongSelectionMode): void {
+  sessionModes.set(sessionId, mode);
+}
+
+export function resetAllModes(): void {
+  sessionModes.clear();
+}
 
 // In-memory card stats per session — tracks dealt/accepted counts (AC #6)
 const cardStatsCache = new Map<string, { dealt: number; accepted: number }>();
@@ -521,6 +549,175 @@ async function initializeQuickPick(sessionId: string, context: DJContext): Promi
 }
 
 /**
+ * Initialize Spin the Wheel round when entering songSelection state.
+ * Fetches 8 suggestions, creates round, stores metadata, broadcasts.
+ */
+async function initializeSpinWheel(sessionId: string, context: DJContext): Promise<void> {
+  try {
+    const suggestions = await computeSuggestions(sessionId, 8);
+    if (suggestions.length === 0) return;
+
+    const segments: SpinWheelSegment[] = suggestions.map((s, i) => ({
+      catalogTrackId: s.catalogTrackId,
+      songTitle: s.songTitle,
+      artist: s.artist,
+      youtubeVideoId: s.youtubeVideoId,
+      overlapCount: s.overlapCount,
+      segmentIndex: i,
+    }));
+
+    startSpinWheelRound(sessionId, segments);
+
+    // Store in metadata for persistence
+    const updatedContext = {
+      ...context,
+      metadata: {
+        ...context.metadata,
+        spinWheelSegments: segments,
+      },
+    };
+    setSessionDjState(sessionId, updatedContext);
+
+    // Broadcast via dedicated event
+    broadcastSpinWheelStarted(sessionId, segments, context.participantCount, 15_000);
+  } catch (error) {
+    console.error(`[session-manager] Failed to initialize Spin the Wheel for ${sessionId}:`, error);
+  }
+}
+
+/**
+ * Handle spin animation completion — transitions to landed, starts veto window or resolves.
+ */
+export async function handleSpinAnimationComplete(sessionId: string): Promise<void> {
+  const landedSegment = onSpinComplete(sessionId);
+  if (!landedSegment) return;
+
+  const round = getSpinWheelRound(sessionId);
+  if (!round) return;
+
+  if (round.vetoUsed) {
+    // Post-veto re-spin: no second veto window (AC #4)
+    const selectedSegment = resolveRound(sessionId);
+    if (!selectedSegment) return;
+    broadcastSpinWheelResult(sessionId, { phase: 'selected', song: selectedSegment });
+    await handleSpinWheelSongSelected(sessionId, selectedSegment);
+  } else {
+    // First spin: show landed, start veto window
+    broadcastSpinWheelResult(sessionId, { phase: 'landed', song: landedSegment });
+    startVetoWindow(sessionId);
+
+    const vetoTimer = setTimeout(() => {
+      void handleVetoWindowExpired(sessionId);
+    }, 5000);
+    round.vetoTimerHandle = vetoTimer;
+  }
+}
+
+/**
+ * Handle veto window expiry — resolves round and selects song.
+ */
+async function handleVetoWindowExpired(sessionId: string): Promise<void> {
+  const round = getSpinWheelRound(sessionId);
+  if (!round || round.state !== 'vetoing') return;
+
+  const selectedSegment = resolveRound(sessionId);
+  if (!selectedSegment) return;
+
+  broadcastSpinWheelResult(sessionId, { phase: 'selected', song: selectedSegment });
+  await handleSpinWheelSongSelected(sessionId, selectedSegment);
+}
+
+/**
+ * Handle Spin the Wheel song selection — mirrors handleQuickPickSongSelected.
+ * CRITICAL: Emit SONG_QUEUED BEFORE processDjTransition(SONG_SELECTED)
+ */
+export async function handleSpinWheelSongSelected(
+  sessionId: string,
+  segment: SpinWheelSegment,
+): Promise<void> {
+  markSongSung(sessionId, segment.songTitle, segment.artist);
+
+  clearSpinWheelRound(sessionId);
+  cancelSessionTimer(sessionId);
+
+  const context = getSessionDjState(sessionId);
+  if (!context) return;
+
+  // Broadcast song selected BEFORE DJ transition (same fix as Story 5.5 H1)
+  const io = getIO();
+  if (io) {
+    io.to(sessionId).emit(EVENTS.SONG_QUEUED, {
+      catalogTrackId: segment.catalogTrackId,
+      songTitle: segment.songTitle,
+      artist: segment.artist,
+      youtubeVideoId: segment.youtubeVideoId,
+    });
+  }
+
+  appendEvent(sessionId, {
+    type: 'spinwheel:selected',
+    ts: Date.now(),
+    data: { song: segment },
+  });
+
+  const updatedContext = {
+    ...context,
+    metadata: {
+      ...context.metadata,
+      selectedSong: {
+        catalogTrackId: segment.catalogTrackId,
+        songTitle: segment.songTitle,
+        artist: segment.artist,
+        youtubeVideoId: segment.youtubeVideoId,
+      },
+    },
+  };
+
+  await processDjTransition(sessionId, updatedContext, { type: 'SONG_SELECTED' });
+}
+
+/**
+ * Handle mode change — updates mode, restarts round if in songSelection.
+ */
+export async function handleModeChange(
+  sessionId: string,
+  mode: 'quickPick' | 'spinWheel',
+  userId: string,
+  displayName: string,
+): Promise<void> {
+  setSongSelectionMode(sessionId, mode);
+  broadcastModeChanged(sessionId, mode, userId, displayName);
+
+  // If currently in songSelection, cancel active round and restart with new mode
+  const context = getSessionDjState(sessionId);
+  if (context && context.state === DJState.songSelection) {
+    // Clear any active rounds
+    clearRound(sessionId); // quick-pick
+    clearSpinWheelRound(sessionId); // spin-wheel
+    cancelSessionTimer(sessionId);
+
+    // Re-initialize with new mode
+    if (mode === 'spinWheel') {
+      void initializeSpinWheel(sessionId, context);
+    } else {
+      void initializeQuickPick(sessionId, context);
+    }
+
+    // Re-schedule DJ timer
+    scheduleSessionTimer(sessionId, 15_000, () => {
+      void handleRecoveryTimeout(sessionId);
+    });
+  }
+
+  appendEvent(sessionId, {
+    type: 'song:modeChanged',
+    ts: Date.now(),
+    userId,
+    data: { mode },
+  });
+}
+
+/**
  * Handle Quick Pick song selection — called from both majority vote path and timeout path.
  * Orchestration function: marks song sung, clears round, cancels timer, triggers DJ transition, broadcasts.
  */
@@ -574,16 +771,38 @@ async function handleRecoveryTimeout(sessionId: string): Promise<void> {
   const context = getSessionDjState(sessionId);
   if (!context) return;
 
-  // Quick Pick resolution: when songSelection timer fires, resolve by timeout
+  // Song selection resolution: when songSelection timer fires
   if (context.state === DJState.songSelection) {
-    const round = getRound(sessionId);
-    if (round && !round.resolved) {
+    // Quick Pick path (existing)
+    const qpRound = getRound(sessionId);
+    if (qpRound && !qpRound.resolved) {
       const winner = resolveByTimeout(sessionId);
       if (winner) {
         await handleQuickPickSongSelected(sessionId, winner);
         return;
       }
     }
+    // Spin the Wheel path
+    const swRound = getSpinWheelRound(sessionId);
+    if (swRound && swRound.state === 'waiting') {
+      // Nobody spun within 15s — auto-spin
+      const spinParams = autoSpin(sessionId);
+      if (spinParams) {
+        broadcastSpinWheelResult(sessionId, {
+          phase: 'spinning',
+          spinnerUserId: null,
+          spinnerDisplayName: 'Auto',
+          ...spinParams,
+        });
+        // Schedule spin animation completion
+        const spinTimer = setTimeout(() => {
+          void handleSpinAnimationComplete(sessionId);
+        }, spinParams.spinDurationMs);
+        swRound.spinTimerHandle = spinTimer;
+        return;
+      }
+    }
+    // Fallback: generic TIMEOUT
   }
 
   await processDjTransition(sessionId, context, { type: 'TIMEOUT' });
@@ -703,9 +922,14 @@ export async function processDjTransition(
     }
   }
 
-  // Quick Pick initialization when entering songSelection
+  // Song selection mode initialization when entering songSelection
   if (newContext.state === DJState.songSelection) {
-    void initializeQuickPick(sessionId, newContext);
+    const mode = getSongSelectionMode(sessionId);
+    if (mode === 'spinWheel') {
+      void initializeSpinWheel(sessionId, newContext);
+    } else {
+      void initializeQuickPick(sessionId, newContext);
+    }
   }
 
   // Orchestrate card dealing when entering partyCardDeal state
@@ -922,6 +1146,8 @@ export async function endSession(
   clearDealtCards(sessionId);
   clearPool(sessionId);
   clearRound(sessionId);
+  clearSpinWheelRound(sessionId);
+  sessionModes.delete(sessionId);
 
   return newContext;
 }

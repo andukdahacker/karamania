@@ -219,6 +219,21 @@ class Copy {
   static const String quickPickDeciding = 'Deciding...';
   static const String quickPickOverlapBadge = 'know this';
 
+  // Spin the Wheel
+  static const String spinTheWheelTitle = 'Spin the Wheel';
+  static const String spinButtonLabel = 'SPIN';
+  static const String spinSpinningLabel = 'Spinning...';
+  static const String spinLandedLabel = 'Landed!';
+  static const String spinVetoLabel = 'VETO!';
+  static const String spinVetoedLabel = 'Vetoed! Re-spinning...';
+  static const String spinSelectedLabel = 'Selected!';
+  static const String spinAutoSpinLabel = 'Auto-spinning...';
+  static const String spinWaitingLabel = 'Tap to spin!';
+
+  // Mode toggle
+  static const String modeQuickPick = 'Quick Pick';
+  static const String modeSpinWheel = 'Spin the Wheel';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

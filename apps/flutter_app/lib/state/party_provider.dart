@@ -50,6 +50,35 @@ class VoteTally {
   }
 }
 
+class SpinWheelSegment {
+  const SpinWheelSegment({
+    required this.catalogTrackId,
+    required this.songTitle,
+    required this.artist,
+    required this.youtubeVideoId,
+    required this.overlapCount,
+    required this.segmentIndex,
+  });
+
+  final String catalogTrackId;
+  final String songTitle;
+  final String artist;
+  final String youtubeVideoId;
+  final int overlapCount;
+  final int segmentIndex;
+
+  factory SpinWheelSegment.fromJson(Map<String, dynamic> json) {
+    return SpinWheelSegment(
+      catalogTrackId: json['catalogTrackId'] as String,
+      songTitle: json['songTitle'] as String,
+      artist: json['artist'] as String,
+      youtubeVideoId: json['youtubeVideoId'] as String,
+      overlapCount: json['overlapCount'] as int,
+      segmentIndex: json['segmentIndex'] as int,
+    );
+  }
+}
+
 class ReactionEvent {
   const ReactionEvent({
     required this.id,
@@ -150,6 +179,19 @@ class PartyProvider extends ChangeNotifier {
   int _quickPickParticipantCount = 0;
   int _quickPickTimerDurationMs = 15000;
 
+  // Spin the Wheel state
+  List<SpinWheelSegment> _spinWheelSegments = [];
+  String? _spinWheelPhase; // 'waiting' | 'spinning' | 'landed' | 'vetoing' | 'selected' | null
+  int? _spinWheelTargetIndex;
+  double? _spinWheelTotalRotation;
+  int _spinWheelSpinDurationMs = 4000;
+  String? _spinWheelSpinnerName;
+  bool _spinWheelVetoUsed = false;
+  int _spinWheelTimerDurationMs = 15000;
+  int _spinWheelParticipantCount = 0;
+  // Song selection mode
+  String _songSelectionMode = 'quickPick'; // 'quickPick' | 'spinWheel'
+
   // Lightstick & hype state
   bool _isLightstickMode = false;
   Color _lightstickColor = const Color(0xFFFFD700); // default: vibe accent
@@ -224,6 +266,16 @@ class PartyProvider extends ChangeNotifier {
   Map<String, String> get myQuickPickVotes => _myQuickPickVotes;
   int get quickPickParticipantCount => _quickPickParticipantCount;
   int get quickPickTimerDurationMs => _quickPickTimerDurationMs;
+  List<SpinWheelSegment> get spinWheelSegments => _spinWheelSegments;
+  String? get spinWheelPhase => _spinWheelPhase;
+  int? get spinWheelTargetIndex => _spinWheelTargetIndex;
+  double? get spinWheelTotalRotation => _spinWheelTotalRotation;
+  int get spinWheelSpinDurationMs => _spinWheelSpinDurationMs;
+  String? get spinWheelSpinnerName => _spinWheelSpinnerName;
+  bool get spinWheelVetoUsed => _spinWheelVetoUsed;
+  int get spinWheelTimerDurationMs => _spinWheelTimerDurationMs;
+  int get spinWheelParticipantCount => _spinWheelParticipantCount;
+  String get songSelectionMode => _songSelectionMode;
 
   /// Whether this client is the current singer (performer).
   bool get isCurrentSinger =>
@@ -449,6 +501,62 @@ class PartyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void onSpinWheelStarted(List<SpinWheelSegment> segments, int participantCount, int timerDurationMs) {
+    _spinWheelSegments = segments;
+    _spinWheelPhase = 'waiting';
+    _spinWheelTargetIndex = null;
+    _spinWheelTotalRotation = null;
+    _spinWheelSpinDurationMs = 4000;
+    _spinWheelSpinnerName = null;
+    _spinWheelVetoUsed = false;
+    _spinWheelTimerDurationMs = timerDurationMs;
+    _spinWheelParticipantCount = participantCount;
+    notifyListeners();
+  }
+
+  void onSpinWheelSpinning(int targetIndex, double totalRotation, int durationMs, String? spinnerName) {
+    _spinWheelPhase = 'spinning';
+    _spinWheelTargetIndex = targetIndex;
+    _spinWheelTotalRotation = totalRotation;
+    _spinWheelSpinDurationMs = durationMs;
+    _spinWheelSpinnerName = spinnerName;
+    notifyListeners();
+  }
+
+  void onSpinWheelLanded(SpinWheelSegment song) {
+    _spinWheelPhase = 'landed';
+    notifyListeners();
+  }
+
+  void onSpinWheelVetoed(SpinWheelSegment vetoedSong, int newTargetIndex, double totalRotation, int durationMs) {
+    _spinWheelVetoUsed = true;
+    _spinWheelPhase = 'spinning';
+    _spinWheelTargetIndex = newTargetIndex;
+    _spinWheelTotalRotation = totalRotation;
+    _spinWheelSpinDurationMs = durationMs;
+    notifyListeners();
+  }
+
+  void onSpinWheelSelected(SpinWheelSegment song) {
+    _spinWheelPhase = 'selected';
+    notifyListeners();
+  }
+
+  void onSpinWheelCleared() {
+    _spinWheelSegments = [];
+    _spinWheelPhase = null;
+    _spinWheelTargetIndex = null;
+    _spinWheelTotalRotation = null;
+    _spinWheelSpinnerName = null;
+    _spinWheelVetoUsed = false;
+    notifyListeners();
+  }
+
+  void onSongSelectionModeChanged(String mode) {
+    _songSelectionMode = mode;
+    notifyListeners();
+  }
+
   void updateMyVote(String catalogTrackId, String vote) {
     _myQuickPickVotes = {..._myQuickPickVotes, catalogTrackId: vote};
     notifyListeners();
@@ -494,6 +602,15 @@ class PartyProvider extends ChangeNotifier {
         _quickPickSongs = [];
         _quickPickVotes = {};
         _myQuickPickVotes = {};
+      }
+      // Clear Spin Wheel state unless winner selected (delayed clear handles it)
+      if (_spinWheelPhase != 'selected') {
+        _spinWheelSegments = [];
+        _spinWheelPhase = null;
+        _spinWheelTargetIndex = null;
+        _spinWheelTotalRotation = null;
+        _spinWheelSpinnerName = null;
+        _spinWheelVetoUsed = false;
       }
     }
     // Clear card state when leaving partyCardDeal state

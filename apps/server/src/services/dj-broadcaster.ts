@@ -1,5 +1,6 @@
 import type { Server as SocketIOServer } from 'socket.io';
 import type { DJContext } from '../dj-engine/types.js';
+import type { SpinWheelSegment } from '../services/spin-wheel.js';
 import { DJState } from '../dj-engine/types.js';
 import { EVENTS } from '../shared/events.js';
 
@@ -137,6 +138,26 @@ export function broadcastQuickPickStarted(
     return;
   }
   io.to(sessionId).emit(EVENTS.QUICKPICK_STARTED, data);
+}
+
+export function broadcastSpinWheelStarted(
+  sessionId: string,
+  segments: SpinWheelSegment[],
+  participantCount: number,
+  timerDurationMs: number,
+): void {
+  if (!io) return;
+  io.to(sessionId).emit(EVENTS.SPINWHEEL_STARTED, { segments, participantCount, timerDurationMs });
+}
+
+export function broadcastSpinWheelResult(sessionId: string, payload: object): void {
+  if (!io) return;
+  io.to(sessionId).emit(EVENTS.SPINWHEEL_RESULT, payload);
+}
+
+export function broadcastModeChanged(sessionId: string, mode: string, userId: string, displayName: string): void {
+  if (!io) return;
+  io.to(sessionId).emit(EVENTS.SONG_MODE_CHANGED, { mode, userId, displayName });
 }
 
 export function broadcastCardDealt(

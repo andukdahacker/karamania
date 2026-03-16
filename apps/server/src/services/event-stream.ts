@@ -29,6 +29,12 @@ export type SessionEvent =
   | { type: 'card:groupActivated'; ts: number; userId: string; data: { cardId: string; selectedUserIds: string[]; announcement: string } }
   | { type: 'lightstick:toggled'; ts: number; userId: string; data: { active: boolean } }
   | { type: 'hype:fired'; ts: number; userId: string; data: Record<string, never> }
+  | { type: 'quickpick:vote'; ts: number; userId: string; data: { catalogTrackId: string; vote: 'up' | 'skip' } }
+  | { type: 'quickpick:selected'; ts: number; data: { song: { catalogTrackId: string; songTitle: string; artist: string; youtubeVideoId: string; overlapCount: number } } }
+  | { type: 'spinwheel:spin'; ts: number; userId: string }
+  | { type: 'spinwheel:veto'; ts: number; userId: string; data: { vetoedSong: string } }
+  | { type: 'spinwheel:selected'; ts: number; data: { song: { catalogTrackId: string; songTitle: string; artist: string; youtubeVideoId: string; overlapCount: number; segmentIndex: number } } }
+  | { type: 'song:modeChanged'; ts: number; userId: string; data: { mode: 'quickPick' | 'spinWheel' } }
   | { type: 'system:recovery'; ts: number; data: { recoveredState: DJState; songCount: number } };
 
 const streams = new Map<string, SessionEvent[]>();

@@ -400,11 +400,69 @@ class SocketClient {
     on('song:queued', (data) {
       final payload = data as Map<String, dynamic>;
       final catalogTrackId = payload['catalogTrackId'] as String;
-      _partyProvider?.onQuickPickResolved(catalogTrackId);
-      // Delay clear to let UI show winner highlight before dismissing
-      Timer(const Duration(seconds: 2), () {
-        _partyProvider?.onQuickPickCleared();
-      });
+      if (_partyProvider?.quickPickSongs.isNotEmpty ?? false) {
+        _partyProvider?.onQuickPickResolved(catalogTrackId);
+        Timer(const Duration(seconds: 2), () {
+          _partyProvider?.onQuickPickCleared();
+        });
+      }
+      if (_partyProvider?.spinWheelSegments.isNotEmpty ?? false) {
+        // Spin wheel selection handled via spinwheel:result 'selected' phase
+        // song:queued is the confirmation — trigger delayed clear
+        Timer(const Duration(seconds: 2), () {
+          _partyProvider?.onSpinWheelCleared();
+        });
+      }
+    });
+
+    // Spin the Wheel events
+    on('spinwheel:started', (data) {
+      final payload = data as Map<String, dynamic>;
+      final rawSegments = payload['segments'] as List<dynamic>;
+      final segments = rawSegments
+          .map((s) => SpinWheelSegment.fromJson(s as Map<String, dynamic>))
+          .toList();
+      final participantCount = payload['participantCount'] as int;
+      final timerDurationMs = payload['timerDurationMs'] as int;
+      _partyProvider?.onSpinWheelStarted(segments, participantCount, timerDurationMs);
+    });
+
+    on('spinwheel:result', (data) {
+      final payload = data as Map<String, dynamic>;
+      final phase = payload['phase'] as String;
+      switch (phase) {
+        case 'spinning':
+          _partyProvider?.onSpinWheelSpinning(
+            payload['targetSegmentIndex'] as int,
+            (payload['totalRotationRadians'] as num).toDouble(),
+            payload['spinDurationMs'] as int,
+            payload['spinnerDisplayName'] as String?,
+          );
+          break;
+        case 'landed':
+          final songData = payload['song'] as Map<String, dynamic>;
+          _partyProvider?.onSpinWheelLanded(SpinWheelSegment.fromJson(songData));
+          break;
+        case 'vetoed':
+          final vetoedSongData = payload['vetoedSong'] as Map<String, dynamic>;
+          _partyProvider?.onSpinWheelVetoed(
+            SpinWheelSegment.fromJson(vetoedSongData),
+            payload['newTargetSegmentIndex'] as int,
+            (payload['totalRotationRadians'] as num).toDouble(),
+            payload['spinDurationMs'] as int,
+          );
+          break;
+        case 'selected':
+          final songData = payload['song'] as Map<String, dynamic>;
+          _partyProvider?.onSpinWheelSelected(SpinWheelSegment.fromJson(songData));
+          break;
+      }
+    });
+
+    on('song:modeChanged', (data) {
+      final payload = data as Map<String, dynamic>;
+      final mode = payload['mode'] as String;
+      _partyProvider?.onSongSelectionModeChanged(mode);
     });
 
     // Hype cooldown enforced by server
@@ -493,6 +551,14 @@ class SocketClient {
       'vote': vote,
     });
     _partyProvider?.updateMyVote(catalogTrackId, vote);
+  }
+
+  void emitSpinWheelAction(String action) {
+    _socket?.emit('song:spinwheel', {'action': action});
+  }
+
+  void emitModeChange(String mode) {
+    _socket?.emit('song:modeChanged', {'mode': mode});
   }
 
   void emitMomentCardShared() {

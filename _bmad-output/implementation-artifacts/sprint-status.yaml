@@ -90,7 +90,7 @@ development_status:
   5-3-playlist-import-spotify: done
   5-4-song-normalization-and-suggestion-engine: done
   5-5-quick-pick-mode: done
-  5-6-spin-the-wheel-mode: backlog
+  5-6-spin-the-wheel-mode: done
   5-7-tv-pairing-and-youtube-lounge-api: backlog
   5-8-song-detection-and-metadata-resolution: backlog
   5-9-suggestion-only-mode: backlog

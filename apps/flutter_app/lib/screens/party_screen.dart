@@ -28,6 +28,8 @@ import 'package:karamania/widgets/group_card_announcement_overlay.dart';
 import 'package:karamania/widgets/tag_team_flash_widget.dart';
 import 'package:karamania/widgets/lightstick_mode.dart';
 import 'package:karamania/widgets/quick_pick_overlay.dart';
+import 'package:karamania/widgets/spin_the_wheel_overlay.dart';
+import 'package:karamania/widgets/song_mode_toggle.dart';
 import 'package:karamania/widgets/hype_signal_button.dart';
 import 'package:go_router/go_router.dart';
 
@@ -200,7 +202,7 @@ class _PartyScreenState extends State<PartyScreen>
                   onDismiss: () => partyProvider.dismissMomentCard(),
                 ),
               ),
-            // Quick Pick overlay — during songSelection OR showing winner
+            // Quick Pick overlay — during songSelection OR showing winner (only when mode is quickPick)
             if (partyProvider.quickPickSongs.isNotEmpty &&
                 (partyProvider.djState == DJState.songSelection ||
                     partyProvider.quickPickWinnerId != null))
@@ -214,6 +216,24 @@ class _PartyScreenState extends State<PartyScreen>
                   timerDurationMs: partyProvider.quickPickTimerDurationMs,
                   onVote: (catalogTrackId, vote) =>
                       SocketClient.instance.emitQuickPickVote(catalogTrackId, vote),
+                ),
+              ),
+            // Spin the Wheel overlay — during songSelection OR showing selected
+            if (partyProvider.spinWheelSegments.isNotEmpty &&
+                (partyProvider.djState == DJState.songSelection ||
+                    partyProvider.spinWheelPhase == 'selected'))
+              Positioned.fill(
+                child: SpinTheWheelOverlay(
+                  segments: partyProvider.spinWheelSegments,
+                  phase: partyProvider.spinWheelPhase,
+                  targetIndex: partyProvider.spinWheelTargetIndex,
+                  totalRotation: partyProvider.spinWheelTotalRotation,
+                  spinDurationMs: partyProvider.spinWheelSpinDurationMs,
+                  spinnerName: partyProvider.spinWheelSpinnerName,
+                  vetoUsed: partyProvider.spinWheelVetoUsed,
+                  timerDurationMs: partyProvider.spinWheelTimerDurationMs,
+                  onSpin: () => SocketClient.instance.emitSpinWheelAction('spin'),
+                  onVeto: () => SocketClient.instance.emitSpinWheelAction('veto'),
                 ),
               ),
             // Party card deal overlay — during partyCardDeal state with dealt card
@@ -445,6 +465,10 @@ class _PartyScreenState extends State<PartyScreen>
                 ),
               ],
               if (partyProvider.djState == DJState.songSelection) ...[
+                const SizedBox(height: DJTokens.spaceMd),
+                SongModeToggle(
+                  currentMode: partyProvider.songSelectionMode,
+                ),
                 const SizedBox(height: DJTokens.spaceLg),
                 BridgeMomentDisplay(
                   currentPerformer: partyProvider.currentPerformer,

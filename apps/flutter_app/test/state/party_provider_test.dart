@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/constants/party_cards.dart';
-import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus, ReactionEvent, QuickPickSong, VoteTally;
+import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus, ReactionEvent, QuickPickSong, VoteTally, SpinWheelSegment;
 import 'package:karamania/theme/dj_theme.dart';
 
 void main() {
@@ -1442,6 +1442,111 @@ void main() {
 
       expect(provider.myQuickPickVotes['s1'], 'up');
       expect(notifyCount, 1);
+    });
+  });
+
+  // Spin the Wheel state tests
+  group('Spin the Wheel state', () {
+    late PartyProvider provider;
+    setUp(() {
+      provider = PartyProvider(wakelockToggle: (_) {});
+    });
+
+    SpinWheelSegment makeSegment(int index) {
+      return SpinWheelSegment(
+        catalogTrackId: 'cat-$index',
+        songTitle: 'Song $index',
+        artist: 'Artist $index',
+        youtubeVideoId: 'yt_$index',
+        overlapCount: index,
+        segmentIndex: index,
+      );
+    }
+
+    test('onSpinWheelStarted sets segments and phase', () {
+      final segments = List.generate(8, makeSegment);
+      provider.onSpinWheelStarted(segments, 5, 15000);
+
+      expect(provider.spinWheelSegments, hasLength(8));
+      expect(provider.spinWheelPhase, 'waiting');
+      expect(provider.spinWheelParticipantCount, 5);
+      expect(provider.spinWheelTimerDurationMs, 15000);
+      expect(provider.spinWheelVetoUsed, false);
+    });
+
+    test('onSpinWheelSpinning sets spin params and phase', () {
+      final segments = List.generate(8, makeSegment);
+      provider.onSpinWheelStarted(segments, 5, 15000);
+      provider.onSpinWheelSpinning(3, 42.5, 4000, 'TestUser');
+
+      expect(provider.spinWheelPhase, 'spinning');
+      expect(provider.spinWheelTargetIndex, 3);
+      expect(provider.spinWheelTotalRotation, 42.5);
+      expect(provider.spinWheelSpinDurationMs, 4000);
+      expect(provider.spinWheelSpinnerName, 'TestUser');
+    });
+
+    test('onSpinWheelLanded sets phase', () {
+      provider.onSpinWheelLanded(makeSegment(3));
+      expect(provider.spinWheelPhase, 'landed');
+    });
+
+    test('onSpinWheelVetoed marks veto used and sets new spin params', () {
+      final segments = List.generate(8, makeSegment);
+      provider.onSpinWheelStarted(segments, 5, 15000);
+      provider.onSpinWheelVetoed(makeSegment(3), 5, 50.0, 4000);
+
+      expect(provider.spinWheelVetoUsed, true);
+      expect(provider.spinWheelPhase, 'spinning');
+      expect(provider.spinWheelTargetIndex, 5);
+      expect(provider.spinWheelTotalRotation, 50.0);
+    });
+
+    test('onSpinWheelSelected sets phase', () {
+      provider.onSpinWheelSelected(makeSegment(3));
+      expect(provider.spinWheelPhase, 'selected');
+    });
+
+    test('onSpinWheelCleared resets all state', () {
+      final segments = List.generate(8, makeSegment);
+      provider.onSpinWheelStarted(segments, 5, 15000);
+      provider.onSpinWheelSpinning(3, 42.5, 4000, 'TestUser');
+      provider.onSpinWheelCleared();
+
+      expect(provider.spinWheelSegments, isEmpty);
+      expect(provider.spinWheelPhase, isNull);
+      expect(provider.spinWheelTargetIndex, isNull);
+      expect(provider.spinWheelTotalRotation, isNull);
+      expect(provider.spinWheelSpinnerName, isNull);
+      expect(provider.spinWheelVetoUsed, false);
+    });
+
+    test('onSongSelectionModeChanged updates mode', () {
+      expect(provider.songSelectionMode, 'quickPick');
+      provider.onSongSelectionModeChanged('spinWheel');
+      expect(provider.songSelectionMode, 'spinWheel');
+    });
+
+    test('spin wheel state cleared on DJ state exit (unless selected)', () {
+      final segments = List.generate(8, makeSegment);
+      provider.onSpinWheelStarted(segments, 5, 15000);
+      provider.onDjStateUpdate(state: DJState.songSelection);
+      provider.onDjStateUpdate(state: DJState.partyCardDeal);
+
+      expect(provider.spinWheelSegments, isEmpty);
+      expect(provider.spinWheelPhase, isNull);
+    });
+
+    test('spin wheel state preserved on DJ state exit when selected', () {
+      final segments = List.generate(8, makeSegment);
+      provider.onSpinWheelStarted(segments, 5, 15000);
+      provider.onSpinWheelSelected(makeSegment(3));
+      provider.onDjStateUpdate(state: DJState.songSelection);
+      provider.onDjStateUpdate(state: DJState.partyCardDeal);
+
+      // segments preserved because phase == 'selected' (delayed clear handles it)
+      expect(provider.spinWheelSegments, hasLength(8));
+      expect(provider.spinWheelPhase, 'selected');
     });
   });
 }
