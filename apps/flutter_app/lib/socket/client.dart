@@ -465,6 +465,23 @@ class SocketClient {
       _partyProvider?.onSongSelectionModeChanged(mode);
     });
 
+    // TV pairing events
+    on('tv:status', (data) {
+      final payload = data as Map<String, dynamic>;
+      final statusStr = payload['status'] as String;
+      final message = payload['message'] as String?;
+      final status = TvConnectionStatus.values.firstWhere((e) => e.name == statusStr);
+      _partyProvider?.setTvStatus(status, message: message);
+    });
+
+    on('tv:nowPlaying', (data) {
+      final payload = data as Map<String, dynamic>;
+      final videoId = payload['videoId'] as String;
+      final title = payload['title'] as String?;
+      final state = payload['state'] as String;
+      _partyProvider?.setTvNowPlaying(videoId, title, state);
+    });
+
     // Hype cooldown enforced by server
     on('hype:cooldown', (data) {
       final payload = data as Map<String, dynamic>;
@@ -559,6 +576,15 @@ class SocketClient {
 
   void emitModeChange(String mode) {
     _socket?.emit('song:modeChanged', {'mode': mode});
+  }
+
+  void pairTv(String pairingCode) {
+    _partyProvider?.setTvPairingState(LoadingState.loading);
+    _socket?.emit('tv:pair', {'pairingCode': pairingCode});
+  }
+
+  void unpairTv() {
+    _socket?.emit('tv:unpair');
   }
 
   void emitMomentCardShared() {

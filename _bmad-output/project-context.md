@@ -86,6 +86,7 @@ All columns `snake_case`. Kysely types match DB exactly. Conversion to `camelCas
 | `card` | `card:dealt`, `card:accepted`, `card:dismissed`, `card:redraw` | Bidirectional |
 | `song` | `song:detected`, `song:queued`, `song:quickpick`, `song:spinwheel` | Bidirectional |
 | `capture` | `capture:bubble`, `capture:started`, `capture:complete` | Bidirectional |
+| `tv` | `tv:pair`, `tv:unpair`, `tv:status`, `tv:nowPlaying` | Bidirectional |
 | `host` | `host:skip`, `host:override`, `host:songOver` | Client -> Server |
 | `auth` | `auth:refreshRequired`, `auth:invalid` | Server -> Client |
 

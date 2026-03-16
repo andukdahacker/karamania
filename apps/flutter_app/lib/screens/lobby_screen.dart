@@ -13,6 +13,7 @@ import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
 import 'package:karamania/widgets/dj_tap_button.dart';
+import 'package:karamania/widgets/tv_pairing_overlay.dart';
 import 'package:karamania/widgets/playlist_import_card.dart';
 import 'package:karamania/widgets/reconnecting_banner.dart';
 
@@ -170,23 +171,45 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           }).toList(),
                         ),
                         const SizedBox(height: DJTokens.spaceLg),
-                        // TV pairing placeholder
-                        Text(
-                          Copy.pairWithTv,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: DJTokens.textSecondary,
-                              ),
-                        ),
-                        TextButton(
-                          // TODO: Implement TV pairing in Story 5.7
-                          onPressed: () {},
-                          child: Text(
-                            Copy.skipNoTv,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: DJTokens.textSecondary,
+                        // TV pairing
+                        if (!partyProvider.isTvPaired && !partyProvider.tvSkipped) ...[
+                          GestureDetector(
+                            onTap: () {
+                              showModalBottomSheet(
+                                context: context,
+                                backgroundColor: DJTokens.surfaceColor,
+                                builder: (_) => ChangeNotifierProvider.value(
+                                  value: partyProvider,
+                                  child: const TvPairingOverlay(),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              Copy.pairWithTv,
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: DJTokens.textSecondary,
+                                  ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              partyProvider.setTvSkipped(true);
+                            },
+                            child: Text(
+                              Copy.skipNoTv,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DJTokens.textSecondary,
+                                  ),
+                            ),
+                          ),
+                        ] else if (partyProvider.isTvPaired) ...[
+                          Text(
+                            Copy.tvConnected,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: DJTokens.actionConfirm,
                                 ),
                           ),
-                        ),
+                        ],
                         const SizedBox(height: DJTokens.spaceLg),
                       ],
                       // Participant list

@@ -10,6 +10,8 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 enum ConnectionStatus { connected, reconnecting }
 
+enum TvConnectionStatus { disconnected, connecting, connected, reconnecting }
+
 class QuickPickSong {
   const QuickPickSong({
     required this.catalogTrackId,
@@ -192,6 +194,13 @@ class PartyProvider extends ChangeNotifier {
   // Song selection mode
   String _songSelectionMode = 'quickPick'; // 'quickPick' | 'spinWheel'
 
+  // TV pairing state
+  TvConnectionStatus _tvStatus = TvConnectionStatus.disconnected;
+  String? _tvStatusMessage;
+  String? _tvNowPlayingVideoId;
+  bool _tvSkipped = false;
+  LoadingState _tvPairingState = LoadingState.idle;
+
   // Lightstick & hype state
   bool _isLightstickMode = false;
   Color _lightstickColor = const Color(0xFFFFD700); // default: vibe accent
@@ -276,6 +285,12 @@ class PartyProvider extends ChangeNotifier {
   int get spinWheelTimerDurationMs => _spinWheelTimerDurationMs;
   int get spinWheelParticipantCount => _spinWheelParticipantCount;
   String get songSelectionMode => _songSelectionMode;
+  TvConnectionStatus get tvStatus => _tvStatus;
+  String? get tvStatusMessage => _tvStatusMessage;
+  String? get tvNowPlayingVideoId => _tvNowPlayingVideoId;
+  bool get isTvPaired => _tvStatus == TvConnectionStatus.connected;
+  bool get tvSkipped => _tvSkipped;
+  LoadingState get tvPairingState => _tvPairingState;
 
   /// Whether this client is the current singer (performer).
   bool get isCurrentSinger =>
@@ -554,6 +569,32 @@ class PartyProvider extends ChangeNotifier {
 
   void onSongSelectionModeChanged(String mode) {
     _songSelectionMode = mode;
+    notifyListeners();
+  }
+
+  void setTvStatus(TvConnectionStatus status, {String? message}) {
+    _tvStatus = status;
+    _tvStatusMessage = message;
+    _tvPairingState = (status == TvConnectionStatus.connected)
+        ? LoadingState.success
+        : (status == TvConnectionStatus.disconnected && message != null)
+            ? LoadingState.error
+            : _tvPairingState;
+    notifyListeners();
+  }
+
+  void setTvNowPlaying(String videoId, String? title, String state) {
+    _tvNowPlayingVideoId = videoId;
+    notifyListeners();
+  }
+
+  void setTvSkipped(bool skipped) {
+    _tvSkipped = skipped;
+    notifyListeners();
+  }
+
+  void setTvPairingState(LoadingState state) {
+    _tvPairingState = state;
     notifyListeners();
   }
 

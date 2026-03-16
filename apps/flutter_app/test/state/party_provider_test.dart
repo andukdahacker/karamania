@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/constants/party_cards.dart';
-import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus, ReactionEvent, QuickPickSong, VoteTally, SpinWheelSegment;
+import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus, ReactionEvent, QuickPickSong, VoteTally, SpinWheelSegment, TvConnectionStatus;
 import 'package:karamania/theme/dj_theme.dart';
 
 void main() {
@@ -1547,6 +1547,66 @@ void main() {
       // segments preserved because phase == 'selected' (delayed clear handles it)
       expect(provider.spinWheelSegments, hasLength(8));
       expect(provider.spinWheelPhase, 'selected');
+    });
+  });
+
+  group('TV pairing state', () {
+    late PartyProvider provider;
+    setUp(() {
+      provider = PartyProvider(wakelockToggle: (_) {});
+    });
+
+    test('initial TV state is disconnected', () {
+      expect(provider.tvStatus, TvConnectionStatus.disconnected);
+      expect(provider.tvStatusMessage, isNull);
+      expect(provider.tvNowPlayingVideoId, isNull);
+      expect(provider.isTvPaired, isFalse);
+      expect(provider.tvSkipped, isFalse);
+      expect(provider.tvPairingState, LoadingState.idle);
+    });
+
+    test('setTvStatus updates status and notifies listeners', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.setTvStatus(TvConnectionStatus.connected);
+
+      expect(provider.tvStatus, TvConnectionStatus.connected);
+      expect(notifyCount, 1);
+    });
+
+    test('setTvStatus sets pairingState to success on connected', () {
+      provider.setTvStatus(TvConnectionStatus.connected);
+      expect(provider.tvPairingState, LoadingState.success);
+    });
+
+    test('setTvStatus sets pairingState to error on disconnected with message', () {
+      provider.setTvStatus(TvConnectionStatus.disconnected, message: 'Failed');
+      expect(provider.tvPairingState, LoadingState.error);
+      expect(provider.tvStatusMessage, 'Failed');
+    });
+
+    test('isTvPaired computed property', () {
+      expect(provider.isTvPaired, isFalse);
+      provider.setTvStatus(TvConnectionStatus.connected);
+      expect(provider.isTvPaired, isTrue);
+      provider.setTvStatus(TvConnectionStatus.reconnecting);
+      expect(provider.isTvPaired, isFalse);
+    });
+
+    test('setTvNowPlaying updates videoId', () {
+      provider.setTvNowPlaying('vid123', 'Test Song', 'playing');
+      expect(provider.tvNowPlayingVideoId, 'vid123');
+    });
+
+    test('setTvSkipped updates skip state', () {
+      provider.setTvSkipped(true);
+      expect(provider.tvSkipped, isTrue);
+    });
+
+    test('setTvPairingState updates loading state', () {
+      provider.setTvPairingState(LoadingState.loading);
+      expect(provider.tvPairingState, LoadingState.loading);
     });
   });
 }

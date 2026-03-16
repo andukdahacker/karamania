@@ -230,6 +230,19 @@ class Copy {
   static const String spinAutoSpinLabel = 'Auto-spinning...';
   static const String spinWaitingLabel = 'Tap to spin!';
 
+  // TV Pairing
+  static const String tvPairingTitle = 'Pair with YouTube TV';
+  static const String tvPairingInstructions =
+      'Enter the code shown on your YouTube TV screen';
+  static const String tvPairingPlaceholder = 'TV Code';
+  static const String tvPairingConnect = 'Connect';
+  static const String tvConnected = 'Connected to TV';
+  static const String tvReconnecting = 'Reconnecting to TV...';
+  static const String tvDisconnected = 'TV disconnected';
+  static const String tvReconnectFailed =
+      'Could not reconnect. Please re-enter the TV code.';
+  static const String tvUnpair = 'Disconnect TV';
+
   // Mode toggle
   static const String modeQuickPick = 'Quick Pick';
   static const String modeSpinWheel = 'Spin the Wheel';

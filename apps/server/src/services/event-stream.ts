@@ -35,7 +35,10 @@ export type SessionEvent =
   | { type: 'spinwheel:veto'; ts: number; userId: string; data: { vetoedSong: string } }
   | { type: 'spinwheel:selected'; ts: number; data: { song: { catalogTrackId: string; songTitle: string; artist: string; youtubeVideoId: string; overlapCount: number; segmentIndex: number } } }
   | { type: 'song:modeChanged'; ts: number; userId: string; data: { mode: 'quickPick' | 'spinWheel' } }
-  | { type: 'system:recovery'; ts: number; data: { recoveredState: DJState; songCount: number } };
+  | { type: 'system:recovery'; ts: number; data: { recoveredState: DJState; songCount: number } }
+  | { type: 'tv:paired'; ts: number; userId: string }
+  | { type: 'tv:unpaired'; ts: number; userId: string }
+  | { type: 'song:detected'; ts: number; data: { videoId: string } };
 
 const streams = new Map<string, SessionEvent[]>();
 

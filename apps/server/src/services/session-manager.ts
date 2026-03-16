@@ -35,6 +35,78 @@ import {
   clearRound as clearSpinWheelRound,
 } from '../services/spin-wheel.js';
 import type { SpinWheelSegment } from '../services/spin-wheel.js';
+import type { TvIntegration, NowPlayingEvent, TvConnectionStatus, CreateTvIntegration } from '../integrations/tv-integration.js';
+import { createLoungeApiClient } from '../integrations/lounge-api.js';
+
+// TV connection tracking
+let tvFactory: CreateTvIntegration = createLoungeApiClient;
+const tvConnections = new Map<string, TvIntegration>();
+
+export function setTvFactory(f: CreateTvIntegration): void {
+  tvFactory = f;
+}
+
+export function getTvConnection(sessionId: string): TvIntegration | undefined {
+  return tvConnections.get(sessionId);
+}
+
+export function isTvPaired(sessionId: string): boolean {
+  return tvConnections.get(sessionId)?.isConnected() ?? false;
+}
+
+export async function pairTv(sessionId: string, pairingCode: string): Promise<void> {
+  const existing = tvConnections.get(sessionId);
+  if (existing) {
+    await existing.disconnect();
+    tvConnections.delete(sessionId);
+  }
+
+  const tv = tvFactory();
+
+  tv.onNowPlaying((event: NowPlayingEvent) => {
+    const io = getIO();
+    if (io) {
+      io.to(sessionId).emit(EVENTS.TV_NOW_PLAYING, {
+        videoId: event.videoId,
+        title: event.title,
+        state: event.state,
+      });
+      io.to(sessionId).emit(EVENTS.SONG_DETECTED, {
+        videoId: event.videoId,
+      });
+    }
+    appendEvent(sessionId, {
+      type: 'song:detected',
+      ts: Date.now(),
+      data: { videoId: event.videoId },
+    });
+  });
+
+  tv.onStatusChange((status: TvConnectionStatus) => {
+    const io = getIO();
+    if (io) {
+      io.to(sessionId).emit(EVENTS.TV_STATUS, { status });
+    }
+    if (status === 'disconnected') {
+      tvConnections.delete(sessionId);
+    }
+  });
+
+  await tv.connect(pairingCode);
+  tvConnections.set(sessionId, tv);
+}
+
+export async function unpairTv(sessionId: string): Promise<void> {
+  const tv = tvConnections.get(sessionId);
+  if (tv) {
+    await tv.disconnect();
+    tvConnections.delete(sessionId);
+  }
+}
+
+export function resetAllTvConnections(): void {
+  tvConnections.clear();
+}
 
 // Song selection mode tracking — default: quickPick
 type SongSelectionMode = 'quickPick' | 'spinWheel';
@@ -654,6 +726,12 @@ export async function handleSpinWheelSongSelected(
     });
   }
 
+  if (isTvPaired(sessionId)) {
+    getTvConnection(sessionId)!.addToQueue(segment.youtubeVideoId).catch((err) => {
+      console.error('[session-manager] TV queue push failed:', err);
+    });
+  }
+
   appendEvent(sessionId, {
     type: 'spinwheel:selected',
     ts: Date.now(),
@@ -742,6 +820,12 @@ export async function handleQuickPickSongSelected(
       songTitle: song.songTitle,
       artist: song.artist,
       youtubeVideoId: song.youtubeVideoId,
+    });
+  }
+
+  if (isTvPaired(sessionId)) {
+    getTvConnection(sessionId)!.addToQueue(song.youtubeVideoId).catch((err) => {
+      console.error('[session-manager] TV queue push failed:', err);
     });
   }
 
@@ -1133,6 +1217,10 @@ export async function endSession(
 
   // Step C: Update DB status + ended_at
   await sessionRepo.updateStatus(sessionId, 'ended');
+
+  // Clean up TV connection
+  tvConnections.get(sessionId)?.disconnect().catch(() => {});
+  tvConnections.delete(sessionId);
 
   // Clean up in-memory state
   removeSessionDjState(sessionId);

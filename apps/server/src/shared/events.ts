@@ -77,6 +77,12 @@ export const EVENTS = {
   SESSION_NOT_FOUND: 'session:notFound',
   SESSION_FULL: 'session:full',
 
+  // TV events
+  TV_PAIR: 'tv:pair',
+  TV_STATUS: 'tv:status',
+  TV_UNPAIR: 'tv:unpair',
+  TV_NOW_PLAYING: 'tv:nowPlaying',
+
   // Auth events
   AUTH_REFRESH_REQUIRED: 'auth:refreshRequired',
   AUTH_INVALID: 'auth:invalid',
