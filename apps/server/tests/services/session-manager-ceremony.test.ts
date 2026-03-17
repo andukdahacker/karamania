@@ -110,6 +110,13 @@ vi.mock('../../src/services/activity-tracker.js', () => ({
   removeSession: vi.fn(),
 }));
 
+vi.mock('../../src/services/capture-trigger.js', () => ({
+  shouldEmitCaptureBubble: vi.fn().mockReturnValue(false),
+  markBubbleEmitted: vi.fn(),
+  clearCaptureTriggerState: vi.fn(),
+  emitReactionPeakBubble: vi.fn(),
+}));
+
 describe('session-manager ceremony orchestration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -413,7 +420,11 @@ describe('session-manager ceremony orchestration', () => {
         sideEffects: [],
       });
 
-      vi.advanceTimersByTime(9999);
+      // Advance past capture bubble timer (3s) then clear call history
+      vi.advanceTimersByTime(3001);
+      mockGetSessionDjState.mockClear();
+
+      vi.advanceTimersByTime(6998);
       expect(mockGetSessionDjState).not.toHaveBeenCalled();
 
       // At 10s — auto-advance fires

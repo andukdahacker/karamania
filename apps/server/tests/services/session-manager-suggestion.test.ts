@@ -160,6 +160,13 @@ vi.mock('../../src/services/song-detection.js', () => ({
   resetDetectionCache: vi.fn(),
 }));
 
+vi.mock('../../src/services/capture-trigger.js', () => ({
+  shouldEmitCaptureBubble: vi.fn().mockReturnValue(false),
+  markBubbleEmitted: vi.fn(),
+  clearCaptureTriggerState: vi.fn(),
+  emitReactionPeakBubble: vi.fn(),
+}));
+
 import { handleManualSongPlay } from '../../src/services/session-manager.js';
 
 describe('handleManualSongPlay', () => {

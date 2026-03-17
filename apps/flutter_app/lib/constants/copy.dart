@@ -261,6 +261,9 @@ class Copy {
   static const String modeQuickPick = 'Quick Pick';
   static const String modeSpinWheel = 'Spin the Wheel';
 
+  // Capture bubble (Story 6.1)
+  static const String captureMoment = 'Capture this moment!';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

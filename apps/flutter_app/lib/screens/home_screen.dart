@@ -7,6 +7,7 @@ import 'package:karamania/constants/tap_tiers.dart';
 import 'package:karamania/socket/client.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
+import 'package:karamania/state/capture_provider.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_tokens.dart';
 import 'package:karamania/widgets/dj_tap_button.dart';
@@ -135,6 +136,7 @@ class HomeScreen extends StatelessWidget {
         partyProvider: partyProvider,
         serverUrl: AppConfig.instance.serverUrl,
         displayName: displayName,
+        captureProvider: context.read<CaptureProvider>(),
       );
       if (!context.mounted) return;
       context.go('/lobby');

@@ -39,7 +39,8 @@ export type SessionEvent =
   | { type: 'tv:paired'; ts: number; userId: string }
   | { type: 'tv:unpaired'; ts: number; userId: string }
   | { type: 'song:detected'; ts: number; data: { videoId: string; title: string; artist: string } }
-  | { type: 'song:manualPlay'; ts: number; data: { videoId: string; title: string; artist: string } };
+  | { type: 'song:manualPlay'; ts: number; data: { videoId: string; title: string; artist: string } }
+  | { type: 'capture:bubble'; ts: number; data: { triggerType: 'session_start' | 'reaction_peak' | 'post_ceremony' | 'session_end' } };
 
 const streams = new Map<string, SessionEvent[]>();
 

@@ -8,6 +8,7 @@ import 'package:karamania/constants/copy.dart';
 import 'package:karamania/socket/client.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
+import 'package:karamania/state/capture_provider.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/constants/tap_tiers.dart';
 import 'package:karamania/theme/dj_tokens.dart';
@@ -63,6 +64,7 @@ class _JoinScreenState extends State<JoinScreen> {
         serverUrl: AppConfig.instance.serverUrl,
         displayName: _nameController.text.trim(),
         partyCode: _codeController.text.toUpperCase(),
+        captureProvider: context.read<CaptureProvider>(),
       );
       if (mounted) {
           final status = context.read<PartyProvider>().sessionStatus;

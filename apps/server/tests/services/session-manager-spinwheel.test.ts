@@ -171,6 +171,13 @@ vi.mock('../../src/services/award-generator.js', () => ({
   AwardTone: { comedic: 'comedic' },
 }));
 
+vi.mock('../../src/services/capture-trigger.js', () => ({
+  shouldEmitCaptureBubble: vi.fn().mockReturnValue(false),
+  markBubbleEmitted: vi.fn(),
+  clearCaptureTriggerState: vi.fn(),
+  emitReactionPeakBubble: vi.fn(),
+}));
+
 const testSuggestions = Array.from({ length: 8 }, (_, i) => ({
   catalogTrackId: `song-${i}`,
   songTitle: `Song ${i}`,

@@ -32,6 +32,7 @@ import 'package:karamania/widgets/spin_the_wheel_overlay.dart';
 import 'package:karamania/widgets/song_mode_toggle.dart';
 import 'package:karamania/widgets/hype_signal_button.dart';
 import 'package:karamania/widgets/now_playing_bar.dart';
+import 'package:karamania/widgets/capture_bubble.dart';
 import 'package:karamania/widgets/selected_song_display.dart';
 import 'package:go_router/go_router.dart';
 
@@ -384,6 +385,12 @@ class _PartyScreenState extends State<PartyScreen>
                   },
                 ),
               ),
+            // Capture bubble — bottom-left, above the SongOverButton area
+            Positioned(
+              bottom: DJTokens.spaceLg + 48 + DJTokens.spaceSm,
+              left: DJTokens.spaceMd,
+              child: const CaptureBubble(),
+            ),
             // Song Over button — visible in BOTH modes (host only)
             if (partyProvider.isHost && partyProvider.djState == DJState.song)
               Positioned(

@@ -161,6 +161,13 @@ vi.mock('../../src/services/award-generator.js', () => ({
   AwardTone: { comedic: 'comedic' },
 }));
 
+vi.mock('../../src/services/capture-trigger.js', () => ({
+  shouldEmitCaptureBubble: vi.fn().mockReturnValue(false),
+  markBubbleEmitted: vi.fn(),
+  clearCaptureTriggerState: vi.fn(),
+  emitReactionPeakBubble: vi.fn(),
+}));
+
 const testSongs: QuickPickSong[] = [
   { catalogTrackId: 'song-1', songTitle: 'Song 1', artist: 'Artist 1', youtubeVideoId: 'yt_1', overlapCount: 3 },
   { catalogTrackId: 'song-2', songTitle: 'Song 2', artist: 'Artist 2', youtubeVideoId: 'yt_2', overlapCount: 2 },

@@ -9,6 +9,7 @@ import 'package:karamania/audio/state_transition_audio.dart';
 import 'package:karamania/constants/party_cards.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
+import 'package:karamania/state/capture_provider.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 
@@ -25,6 +26,7 @@ class SocketClient {
   Timer? _disconnectUiTimer;
   Timer? _hostTransferBannerTimer;
   PartyProvider? _partyProvider;
+  CaptureProvider? _captureProvider;
   StateTransitionAudio _stateTransitionAudio = StateTransitionAudio();
 
   /// Replace the [StateTransitionAudio] instance for testing.
@@ -44,10 +46,12 @@ class SocketClient {
     String? displayName,
     required String userId,
     required PartyProvider partyProvider,
+    CaptureProvider? captureProvider,
   }) async {
     _currentSessionId = sessionId;
     _userId = userId;
     _partyProvider = partyProvider;
+    _captureProvider = captureProvider;
     partyProvider.setLocalUserId(userId);
 
     _socket = io.io(
@@ -112,6 +116,8 @@ class SocketClient {
     _stateTransitionAudio.reset();
     _partyProvider?.onSessionEnd();
     _partyProvider = null;
+    _captureProvider?.clearState();
+    _captureProvider = null;
     _userId = null;
     _socket?.disconnect();
     _socket?.dispose();
@@ -526,6 +532,13 @@ class SocketClient {
       _partyProvider?.onHypeCooldownEnforced(remainingMs);
     });
 
+    // Capture bubble event
+    on('capture:bubble', (data) {
+      final payload = data as Map<String, dynamic>;
+      final triggerType = payload['triggerType'] as String;
+      _captureProvider?.onCaptureBubbleTriggered(triggerType: triggerType);
+    });
+
     // Host transfer event (AC #4)
     on('party:hostTransferred', (data) {
       final payload = data as Map<String, dynamic>;
@@ -663,6 +676,7 @@ class SocketClient {
     String? displayName,
     String? vibe,
     bool accessibilityEqualVolume = false,
+    required CaptureProvider captureProvider,
   }) async {
     partyProvider.onCreatePartyLoading(LoadingState.loading);
     try {
@@ -697,6 +711,7 @@ class SocketClient {
         displayName: displayName ?? authProvider.displayName,
         userId: guestId ?? authProvider.firebaseUser?.uid ?? '',
         partyProvider: partyProvider,
+        captureProvider: captureProvider,
       );
       AudioEngine.instance.setRole(
         isHost: true,
@@ -716,6 +731,7 @@ class SocketClient {
     required String displayName,
     required String partyCode,
     bool accessibilityEqualVolume = false,
+    required CaptureProvider captureProvider,
   }) async {
     partyProvider.onJoinPartyLoading(LoadingState.loading);
     try {
@@ -746,6 +762,7 @@ class SocketClient {
         displayName: displayName,
         userId: guestId,
         partyProvider: partyProvider,
+        captureProvider: captureProvider,
       );
       AudioEngine.instance.setRole(
         isHost: false,

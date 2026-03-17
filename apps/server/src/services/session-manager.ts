@@ -22,6 +22,7 @@ import { clearPool, markSongSung } from '../services/song-pool.js';
 import { detectSong } from '../services/song-detection.js';
 import { startRound, getRound, resolveByTimeout, clearRound } from '../services/quick-pick.js';
 import { computeSuggestions } from '../services/suggestion-engine.js';
+import { shouldEmitCaptureBubble, markBubbleEmitted, clearCaptureTriggerState, type CaptureTriggerType } from '../services/capture-trigger.js';
 import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged } from '../services/dj-broadcaster.js';
 import type { QuickPickSong } from '../services/quick-pick.js';
 import {
@@ -279,6 +280,12 @@ async function orchestrateFullCeremony(
         songTitle,
       },
     });
+
+    // Capture bubble after reveal (short delay for dramatic effect)
+    setTimeout(() => {
+      const ctx = getSessionDjState(sessionId);
+      emitCaptureBubble(sessionId, 'post_ceremony', ctx?.state);
+    }, 3000);
   }, ANTICIPATION_DURATION_MS);
 
   ceremonyRevealTimers.set(sessionId, revealTimer);
@@ -317,6 +324,12 @@ async function orchestrateQuickCeremony(
       songTitle: context.currentSongTitle,
     },
   });
+
+  // Capture bubble after quick ceremony (short delay for dramatic effect)
+  setTimeout(() => {
+    const ctx = getSessionDjState(sessionId);
+    emitCaptureBubble(sessionId, 'post_ceremony', ctx?.state);
+  }, 3000);
 
   // Schedule auto-advance after display duration
   // Follows handleRecoveryTimeout pattern: retrieve current context, guard state, try-catch
@@ -1049,6 +1062,24 @@ export async function loadDjState(sessionId: string): Promise<DJContext | null> 
   }
 }
 
+/** Emit capture:bubble if allowed by cooldown/state, log to event stream. */
+function emitCaptureBubble(sessionId: string, triggerType: CaptureTriggerType, currentState?: DJState): void {
+  if (!shouldEmitCaptureBubble(sessionId, currentState)) return;
+  markBubbleEmitted(sessionId);
+  const io = getIO();
+  if (io) {
+    io.to(sessionId).emit(EVENTS.CAPTURE_BUBBLE, {
+      triggerType,
+      ts: Date.now(),
+    });
+  }
+  appendEvent(sessionId, {
+    type: 'capture:bubble',
+    ts: Date.now(),
+    data: { triggerType },
+  });
+}
+
 export async function processDjTransition(
   sessionId: string,
   context: DJContext,
@@ -1100,6 +1131,14 @@ export async function processDjTransition(
     }
   }
 
+  // Session start capture bubble — delayed so clients render party screen first
+  // Architecture target: 10s after icebreaker (Story 7.6). Interim: 3s after lobby→songSelection.
+  if (context.state === DJState.lobby && newContext.state === DJState.songSelection) {
+    setTimeout(() => {
+      emitCaptureBubble(sessionId, 'session_start', newContext.state);
+    }, 3000);
+  }
+
   // Song selection mode initialization when entering songSelection
   if (newContext.state === DJState.songSelection) {
     const mode = getSongSelectionMode(sessionId);
@@ -1108,6 +1147,11 @@ export async function processDjTransition(
     } else {
       void initializeQuickPick(sessionId, newContext);
     }
+  }
+
+  // Final capture opportunity when entering finale
+  if (newContext.state === DJState.finale) {
+    emitCaptureBubble(sessionId, 'session_end', newContext.state);
   }
 
   // Orchestrate card dealing when entering partyCardDeal state
@@ -1327,6 +1371,7 @@ export async function endSession(
   clearCardStats(sessionId);
   clearDealtCards(sessionId);
   clearPool(sessionId);
+  clearCaptureTriggerState(sessionId);
   clearRound(sessionId);
   clearSpinWheelRound(sessionId);
   sessionModes.delete(sessionId);
