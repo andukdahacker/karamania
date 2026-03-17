@@ -32,6 +32,7 @@ import 'package:karamania/widgets/spin_the_wheel_overlay.dart';
 import 'package:karamania/widgets/song_mode_toggle.dart';
 import 'package:karamania/widgets/hype_signal_button.dart';
 import 'package:karamania/widgets/now_playing_bar.dart';
+import 'package:karamania/widgets/selected_song_display.dart';
 import 'package:go_router/go_router.dart';
 
 class PartyScreen extends StatefulWidget {
@@ -94,6 +95,21 @@ class _PartyScreenState extends State<PartyScreen>
         _pulseController.stop();
       }
       _startCatchUpTimer();
+    }
+
+    // TV degradation notification
+    if (provider.tvDegraded) {
+      provider.setTvDegraded(false); // Reset immediately to prevent re-trigger
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(Copy.tvDisconnectedSuggestionMode),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: Copy.dismiss,
+            onPressed: () {},
+          ),
+        ),
+      );
     }
 
     // Update countdown timer when DJ state changes
@@ -180,15 +196,18 @@ class _PartyScreenState extends State<PartyScreen>
         child: Stack(
           children: [
             _buildPartyContent(context, partyProvider, displayVibe),
-            // Now Playing bar — top of screen during song state
+            // Now Playing / Selected Song — top of screen during song state
             if (partyProvider.djState == DJState.song &&
-                !partyProvider.isLightstickMode &&
-                partyProvider.hasDetectedSong)
+                !partyProvider.isLightstickMode)
               Positioned(
                 top: DJTokens.spaceMd,
                 left: DJTokens.spaceMd,
                 right: DJTokens.spaceMd,
-                child: const NowPlayingBar(),
+                child: partyProvider.isSuggestionOnlyMode
+                    ? const SelectedSongDisplay()
+                    : (partyProvider.hasDetectedSong
+                        ? const NowPlayingBar()
+                        : const SizedBox.shrink()),
               ),
             if (_showLoadingSkeleton)
               _buildLoadingSkeleton(context, displayVibe),

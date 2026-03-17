@@ -54,6 +54,7 @@ export const EVENTS = {
   QUICKPICK_STARTED: 'quickpick:started',
   SPINWHEEL_STARTED: 'spinwheel:started',
   SPINWHEEL_RESULT: 'spinwheel:result',
+  SONG_MANUAL_PLAY: 'song:manualPlay',
   SONG_MODE_CHANGED: 'song:modeChanged',
 
   // Capture events

@@ -21,5 +21,12 @@ export const songDetectedSchema = z.object({
   artist: z.string().nullable(),
   channel: z.string().nullable(),
   thumbnail: z.string().nullable(),
-  source: z.enum(['catalog', 'api-parsed', 'api-raw']),
+  source: z.enum(['catalog', 'api-parsed', 'api-raw', 'manual']),
+});
+
+export const songManualPlaySchema = z.object({
+  catalogTrackId: z.string(),
+  songTitle: z.string(),
+  artist: z.string(),
+  youtubeVideoId: z.string(),
 });

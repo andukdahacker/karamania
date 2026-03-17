@@ -120,11 +120,18 @@ export async function pairTv(sessionId: string, pairingCode: string): Promise<vo
 
   tv.onStatusChange((status: TvConnectionStatus) => {
     const io = getIO();
-    if (io) {
-      io.to(sessionId).emit(EVENTS.TV_STATUS, { status });
-    }
+    if (!io) return;
+
     if (status === 'disconnected') {
       tvConnections.delete(sessionId);
+      // Graceful degradation notification with degraded flag
+      io.to(sessionId).emit(EVENTS.TV_STATUS, {
+        status,
+        degraded: true,
+        message: 'TV disconnected. Continuing in suggestion-only mode.',
+      });
+    } else {
+      io.to(sessionId).emit(EVENTS.TV_STATUS, { status });
     }
   });
 
@@ -950,6 +957,57 @@ export async function createSession(params: {
   });
 
   return { sessionId: session.id, partyCode: session.party_code };
+}
+
+export async function handleManualSongPlay(
+  sessionId: string,
+  song: { catalogTrackId: string; songTitle: string; artist: string; youtubeVideoId: string },
+): Promise<void> {
+  const context = getSessionDjState(sessionId);
+  if (!context) return;
+
+  // Update DJ context with song metadata — enables ceremony/challenge references
+  const updatedContext = {
+    ...context,
+    currentSongTitle: song.songTitle,
+    metadata: {
+      ...context.metadata,
+      manuallyMarkedSong: {
+        catalogTrackId: song.catalogTrackId,
+        songTitle: song.songTitle,
+        artist: song.artist,
+        youtubeVideoId: song.youtubeVideoId,
+      },
+    },
+  };
+  setSessionDjState(sessionId, updatedContext);
+  void persistDjState(sessionId, serializeDJContext(updatedContext));
+
+  // Emit song:detected equivalent so Flutter shows now-playing metadata
+  const io = getIO();
+  if (io) {
+    io.to(sessionId).emit(EVENTS.SONG_DETECTED, {
+      videoId: song.youtubeVideoId,
+      songTitle: song.songTitle,
+      artist: song.artist,
+      channel: null,
+      thumbnail: null,
+      source: 'manual',
+    });
+  }
+
+  // Mark as sung in pool for suggestion dedup
+  markSongSung(sessionId, song.songTitle, song.artist);
+
+  appendEvent(sessionId, {
+    type: 'song:manualPlay',
+    ts: Date.now(),
+    data: {
+      videoId: song.youtubeVideoId,
+      title: song.songTitle,
+      artist: song.artist,
+    },
+  });
 }
 
 export async function persistDjState(sessionId: string, serializedState: unknown): Promise<void> {

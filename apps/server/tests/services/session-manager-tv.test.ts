@@ -389,6 +389,48 @@ describe('session-manager TV integration', () => {
     });
   });
 
+  describe('TV disconnect graceful degradation', () => {
+    it('emits TV_STATUS with degraded flag on disconnect', async () => {
+      await pairTv('session-1', 'ABC123');
+
+      const onStatusCall = (mockTv.onStatusChange as ReturnType<typeof vi.fn>).mock.calls[0]!;
+      const callback = onStatusCall[0] as (status: TvConnectionStatus) => void;
+
+      callback('disconnected');
+
+      expect(mockTo).toHaveBeenCalledWith('session-1');
+      expect(mockEmit).toHaveBeenCalledWith('tv:status', {
+        status: 'disconnected',
+        degraded: true,
+        message: 'TV disconnected. Continuing in suggestion-only mode.',
+      });
+    });
+
+    it('cleans up tvConnections entry on disconnect', async () => {
+      await pairTv('session-1', 'ABC123');
+      expect(getTvConnection('session-1')).toBeDefined();
+
+      const onStatusCall = (mockTv.onStatusChange as ReturnType<typeof vi.fn>).mock.calls[0]!;
+      const callback = onStatusCall[0] as (status: TvConnectionStatus) => void;
+
+      callback('disconnected');
+
+      expect(getTvConnection('session-1')).toBeUndefined();
+      expect(isTvPaired('session-1')).toBe(false);
+    });
+
+    it('emits normal TV_STATUS for non-disconnect statuses', async () => {
+      await pairTv('session-1', 'ABC123');
+
+      const onStatusCall = (mockTv.onStatusChange as ReturnType<typeof vi.fn>).mock.calls[0]!;
+      const callback = onStatusCall[0] as (status: TvConnectionStatus) => void;
+
+      callback('reconnecting');
+
+      expect(mockEmit).toHaveBeenCalledWith('tv:status', { status: 'reconnecting' });
+    });
+  });
+
   describe('endSession cleanup', () => {
     it('disconnects TV on session end', async () => {
       await pairTv('session-1', 'ABC123');

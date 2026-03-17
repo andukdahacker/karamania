@@ -4,10 +4,12 @@ import { EVENTS } from '../shared/events.js';
 import { getSessionDjState } from '../services/dj-state-store.js';
 import { DJState } from '../dj-engine/types.js';
 import { recordVote, getRound } from '../services/quick-pick.js';
-import { handleQuickPickSongSelected, recordParticipationAction, getSongSelectionMode, handleModeChange, handleSpinAnimationComplete } from '../services/session-manager.js';
+import { handleQuickPickSongSelected, recordParticipationAction, getSongSelectionMode, handleModeChange, handleSpinAnimationComplete, handleManualSongPlay } from '../services/session-manager.js';
 import { appendEvent } from '../services/event-stream.js';
 import { quickPickVoteSchema } from '../shared/schemas/quick-pick-schemas.js';
 import { spinWheelActionSchema, songModeSchema } from '../shared/schemas/spin-wheel-schemas.js';
+import { songManualPlaySchema } from '../shared/schemas/tv-schemas.js';
+import { validateHost } from './host-handlers.js';
 import { initiateSpin, getRound as getSpinWheelRound, handleVeto } from '../services/spin-wheel.js';
 import { broadcastSpinWheelResult } from '../services/dj-broadcaster.js';
 import { cancelSessionTimer } from '../services/timer-scheduler.js';
@@ -157,5 +159,20 @@ export function registerSongHandlers(
     if (!sessionId || !userId) return;
 
     await handleModeChange(sessionId, parsed.data.mode, userId, displayName ?? 'Unknown');
+  });
+
+  // Manual song play handler (suggestion-only mode)
+  socket.on(EVENTS.SONG_MANUAL_PLAY, async (data: unknown) => {
+    try {
+      const { sessionId } = socket.data;
+      if (!sessionId) return;
+      await validateHost(socket);
+      const parsed = songManualPlaySchema.parse(data);
+      await handleManualSongPlay(sessionId, parsed);
+    } catch (error) {
+      if (!(error instanceof Error && error.message === 'Not host')) {
+        console.error('[song-handlers] song:manualPlay error:', error);
+      }
+    }
   });
 }

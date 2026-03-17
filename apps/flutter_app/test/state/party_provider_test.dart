@@ -1686,4 +1686,111 @@ void main() {
       expect(provider.tvNowPlayingVideoId, 'vid123');
     });
   });
+
+  group('Suggestion-only mode', () {
+    late PartyProvider provider;
+
+    setUp(() {
+      provider = PartyProvider(wakelockToggle: (_) {});
+    });
+
+    test('setLastQueuedSong updates all fields and notifies listeners', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.setLastQueuedSong(
+        songTitle: 'Bohemian Rhapsody',
+        artist: 'Queen',
+        videoId: 'yt-vid-123',
+        catalogTrackId: 'cat-1',
+      );
+
+      expect(provider.lastQueuedSongTitle, 'Bohemian Rhapsody');
+      expect(provider.lastQueuedArtist, 'Queen');
+      expect(provider.lastQueuedVideoId, 'yt-vid-123');
+      expect(provider.lastQueuedCatalogTrackId, 'cat-1');
+      expect(notifyCount, 1);
+    });
+
+    test('clearLastQueuedSong resets all fields and notifies listeners', () {
+      provider.setLastQueuedSong(
+        songTitle: 'Test',
+        artist: 'Artist',
+        videoId: 'vid',
+        catalogTrackId: 'cat',
+      );
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.clearLastQueuedSong();
+
+      expect(provider.lastQueuedSongTitle, isNull);
+      expect(provider.lastQueuedArtist, isNull);
+      expect(provider.lastQueuedVideoId, isNull);
+      expect(provider.lastQueuedCatalogTrackId, isNull);
+      expect(notifyCount, 1);
+    });
+
+    test('hasLastQueuedSong returns true when song is set', () {
+      expect(provider.hasLastQueuedSong, isFalse);
+
+      provider.setLastQueuedSong(
+        songTitle: 'Test',
+        artist: 'Artist',
+        videoId: 'vid',
+        catalogTrackId: 'cat',
+      );
+
+      expect(provider.hasLastQueuedSong, isTrue);
+    });
+
+    test('isSuggestionOnlyMode returns true when TV not paired', () {
+      expect(provider.isSuggestionOnlyMode, isTrue);
+
+      provider.setTvStatus(TvConnectionStatus.connected);
+      expect(provider.isSuggestionOnlyMode, isFalse);
+    });
+
+    test('tvDegraded field set and clear', () {
+      expect(provider.tvDegraded, isFalse);
+
+      provider.setTvDegraded(true);
+      expect(provider.tvDegraded, isTrue);
+
+      provider.setTvDegraded(false);
+      expect(provider.tvDegraded, isFalse);
+    });
+
+    test('onDjStateUpdate clears lastQueuedSong when transitioning into songSelection', () {
+      provider.setLastQueuedSong(
+        songTitle: 'Test',
+        artist: 'Artist',
+        videoId: 'vid',
+        catalogTrackId: 'cat',
+      );
+
+      // Transition: song -> songSelection (new round)
+      provider.onDjStateUpdate(state: DJState.song);
+      provider.onDjStateUpdate(state: DJState.songSelection);
+
+      expect(provider.hasLastQueuedSong, isFalse);
+    });
+
+    test('onDjStateUpdate clears lastQueuedSong when transitioning out of song state', () {
+      provider.onDjStateUpdate(state: DJState.song);
+
+      provider.setLastQueuedSong(
+        songTitle: 'Test',
+        artist: 'Artist',
+        videoId: 'vid',
+        catalogTrackId: 'cat',
+      );
+
+      // Transition: song -> ceremony
+      provider.onDjStateUpdate(state: DJState.ceremony);
+
+      expect(provider.hasLastQueuedSong, isFalse);
+    });
+  });
 }

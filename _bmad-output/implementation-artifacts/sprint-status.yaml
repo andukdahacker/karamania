@@ -93,7 +93,7 @@ development_status:
   5-6-spin-the-wheel-mode: done
   5-7-tv-pairing-and-youtube-lounge-api: done
   5-8-song-detection-and-metadata-resolution: done
-  5-9-suggestion-only-mode: backlog
+  5-9-suggestion-only-mode: done
   epic-5-retrospective: optional
 
   # Epic 6: Media Capture & Sharing (5 stories)

@@ -205,7 +205,16 @@ class PartyProvider extends ChangeNotifier {
   String? _detectedSongTitle;
   String? _detectedArtist;
   String? _detectedThumbnail;
-  String? _detectedSource; // 'catalog', 'api-parsed', 'api-raw'
+  String? _detectedSource; // 'catalog', 'api-parsed', 'api-raw', 'manual'
+
+  // Last selected song info (populated from song:queued event)
+  String? _lastQueuedSongTitle;
+  String? _lastQueuedArtist;
+  String? _lastQueuedVideoId;
+  String? _lastQueuedCatalogTrackId;
+
+  // TV degradation notification
+  bool _tvDegraded = false;
 
   // Lightstick & hype state
   bool _isLightstickMode = false;
@@ -302,6 +311,13 @@ class PartyProvider extends ChangeNotifier {
   String? get detectedThumbnail => _detectedThumbnail;
   String? get detectedSource => _detectedSource;
   bool get hasDetectedSong => _detectedSongTitle != null;
+  String? get lastQueuedSongTitle => _lastQueuedSongTitle;
+  String? get lastQueuedArtist => _lastQueuedArtist;
+  String? get lastQueuedVideoId => _lastQueuedVideoId;
+  String? get lastQueuedCatalogTrackId => _lastQueuedCatalogTrackId;
+  bool get hasLastQueuedSong => _lastQueuedSongTitle != null;
+  bool get isSuggestionOnlyMode => !isTvPaired;
+  bool get tvDegraded => _tvDegraded;
 
   /// Whether this client is the current singer (performer).
   bool get isCurrentSinger =>
@@ -630,6 +646,32 @@ class PartyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setLastQueuedSong({
+    required String songTitle,
+    required String artist,
+    required String videoId,
+    required String catalogTrackId,
+  }) {
+    _lastQueuedSongTitle = songTitle;
+    _lastQueuedArtist = artist;
+    _lastQueuedVideoId = videoId;
+    _lastQueuedCatalogTrackId = catalogTrackId;
+    notifyListeners();
+  }
+
+  void clearLastQueuedSong() {
+    _lastQueuedSongTitle = null;
+    _lastQueuedArtist = null;
+    _lastQueuedVideoId = null;
+    _lastQueuedCatalogTrackId = null;
+    notifyListeners();
+  }
+
+  void setTvDegraded(bool degraded) {
+    _tvDegraded = degraded;
+    notifyListeners();
+  }
+
   void updateMyVote(String catalogTrackId, String vote) {
     _myQuickPickVotes = {..._myQuickPickVotes, catalogTrackId: vote};
     notifyListeners();
@@ -714,6 +756,18 @@ class PartyProvider extends ChangeNotifier {
       _isLightstickMode = false;
       _isHypeCooldown = false;
       _hypeCooldownEnd = null;
+      // Clear last queued song when leaving song state
+      _lastQueuedSongTitle = null;
+      _lastQueuedArtist = null;
+      _lastQueuedVideoId = null;
+      _lastQueuedCatalogTrackId = null;
+    }
+    // Clear last queued song when entering songSelection (new round starting)
+    if (state == DJState.songSelection && _djState != DJState.songSelection) {
+      _lastQueuedSongTitle = null;
+      _lastQueuedArtist = null;
+      _lastQueuedVideoId = null;
+      _lastQueuedCatalogTrackId = null;
     }
     _djState = state;
     _ceremonyType = ceremonyType;
@@ -906,6 +960,11 @@ class PartyProvider extends ChangeNotifier {
     _detectedArtist = null;
     _detectedThumbnail = null;
     _detectedSource = null;
+    _lastQueuedSongTitle = null;
+    _lastQueuedArtist = null;
+    _lastQueuedVideoId = null;
+    _lastQueuedCatalogTrackId = null;
+    _tvDegraded = false;
     if (_wakelockEnabled) {
       _wakelockEnabled = false;
       _wakelockToggle(false);
@@ -926,6 +985,11 @@ class PartyProvider extends ChangeNotifier {
     _detectedArtist = null;
     _detectedThumbnail = null;
     _detectedSource = null;
+    _lastQueuedSongTitle = null;
+    _lastQueuedArtist = null;
+    _lastQueuedVideoId = null;
+    _lastQueuedCatalogTrackId = null;
+    _tvDegraded = false;
     if (_wakelockEnabled) {
       _wakelockEnabled = false;
       _wakelockToggle(false);
@@ -942,6 +1006,11 @@ class PartyProvider extends ChangeNotifier {
   @override
   void dispose() {
     _momentCardTimer?.cancel();
+    _lastQueuedSongTitle = null;
+    _lastQueuedArtist = null;
+    _lastQueuedVideoId = null;
+    _lastQueuedCatalogTrackId = null;
+    _tvDegraded = false;
     super.dispose();
   }
 
@@ -952,6 +1021,11 @@ class PartyProvider extends ChangeNotifier {
     _detectedArtist = null;
     _detectedThumbnail = null;
     _detectedSource = null;
+    _lastQueuedSongTitle = null;
+    _lastQueuedArtist = null;
+    _lastQueuedVideoId = null;
+    _lastQueuedCatalogTrackId = null;
+    _tvDegraded = false;
     if (_wakelockEnabled) {
       _wakelockEnabled = false;
       _wakelockToggle(false);

@@ -248,6 +248,15 @@ class Copy {
   static const String unknownSong = 'Unknown Song';
   static const String unknownArtist = 'Unknown Artist';
 
+  // Suggestion-only mode
+  static const String upNext = 'Up Next';
+  static const String enterOnKaraokeMachine = 'Enter this on the karaoke machine';
+  static const String markAsPlaying = 'Mark as Playing';
+  static const String songMarkedPlaying = 'Marked as Playing';
+  static const String tvDisconnectedSuggestionMode =
+      'TV disconnected. Continuing in suggestion-only mode.';
+  static const String dismiss = 'Dismiss';
+
   // Mode toggle
   static const String modeQuickPick = 'Quick Pick';
   static const String modeSpinWheel = 'Spin the Wheel';

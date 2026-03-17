@@ -400,6 +400,19 @@ class SocketClient {
     on('song:queued', (data) {
       final payload = data as Map<String, dynamic>;
       final catalogTrackId = payload['catalogTrackId'] as String;
+      final songTitle = payload['songTitle'] as String;
+      final artist = payload['artist'] as String;
+      final videoId = payload['youtubeVideoId'] as String;
+
+      // Store selected song for suggestion-only display
+      _partyProvider?.setLastQueuedSong(
+        songTitle: songTitle,
+        artist: artist,
+        videoId: videoId,
+        catalogTrackId: catalogTrackId,
+      );
+
+      // Existing quick-pick/spin-wheel resolution logic (unchanged)
       if (_partyProvider?.quickPickSongs.isNotEmpty ?? false) {
         _partyProvider?.onQuickPickResolved(catalogTrackId);
         Timer(const Duration(seconds: 2), () {
@@ -472,6 +485,13 @@ class SocketClient {
       final message = payload['message'] as String?;
       final status = TvConnectionStatus.values.firstWhere((e) => e.name == statusStr);
       _partyProvider?.setTvStatus(status, message: message);
+
+      // Detect graceful degradation from TV disconnect
+      final degraded = payload['degraded'] as bool? ?? false;
+      if (degraded) {
+        _partyProvider?.setTvDegraded(true);
+      }
+
       if (statusStr == 'disconnected') {
         _partyProvider?.clearDetectedSong();
       }
@@ -602,6 +622,17 @@ class SocketClient {
 
   void unpairTv() {
     _socket?.emit('tv:unpair');
+  }
+
+  void markSongAsPlaying() {
+    final provider = _partyProvider;
+    if (provider == null || !provider.hasLastQueuedSong) return;
+    _socket?.emit('song:manualPlay', {
+      'catalogTrackId': provider.lastQueuedCatalogTrackId,
+      'songTitle': provider.lastQueuedSongTitle,
+      'artist': provider.lastQueuedArtist,
+      'youtubeVideoId': provider.lastQueuedVideoId,
+    });
   }
 
   void emitMomentCardShared() {
