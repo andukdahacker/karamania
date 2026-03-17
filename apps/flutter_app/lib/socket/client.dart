@@ -472,6 +472,9 @@ class SocketClient {
       final message = payload['message'] as String?;
       final status = TvConnectionStatus.values.firstWhere((e) => e.name == statusStr);
       _partyProvider?.setTvStatus(status, message: message);
+      if (statusStr == 'disconnected') {
+        _partyProvider?.clearDetectedSong();
+      }
     });
 
     on('tv:nowPlaying', (data) {
@@ -480,6 +483,20 @@ class SocketClient {
       final title = payload['title'] as String?;
       final state = payload['state'] as String;
       _partyProvider?.setTvNowPlaying(videoId, title, state);
+      // Clear resolved metadata when song stops — new metadata will arrive via song:detected for next song
+      if (state == 'idle') {
+        _partyProvider?.clearDetectedSong();
+      }
+    });
+
+    on('song:detected', (data) {
+      final payload = data as Map<String, dynamic>;
+      _partyProvider?.setDetectedSong(
+        songTitle: payload['songTitle'] as String,
+        artist: payload['artist'] as String?,
+        thumbnail: payload['thumbnail'] as String?,
+        source: payload['source'] as String?,
+      );
     });
 
     // Hype cooldown enforced by server

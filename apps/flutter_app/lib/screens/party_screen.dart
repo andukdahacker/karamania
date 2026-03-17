@@ -31,6 +31,7 @@ import 'package:karamania/widgets/quick_pick_overlay.dart';
 import 'package:karamania/widgets/spin_the_wheel_overlay.dart';
 import 'package:karamania/widgets/song_mode_toggle.dart';
 import 'package:karamania/widgets/hype_signal_button.dart';
+import 'package:karamania/widgets/now_playing_bar.dart';
 import 'package:go_router/go_router.dart';
 
 class PartyScreen extends StatefulWidget {
@@ -179,6 +180,16 @@ class _PartyScreenState extends State<PartyScreen>
         child: Stack(
           children: [
             _buildPartyContent(context, partyProvider, displayVibe),
+            // Now Playing bar — top of screen during song state
+            if (partyProvider.djState == DJState.song &&
+                !partyProvider.isLightstickMode &&
+                partyProvider.hasDetectedSong)
+              Positioned(
+                top: DJTokens.spaceMd,
+                left: DJTokens.spaceMd,
+                right: DJTokens.spaceMd,
+                child: const NowPlayingBar(),
+              ),
             if (_showLoadingSkeleton)
               _buildLoadingSkeleton(context, displayVibe),
             if (partyProvider.isCatchingUp)

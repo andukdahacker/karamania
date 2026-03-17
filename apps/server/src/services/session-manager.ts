@@ -19,6 +19,7 @@ import { calculateScoreIncrement, ACTION_TIER_MAP } from '../services/participat
 import { generateAward, AWARD_TEMPLATES, AwardTone, type AwardContext } from '../services/award-generator.js';
 import { clearSessionStreaks } from '../services/streak-tracker.js';
 import { clearPool, markSongSung } from '../services/song-pool.js';
+import { detectSong } from '../services/song-detection.js';
 import { startRound, getRound, resolveByTimeout, clearRound } from '../services/quick-pick.js';
 import { computeSuggestions } from '../services/suggestion-engine.js';
 import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged } from '../services/dj-broadcaster.js';
@@ -65,21 +66,56 @@ export async function pairTv(sessionId: string, pairingCode: string): Promise<vo
 
   tv.onNowPlaying((event: NowPlayingEvent) => {
     const io = getIO();
-    if (io) {
-      io.to(sessionId).emit(EVENTS.TV_NOW_PLAYING, {
-        videoId: event.videoId,
-        title: event.title,
-        state: event.state,
-      });
-      io.to(sessionId).emit(EVENTS.SONG_DETECTED, {
-        videoId: event.videoId,
-      });
-    }
-    appendEvent(sessionId, {
-      type: 'song:detected',
-      ts: Date.now(),
-      data: { videoId: event.videoId },
+    if (!io) return;
+
+    // Always emit raw nowPlaying immediately (for TV status display)
+    io.to(sessionId).emit(EVENTS.TV_NOW_PLAYING, {
+      videoId: event.videoId,
+      title: event.title,
+      state: event.state,
     });
+
+    // Skip metadata resolution for non-playing states
+    if (event.state !== 'playing') return;
+
+    // Resolve metadata asynchronously (fire-and-forget with emit on success)
+    detectSong(event.videoId)
+      .then((detected) => {
+        if (detected) {
+          io.to(sessionId).emit(EVENTS.SONG_DETECTED, {
+            videoId: detected.videoId,
+            songTitle: detected.songTitle,
+            artist: detected.artist,
+            channel: detected.channel,
+            thumbnail: detected.thumbnail,
+            source: detected.source,
+          });
+          appendEvent(sessionId, {
+            type: 'song:detected',
+            ts: Date.now(),
+            data: {
+              videoId: detected.videoId,
+              title: detected.songTitle,
+              artist: detected.artist,
+            },
+          });
+
+          // Mark song as sung in pool for suggestion engine deduplication
+          markSongSung(sessionId, detected.songTitle, detected.artist);
+        }
+      })
+      .catch((err) => {
+        console.error('[session-manager] Song detection failed:', err);
+        // Emit minimal detection so UI still updates
+        io.to(sessionId).emit(EVENTS.SONG_DETECTED, {
+          videoId: event.videoId,
+          songTitle: event.title ?? 'Unknown',
+          artist: null,
+          channel: null,
+          thumbnail: null,
+          source: 'api-raw',
+        });
+      });
   });
 
   tv.onStatusChange((status: TvConnectionStatus) => {

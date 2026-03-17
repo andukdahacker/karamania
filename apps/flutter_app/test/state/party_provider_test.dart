@@ -1609,4 +1609,81 @@ void main() {
       expect(provider.tvPairingState, LoadingState.loading);
     });
   });
+
+  group('Detected song state', () {
+    late PartyProvider provider;
+    setUp(() {
+      provider = PartyProvider(wakelockToggle: (_) {});
+    });
+
+    test('initial detected song state is null', () {
+      expect(provider.detectedSongTitle, isNull);
+      expect(provider.detectedArtist, isNull);
+      expect(provider.detectedThumbnail, isNull);
+      expect(provider.detectedSource, isNull);
+      expect(provider.hasDetectedSong, isFalse);
+    });
+
+    test('setDetectedSong updates all metadata fields and notifies listeners', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.setDetectedSong(
+        songTitle: 'Bohemian Rhapsody',
+        artist: 'Queen',
+        thumbnail: 'https://thumb.jpg',
+        source: 'catalog',
+      );
+
+      expect(provider.detectedSongTitle, 'Bohemian Rhapsody');
+      expect(provider.detectedArtist, 'Queen');
+      expect(provider.detectedThumbnail, 'https://thumb.jpg');
+      expect(provider.detectedSource, 'catalog');
+      expect(provider.hasDetectedSong, isTrue);
+      expect(notifyCount, 1);
+    });
+
+    test('clearDetectedSong resets all metadata fields and notifies listeners', () {
+      provider.setDetectedSong(
+        songTitle: 'Hello',
+        artist: 'Adele',
+        thumbnail: 'https://thumb.jpg',
+        source: 'api-parsed',
+      );
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.clearDetectedSong();
+
+      expect(provider.detectedSongTitle, isNull);
+      expect(provider.detectedArtist, isNull);
+      expect(provider.detectedThumbnail, isNull);
+      expect(provider.detectedSource, isNull);
+      expect(provider.hasDetectedSong, isFalse);
+      expect(notifyCount, 1);
+    });
+
+    test('hasDetectedSong is true when songTitle is set, false when cleared', () {
+      expect(provider.hasDetectedSong, isFalse);
+
+      provider.setDetectedSong(songTitle: 'Test Song');
+      expect(provider.hasDetectedSong, isTrue);
+
+      provider.clearDetectedSong();
+      expect(provider.hasDetectedSong, isFalse);
+    });
+
+    test('setDetectedSong does NOT modify tvNowPlayingVideoId', () {
+      provider.setTvNowPlaying('vid123', 'Test', 'playing');
+
+      provider.setDetectedSong(
+        songTitle: 'Test Song',
+        artist: 'Test Artist',
+      );
+
+      // TV video ID is a separate concern
+      expect(provider.tvNowPlayingVideoId, 'vid123');
+    });
+  });
 }

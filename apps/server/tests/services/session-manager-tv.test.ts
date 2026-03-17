@@ -163,6 +163,12 @@ vi.mock('../../src/integrations/lounge-api.js', () => ({
   resetForTest: vi.fn(),
 }));
 
+const mockDetectSong = vi.fn();
+vi.mock('../../src/services/song-detection.js', () => ({
+  detectSong: (...args: unknown[]) => mockDetectSong(...args),
+  resetDetectionCache: vi.fn(),
+}));
+
 import {
   pairTv,
   unpairTv,
@@ -236,7 +242,8 @@ describe('session-manager TV integration', () => {
       expect(getTvConnection('session-1')).toBe(mockTv);
     });
 
-    it('registers nowPlaying callback that emits events', async () => {
+    it('registers nowPlaying callback that emits TV_NOW_PLAYING immediately', async () => {
+      mockDetectSong.mockResolvedValue(null);
       await pairTv('session-1', 'ABC123');
 
       // Get the registered callback
@@ -252,13 +259,8 @@ describe('session-manager TV integration', () => {
         title: 'Test Song',
         state: 'playing',
       });
-      expect(mockEmit).toHaveBeenCalledWith('song:detected', {
-        videoId: 'vid123',
-      });
-      expect(mockAppendEvent).toHaveBeenCalledWith('session-1', expect.objectContaining({
-        type: 'song:detected',
-        data: { videoId: 'vid123' },
-      }));
+      // song:detected is emitted asynchronously via detectSong — tested in session-manager-detection.test.ts
+      expect(mockDetectSong).toHaveBeenCalledWith('vid123');
     });
 
     it('registers statusChange callback that removes on disconnect', async () => {

@@ -201,6 +201,12 @@ class PartyProvider extends ChangeNotifier {
   bool _tvSkipped = false;
   LoadingState _tvPairingState = LoadingState.idle;
 
+  // Detected song metadata (enrichment on top of existing _tvNowPlayingVideoId)
+  String? _detectedSongTitle;
+  String? _detectedArtist;
+  String? _detectedThumbnail;
+  String? _detectedSource; // 'catalog', 'api-parsed', 'api-raw'
+
   // Lightstick & hype state
   bool _isLightstickMode = false;
   Color _lightstickColor = const Color(0xFFFFD700); // default: vibe accent
@@ -291,6 +297,11 @@ class PartyProvider extends ChangeNotifier {
   bool get isTvPaired => _tvStatus == TvConnectionStatus.connected;
   bool get tvSkipped => _tvSkipped;
   LoadingState get tvPairingState => _tvPairingState;
+  String? get detectedSongTitle => _detectedSongTitle;
+  String? get detectedArtist => _detectedArtist;
+  String? get detectedThumbnail => _detectedThumbnail;
+  String? get detectedSource => _detectedSource;
+  bool get hasDetectedSong => _detectedSongTitle != null;
 
   /// Whether this client is the current singer (performer).
   bool get isCurrentSinger =>
@@ -598,6 +609,27 @@ class PartyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setDetectedSong({
+    required String songTitle,
+    String? artist,
+    String? thumbnail,
+    String? source,
+  }) {
+    _detectedSongTitle = songTitle;
+    _detectedArtist = artist;
+    _detectedThumbnail = thumbnail;
+    _detectedSource = source;
+    notifyListeners();
+  }
+
+  void clearDetectedSong() {
+    _detectedSongTitle = null;
+    _detectedArtist = null;
+    _detectedThumbnail = null;
+    _detectedSource = null;
+    notifyListeners();
+  }
+
   void updateMyVote(String catalogTrackId, String vote) {
     _myQuickPickVotes = {..._myQuickPickVotes, catalogTrackId: vote};
     notifyListeners();
@@ -870,6 +902,10 @@ class PartyProvider extends ChangeNotifier {
     _timerDurationMs = null;
     _ceremonyType = null;
     _clearCeremonyState();
+    _detectedSongTitle = null;
+    _detectedArtist = null;
+    _detectedThumbnail = null;
+    _detectedSource = null;
     if (_wakelockEnabled) {
       _wakelockEnabled = false;
       _wakelockToggle(false);
@@ -886,6 +922,10 @@ class PartyProvider extends ChangeNotifier {
     _timerDurationMs = null;
     _ceremonyType = null;
     _clearCeremonyState();
+    _detectedSongTitle = null;
+    _detectedArtist = null;
+    _detectedThumbnail = null;
+    _detectedSource = null;
     if (_wakelockEnabled) {
       _wakelockEnabled = false;
       _wakelockToggle(false);
@@ -908,6 +948,10 @@ class PartyProvider extends ChangeNotifier {
   /// Disable wakelock when leaving the session.
   void onSessionEnd() {
     _clearCeremonyState();
+    _detectedSongTitle = null;
+    _detectedArtist = null;
+    _detectedThumbnail = null;
+    _detectedSource = null;
     if (_wakelockEnabled) {
       _wakelockEnabled = false;
       _wakelockToggle(false);

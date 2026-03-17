@@ -38,7 +38,7 @@ export type SessionEvent =
   | { type: 'system:recovery'; ts: number; data: { recoveredState: DJState; songCount: number } }
   | { type: 'tv:paired'; ts: number; userId: string }
   | { type: 'tv:unpaired'; ts: number; userId: string }
-  | { type: 'song:detected'; ts: number; data: { videoId: string } };
+  | { type: 'song:detected'; ts: number; data: { videoId: string; title: string; artist: string } };
 
 const streams = new Map<string, SessionEvent[]>();
 

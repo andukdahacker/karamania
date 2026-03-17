@@ -80,6 +80,76 @@ async function fetchPlaylistPage(
   throw new Error(`Failed after ${MAX_RETRIES} retries`);
 }
 
+export interface VideoDetails {
+  videoId: string;
+  title: string;
+  channelTitle: string;
+  thumbnail: string;
+  duration: string; // ISO 8601 duration, e.g., "PT3M45S"
+}
+
+interface VideoListResponse {
+  items: Array<{
+    id: string;
+    snippet: {
+      title: string;
+      channelTitle: string;
+      thumbnails: { medium: { url: string } };
+    };
+    contentDetails: { duration: string };
+  }>;
+}
+
+export async function fetchVideoDetails(
+  videoIds: string[],
+  apiKey: string,
+): Promise<Map<string, VideoDetails>> {
+  if (videoIds.length === 0) {
+    return new Map();
+  }
+
+  if (videoIds.length > 50) {
+    throw new Error(`fetchVideoDetails accepts at most 50 video IDs per call, got ${videoIds.length}`);
+  }
+
+  const params = new URLSearchParams({
+    part: 'snippet,contentDetails',
+    id: videoIds.join(','),
+    key: apiKey,
+  });
+
+  const url = `${YOUTUBE_API_BASE}/videos?${params.toString()}`;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+
+    if (response.ok) {
+      const data = (await response.json()) as VideoListResponse;
+      const result = new Map<string, VideoDetails>();
+      for (const item of data.items) {
+        result.set(item.id, {
+          videoId: item.id,
+          title: item.snippet.title,
+          channelTitle: item.snippet.channelTitle,
+          thumbnail: item.snippet.thumbnails?.medium?.url ?? '',
+          duration: item.contentDetails.duration,
+        });
+      }
+      return result;
+    }
+
+    if (response.status === 429 || response.status >= 500) {
+      const delay = Math.pow(2, attempt) * 1000;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      continue;
+    }
+
+    throw new Error(`YouTube API error: ${response.status} ${response.statusText}`);
+  }
+
+  throw new Error(`Failed after ${MAX_RETRIES} retries`);
+}
+
 export async function fetchPlaylistTracks(playlistId: string, apiKey: string): Promise<PlaylistResult> {
   const tracks: PlaylistTrack[] = [];
   let unparseable = 0;
