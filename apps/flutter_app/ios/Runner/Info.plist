@@ -36,6 +36,10 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Karamania needs camera access to capture party moments</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Karamania needs microphone access to record party audio</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

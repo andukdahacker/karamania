@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
+/// Capture types — must stay in sync with server-side type union
+/// in capture-handlers.ts: 'photo' | 'video' | 'audio'
+enum CaptureType { photo, video, audio }
+
 class CaptureProvider extends ChangeNotifier {
   // Bubble visibility state
   bool _isBubbleVisible = false;
@@ -11,6 +15,30 @@ class CaptureProvider extends ChangeNotifier {
   DateTime? _lastBubbleShownAt;
   static const _bubbleCooldown = Duration(seconds: 60);
   static const _autoDismissDuration = Duration(seconds: 15);
+
+  // --- Capture flow state (Story 6.2) ---
+
+  // Capture mode selector visibility (after bubble pop)
+  bool _isSelectorVisible = false;
+  bool get isSelectorVisible => _isSelectorVisible;
+
+  // Active capture state
+  CaptureType? _activeCaptureType;
+  CaptureType? get activeCaptureType => _activeCaptureType;
+
+  bool _isCapturing = false;
+  bool get isCapturing => _isCapturing;
+
+  // Track trigger source for analytics
+  String _captureTriggerType = 'manual';
+  String get captureTriggerType => _captureTriggerType;
+
+  // Video/audio countdown seconds
+  int _recordingSecondsRemaining = 0;
+  int get recordingSecondsRemaining => _recordingSecondsRemaining;
+
+  // Recording countdown tick timer
+  Timer? _countdownTimer;
 
   // Getters
   bool get isBubbleVisible => _isBubbleVisible;
@@ -38,12 +66,65 @@ class CaptureProvider extends ChangeNotifier {
     });
   }
 
-  // Called when bubble is tapped (Story 6.2 will handle capture flow)
+  // Called when bubble is tapped — shows capture mode selector
   void onBubbleTapped() {
     _autoDismissTimer?.cancel();
     _isBubbleVisible = false;
+    _captureTriggerType = _currentTriggerType ?? 'manual';
     _currentTriggerType = null;
-    // TODO Story 6.2: Initiate inline capture flow
+    _isSelectorVisible = true;
+    notifyListeners();
+  }
+
+  // Called when persistent capture icon is tapped (FR39)
+  void onManualCaptureTriggered() {
+    if (_isCapturing || _isSelectorVisible) return;
+    _captureTriggerType = 'manual';
+    _isSelectorVisible = true;
+    notifyListeners();
+  }
+
+  // Called when a capture type is selected from the mode selector
+  void onCaptureTypeSelected(CaptureType type) {
+    _isSelectorVisible = false;
+    _activeCaptureType = type;
+    _isCapturing = true;
+
+    // M2 fix: only start countdown for audio — video uses native picker
+    // which enforces maxDuration itself (countdown would be invisible)
+    if (type == CaptureType.audio) {
+      _recordingSecondsRemaining = 10;
+      _startCountdown();
+    }
+
+    notifyListeners();
+  }
+
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _recordingSecondsRemaining--;
+      if (_recordingSecondsRemaining <= 0) {
+        timer.cancel();
+      }
+      notifyListeners();
+    });
+  }
+
+  void onCaptureComplete() {
+    _countdownTimer?.cancel();
+    _isCapturing = false;
+    _activeCaptureType = null;
+    _recordingSecondsRemaining = 0;
+    notifyListeners();
+  }
+
+  void onCaptureCancelled() {
+    _countdownTimer?.cancel();
+    _isSelectorVisible = false;
+    _isCapturing = false;
+    _activeCaptureType = null;
+    _recordingSecondsRemaining = 0;
     notifyListeners();
   }
 
@@ -52,21 +133,29 @@ class CaptureProvider extends ChangeNotifier {
     _autoDismissTimer?.cancel();
     _isBubbleVisible = false;
     _currentTriggerType = null;
+    _isSelectorVisible = false;
     notifyListeners();
   }
 
   // Called on session end cleanup
   void clearState() {
     _autoDismissTimer?.cancel();
+    _countdownTimer?.cancel();
     _isBubbleVisible = false;
     _currentTriggerType = null;
     _lastBubbleShownAt = null;
+    _isSelectorVisible = false;
+    _isCapturing = false;
+    _activeCaptureType = null;
+    _recordingSecondsRemaining = 0;
+    _captureTriggerType = 'manual';
     notifyListeners();
   }
 
   @override
   void dispose() {
     _autoDismissTimer?.cancel();
+    _countdownTimer?.cancel();
     super.dispose();
   }
 }

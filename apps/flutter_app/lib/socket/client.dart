@@ -648,6 +648,28 @@ class SocketClient {
     });
   }
 
+  void emitCaptureStarted({
+    required String captureType,
+    required String triggerType,
+  }) {
+    _socket?.emit('capture:started', {
+      'captureType': captureType,
+      'triggerType': triggerType,
+    });
+  }
+
+  void emitCaptureComplete({
+    required String captureType,
+    required String triggerType,
+    int? durationMs,
+  }) {
+    _socket?.emit('capture:complete', {
+      'captureType': captureType,
+      'triggerType': triggerType,
+      if (durationMs != null) 'durationMs': durationMs,
+    });
+  }
+
   void emitMomentCardShared() {
     _socket?.emit('card:shared', {
       'type': 'moment',

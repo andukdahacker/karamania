@@ -136,5 +136,147 @@ void main() {
       provider.clearState();
       expect(notifyCount, 1);
     });
+
+    // Story 6.2 — Capture flow state tests
+
+    test('initial capture flow state: selector not visible, not capturing', () {
+      expect(provider.isSelectorVisible, isFalse);
+      expect(provider.isCapturing, isFalse);
+      expect(provider.activeCaptureType, isNull);
+      expect(provider.recordingSecondsRemaining, 0);
+      expect(provider.captureTriggerType, 'manual');
+    });
+
+    test('onBubbleTapped sets isSelectorVisible true and isBubbleVisible false', () {
+      provider.onCaptureBubbleTriggered(triggerType: 'session_start');
+      provider.onBubbleTapped();
+      expect(provider.isSelectorVisible, isTrue);
+      expect(provider.isBubbleVisible, isFalse);
+    });
+
+    test('onBubbleTapped preserves triggerType for capture analytics', () {
+      provider.onCaptureBubbleTriggered(triggerType: 'post_ceremony');
+      provider.onBubbleTapped();
+      expect(provider.captureTriggerType, 'post_ceremony');
+    });
+
+    test('onManualCaptureTriggered sets isSelectorVisible true with triggerType manual', () {
+      provider.onManualCaptureTriggered();
+      expect(provider.isSelectorVisible, isTrue);
+      expect(provider.captureTriggerType, 'manual');
+    });
+
+    test('onManualCaptureTriggered ignored when already capturing', () {
+      provider.onCaptureTypeSelected(CaptureType.photo);
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onManualCaptureTriggered();
+      expect(notifyCount, 0);
+    });
+
+    test('onManualCaptureTriggered ignored when selector visible', () {
+      provider.onManualCaptureTriggered(); // makes selector visible
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.onManualCaptureTriggered(); // should be ignored
+      expect(notifyCount, 0);
+    });
+
+    test('onCaptureTypeSelected(photo) sets isCapturing true and activeCaptureType photo', () {
+      provider.onCaptureTypeSelected(CaptureType.photo);
+      expect(provider.isCapturing, isTrue);
+      expect(provider.activeCaptureType, CaptureType.photo);
+      expect(provider.isSelectorVisible, isFalse);
+    });
+
+    test('onCaptureTypeSelected(video) sets capturing but no countdown (native picker)', () {
+      provider.onCaptureTypeSelected(CaptureType.video);
+      expect(provider.isCapturing, isTrue);
+      expect(provider.activeCaptureType, CaptureType.video);
+      expect(provider.recordingSecondsRemaining, 0);
+    });
+
+    test('onCaptureTypeSelected(audio) starts countdown from 10', () {
+      provider.onCaptureTypeSelected(CaptureType.audio);
+      expect(provider.isCapturing, isTrue);
+      expect(provider.activeCaptureType, CaptureType.audio);
+      expect(provider.recordingSecondsRemaining, 10);
+    });
+
+    test('countdown decrements every second', () {
+      fakeAsync((async) {
+        final p = CaptureProvider();
+        p.onCaptureTypeSelected(CaptureType.audio);
+        expect(p.recordingSecondsRemaining, 10);
+
+        async.elapse(const Duration(seconds: 1));
+        expect(p.recordingSecondsRemaining, 9);
+
+        async.elapse(const Duration(seconds: 1));
+        expect(p.recordingSecondsRemaining, 8);
+
+        p.dispose();
+      });
+    });
+
+    test('countdown stops at 0', () {
+      fakeAsync((async) {
+        final p = CaptureProvider();
+        p.onCaptureTypeSelected(CaptureType.video);
+
+        async.elapse(const Duration(seconds: 5));
+        expect(p.recordingSecondsRemaining, 0);
+
+        // No further decrements
+        async.elapse(const Duration(seconds: 2));
+        expect(p.recordingSecondsRemaining, 0);
+
+        p.dispose();
+      });
+    });
+
+    test('onCaptureComplete resets all capture state', () {
+      provider.onCaptureTypeSelected(CaptureType.video);
+      provider.onCaptureComplete();
+
+      expect(provider.isCapturing, isFalse);
+      expect(provider.activeCaptureType, isNull);
+      expect(provider.recordingSecondsRemaining, 0);
+    });
+
+    test('onCaptureCancelled resets all capture state', () {
+      provider.onManualCaptureTriggered();
+      provider.onCaptureTypeSelected(CaptureType.audio);
+      provider.onCaptureCancelled();
+
+      expect(provider.isCapturing, isFalse);
+      expect(provider.isSelectorVisible, isFalse);
+      expect(provider.activeCaptureType, isNull);
+      expect(provider.recordingSecondsRemaining, 0);
+    });
+
+    test('clearState resets capture flow state (new fields)', () {
+      provider.onManualCaptureTriggered();
+      provider.onCaptureTypeSelected(CaptureType.audio);
+      provider.clearState();
+
+      expect(provider.isSelectorVisible, isFalse);
+      expect(provider.isCapturing, isFalse);
+      expect(provider.activeCaptureType, isNull);
+      expect(provider.recordingSecondsRemaining, 0);
+      expect(provider.captureTriggerType, 'manual');
+    });
+
+    test('dismissBubble also dismisses selector if open', () {
+      provider.onManualCaptureTriggered();
+      expect(provider.isSelectorVisible, isTrue);
+
+      provider.dismissBubble();
+      expect(provider.isSelectorVisible, isFalse);
+    });
   });
 }

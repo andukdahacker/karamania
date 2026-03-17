@@ -264,6 +264,14 @@ class Copy {
   // Capture bubble (Story 6.1)
   static const String captureMoment = 'Capture this moment!';
 
+  // Capture mode selector (Story 6.2)
+  static const String capturePhoto = 'Photo';
+  static const String captureVideo = 'Video';
+  static const String captureAudio = 'Audio';
+  static const String captureManual = 'Capture a moment';
+  static const String captureRecording = 'Recording...';
+  static const String captureRecordingStop = 'Tap to stop';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

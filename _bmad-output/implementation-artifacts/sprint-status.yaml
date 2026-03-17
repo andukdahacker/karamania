@@ -99,7 +99,7 @@ development_status:
   # Epic 6: Media Capture & Sharing (5 stories)
   epic-6: in-progress
   6-1-floating-capture-bubble: done
-  6-2-inline-media-capture: backlog
+  6-2-inline-media-capture: done
   6-3-media-tagging-and-background-upload: backlog
   6-4-server-side-media-storage: backlog
   6-5-reaction-peak-detection: backlog

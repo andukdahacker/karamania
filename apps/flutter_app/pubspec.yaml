@@ -21,6 +21,9 @@ dependencies:
   wakelock_plus: ^1.2.8
   flutter_soloud: ^3.4.6
   torch_light: ^1.1.0
+  image_picker: ^1.1.2
+  record: ^5.2.0
+  path_provider: ^2.1.5
   dart_open_fetch_runtime:
     git:
       url: https://github.com/andukdahacker/dart-open-fetch.git
