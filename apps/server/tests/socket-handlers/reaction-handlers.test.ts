@@ -37,8 +37,10 @@ vi.mock('../../src/services/rate-limiter.js', () => ({
 }));
 
 const mockRecordParticipationAction = vi.fn();
+const mockEmitCaptureBubble = vi.fn();
 vi.mock('../../src/services/session-manager.js', () => ({
   recordParticipationAction: (...args: unknown[]) => mockRecordParticipationAction(...args),
+  emitCaptureBubble: (...args: unknown[]) => mockEmitCaptureBubble(...args),
   persistDjState: vi.fn(),
 }));
 
@@ -76,6 +78,15 @@ vi.mock('../../src/services/streak-tracker.js', () => ({
   clearSessionStreaks: vi.fn(),
   clearUserStreak: vi.fn(),
   clearStreakStore: vi.fn(),
+}));
+
+const mockRecordReaction = vi.fn().mockReturnValue(false);
+const mockResetLastPeak = vi.fn();
+vi.mock('../../src/services/peak-detector.js', () => ({
+  recordReaction: (...args: unknown[]) => mockRecordReaction(...args),
+  resetLastPeak: (...args: unknown[]) => mockResetLastPeak(...args),
+  clearSession: vi.fn(),
+  clearAllSessions: vi.fn(),
 }));
 
 function createMockSocket(overrides: Partial<{ userId: string; sessionId: string; displayName: string }> = {}) {
@@ -408,6 +419,75 @@ describe('reaction-handlers', () => {
 
       expect(emittedToRoom).toHaveLength(0);
       expect(mockRecordParticipationAction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('peak detection triggering', () => {
+    it('calls emitCaptureBubble when recordReaction returns true', async () => {
+      setupSongState();
+      mockRecordReaction.mockReturnValue(true);
+      mockEmitCaptureBubble.mockReturnValue(true);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerReactionHandlers } = await import('../../src/socket-handlers/reaction-handlers.js');
+      registerReactionHandlers(socket as never, io as never);
+
+      await handlers.get('reaction:sent')!({ emoji: '🔥' });
+
+      expect(mockRecordReaction).toHaveBeenCalledWith('session-1', expect.any(Number));
+      expect(mockEmitCaptureBubble).toHaveBeenCalledWith('session-1', 'reaction_peak', 'song');
+      expect(mockResetLastPeak).not.toHaveBeenCalled();
+    });
+
+    it('resets peak cooldown when bubble is suppressed by capture-trigger', async () => {
+      setupSongState();
+      mockRecordReaction.mockReturnValue(true);
+      mockEmitCaptureBubble.mockReturnValue(false);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerReactionHandlers } = await import('../../src/socket-handlers/reaction-handlers.js');
+      registerReactionHandlers(socket as never, io as never);
+
+      await handlers.get('reaction:sent')!({ emoji: '🔥' });
+
+      expect(mockEmitCaptureBubble).toHaveBeenCalledWith('session-1', 'reaction_peak', 'song');
+      expect(mockResetLastPeak).toHaveBeenCalledWith('session-1');
+    });
+
+    it('does NOT call emitCaptureBubble when recordReaction returns false', async () => {
+      setupSongState();
+      mockRecordReaction.mockReturnValue(false);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerReactionHandlers } = await import('../../src/socket-handlers/reaction-handlers.js');
+      registerReactionHandlers(socket as never, io as never);
+
+      await handlers.get('reaction:sent')!({ emoji: '🔥' });
+
+      expect(mockRecordReaction).toHaveBeenCalled();
+      expect(mockEmitCaptureBubble).not.toHaveBeenCalled();
+    });
+
+    it('does not call recordReaction or emitCaptureBubble during non-song state', async () => {
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'lobby' as const });
+      mockGetSessionDjState.mockReturnValue(context);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerReactionHandlers } = await import('../../src/socket-handlers/reaction-handlers.js');
+      registerReactionHandlers(socket as never, io as never);
+
+      await handlers.get('reaction:sent')!({ emoji: '🔥' });
+
+      expect(mockRecordReaction).not.toHaveBeenCalled();
+      expect(mockEmitCaptureBubble).not.toHaveBeenCalled();
     });
   });
 

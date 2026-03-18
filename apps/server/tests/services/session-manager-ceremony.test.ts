@@ -114,7 +114,6 @@ vi.mock('../../src/services/capture-trigger.js', () => ({
   shouldEmitCaptureBubble: vi.fn().mockReturnValue(false),
   markBubbleEmitted: vi.fn(),
   clearCaptureTriggerState: vi.fn(),
-  emitReactionPeakBubble: vi.fn(),
 }));
 
 describe('session-manager ceremony orchestration', () => {

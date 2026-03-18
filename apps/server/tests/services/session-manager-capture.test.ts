@@ -167,7 +167,6 @@ vi.mock('../../src/services/capture-trigger.js', () => ({
   shouldEmitCaptureBubble: (...args: unknown[]) => mockShouldEmitCaptureBubble(...args),
   markBubbleEmitted: (...args: unknown[]) => mockMarkBubbleEmitted(...args),
   clearCaptureTriggerState: (...args: unknown[]) => mockClearCaptureTriggerState(...args),
-  emitReactionPeakBubble: vi.fn(),
 }));
 
 import { processTransition } from '../../src/dj-engine/machine.js';

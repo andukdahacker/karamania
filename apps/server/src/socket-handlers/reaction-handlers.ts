@@ -2,12 +2,13 @@ import type { Server as SocketIOServer } from 'socket.io';
 import type { AuthenticatedSocket } from '../shared/socket-types.js';
 import { EVENTS } from '../shared/events.js';
 import { recordUserEvent, checkRateLimit } from '../services/rate-limiter.js';
-import { recordParticipationAction } from '../services/session-manager.js';
+import { recordParticipationAction, emitCaptureBubble } from '../services/session-manager.js';
 import { getSessionDjState } from '../services/dj-state-store.js';
 import { recordActivity } from '../services/activity-tracker.js';
 import { DJState } from '../dj-engine/types.js';
 import { recordReactionStreak } from '../services/streak-tracker.js';
 import { appendEvent } from '../services/event-stream.js';
+import { recordReaction, resetLastPeak } from '../services/peak-detector.js';
 
 export function registerReactionHandlers(socket: AuthenticatedSocket, io: SocketIOServer): void {
   socket.on(EVENTS.REACTION_SENT, async (data: { emoji: string }) => {
@@ -57,5 +58,14 @@ export function registerReactionHandlers(socket: AuthenticatedSocket, io: Socket
       userId,
       data: { emoji: data.emoji, streak: streakCount },
     });
+
+    // Peak detection — server-side, consistent triggering (FR73)
+    const isPeak = recordReaction(sessionId, now);
+    if (isPeak) {
+      const emitted = emitCaptureBubble(sessionId, 'reaction_peak', context.state);
+      if (!emitted) {
+        resetLastPeak(sessionId);
+      }
+    }
   });
 }

@@ -18,6 +18,7 @@ import { appendEvent, flushEventStream, getEventStream, type SessionEvent } from
 import { calculateScoreIncrement, ACTION_TIER_MAP } from '../services/participation-scoring.js';
 import { generateAward, AWARD_TEMPLATES, AwardTone, type AwardContext } from '../services/award-generator.js';
 import { clearSessionStreaks } from '../services/streak-tracker.js';
+import { clearSession as clearPeakDetectorState } from '../services/peak-detector.js';
 import { clearPool, markSongSung } from '../services/song-pool.js';
 import { detectSong } from '../services/song-detection.js';
 import { startRound, getRound, resolveByTimeout, clearRound } from '../services/quick-pick.js';
@@ -1062,9 +1063,9 @@ export async function loadDjState(sessionId: string): Promise<DJContext | null> 
   }
 }
 
-/** Emit capture:bubble if allowed by cooldown/state, log to event stream. */
-function emitCaptureBubble(sessionId: string, triggerType: CaptureTriggerType, currentState?: DJState): void {
-  if (!shouldEmitCaptureBubble(sessionId, currentState)) return;
+/** Emit capture:bubble if allowed by cooldown/state, log to event stream. Returns true if emitted. */
+export function emitCaptureBubble(sessionId: string, triggerType: CaptureTriggerType, currentState?: DJState): boolean {
+  if (!shouldEmitCaptureBubble(sessionId, currentState)) return false;
   markBubbleEmitted(sessionId);
   const io = getIO();
   if (io) {
@@ -1078,6 +1079,7 @@ function emitCaptureBubble(sessionId: string, triggerType: CaptureTriggerType, c
     ts: Date.now(),
     data: { triggerType },
   });
+  return true;
 }
 
 export async function processDjTransition(
@@ -1372,6 +1374,7 @@ export async function endSession(
   clearDealtCards(sessionId);
   clearPool(sessionId);
   clearCaptureTriggerState(sessionId);
+  clearPeakDetectorState(sessionId);
   clearRound(sessionId);
   clearSpinWheelRound(sessionId);
   sessionModes.delete(sessionId);

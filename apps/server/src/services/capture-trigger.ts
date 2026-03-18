@@ -23,10 +23,3 @@ export function clearCaptureTriggerState(sessionId: string): void {
   lastBubbleEmittedAt.delete(sessionId);
 }
 
-// TODO Story 6.5: Reaction peak detection
-// Will call shouldEmitCaptureBubble() and markBubbleEmitted() from peak-detector service
-// Peak detection logic: sustained reaction rate spike above session baseline
-// Server-side detection ensures consistent triggering across all devices (FR73)
-export function emitReactionPeakBubble(_sessionId: string): void {
-  // Placeholder — implemented in Story 6.5
-}

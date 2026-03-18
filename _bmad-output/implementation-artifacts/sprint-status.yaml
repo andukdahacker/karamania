@@ -102,7 +102,7 @@ development_status:
   6-2-inline-media-capture: done
   6-3-media-tagging-and-background-upload: done
   6-4-server-side-media-storage: done
-  6-5-reaction-peak-detection: backlog
+  6-5-reaction-peak-detection: done
   epic-6-retrospective: optional
 
   # Epic 7: Interlude Games & Icebreaker (6 stories)

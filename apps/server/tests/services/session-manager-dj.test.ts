@@ -131,7 +131,13 @@ vi.mock('../../src/services/capture-trigger.js', () => ({
   shouldEmitCaptureBubble: vi.fn().mockReturnValue(false),
   markBubbleEmitted: vi.fn(),
   clearCaptureTriggerState: vi.fn(),
-  emitReactionPeakBubble: vi.fn(),
+}));
+
+vi.mock('../../src/services/peak-detector.js', () => ({
+  clearSession: vi.fn(),
+  recordReaction: vi.fn().mockReturnValue(false),
+  resetLastPeak: vi.fn(),
+  clearAllSessions: vi.fn(),
 }));
 
 describe('session-manager DJ functions', () => {
