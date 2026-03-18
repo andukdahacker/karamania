@@ -573,7 +573,9 @@ class SocketClient {
       final cardJson = payload['card'] as Map<String, dynamic>;
       final card = InterludeGameCard.fromJson(cardJson);
       final gameDurationMs = payload['gameDurationMs'] as int;
-      _partyProvider?.onInterludeGameStarted(activityId, card, gameDurationMs);
+      final targetUserId = payload['targetUserId'] as String?;
+      final targetDisplayName = payload['targetDisplayName'] as String?;
+      _partyProvider?.onInterludeGameStarted(activityId, card, gameDurationMs, targetUserId: targetUserId, targetDisplayName: targetDisplayName);
     });
 
     on('interlude:gameEnded', (_) {

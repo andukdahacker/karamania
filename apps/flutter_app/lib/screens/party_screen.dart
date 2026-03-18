@@ -28,6 +28,7 @@ import 'package:karamania/widgets/group_card_announcement_overlay.dart';
 import 'package:karamania/widgets/tag_team_flash_widget.dart';
 import 'package:karamania/widgets/lightstick_mode.dart';
 import 'package:karamania/widgets/interlude_vote_overlay.dart';
+import 'package:karamania/widgets/dare_pull_overlay.dart';
 import 'package:karamania/widgets/kings_cup_overlay.dart';
 import 'package:karamania/widgets/quick_pick_overlay.dart';
 import 'package:karamania/widgets/spin_the_wheel_overlay.dart';
@@ -294,6 +295,18 @@ class _PartyScreenState extends State<PartyScreen>
                 child: KingsCupOverlay(
                   card: partyProvider.interludeGameCard!,
                   gameDurationMs: partyProvider.interludeGameDurationMs,
+                  timerStartedAt: partyProvider.interludeGameStartedAt,
+                ),
+              ),
+            // Dare Pull game overlay — after vote concludes
+            if (partyProvider.interludeGameActivityId == 'dare_pull' &&
+                partyProvider.interludeGameCard != null &&
+                partyProvider.interludeGameTargetDisplayName != null)
+              Positioned.fill(
+                child: DarePullOverlay(
+                  card: partyProvider.interludeGameCard!,
+                  gameDurationMs: partyProvider.interludeGameDurationMs,
+                  targetDisplayName: partyProvider.interludeGameTargetDisplayName!,
                   timerStartedAt: partyProvider.interludeGameStartedAt,
                 ),
               ),

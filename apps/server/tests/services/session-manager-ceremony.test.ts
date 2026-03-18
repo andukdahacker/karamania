@@ -95,6 +95,13 @@ vi.mock('../../src/services/kings-cup-dealer.js', () => ({
   resetAll: vi.fn(),
 }));
 
+vi.mock('../../src/services/dare-pull-dealer.js', () => ({
+  dealDare: vi.fn().mockReturnValue({ id: 'mock-dare', title: 'Mock Dare', dare: 'Mock dare text', emoji: '🎯' }),
+  selectTarget: vi.fn().mockReturnValue(null),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
 vi.mock('../../src/services/activity-voter.js', () => ({
   selectActivityOptions: vi.fn().mockReturnValue([{ id: 'mock', name: 'Mock', description: '', icon: '', universal: true, minParticipants: 2 }]),
   startVoteRound: vi.fn(),

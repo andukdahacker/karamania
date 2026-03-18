@@ -253,6 +253,8 @@ class PartyProvider extends ChangeNotifier {
   InterludeGameCard? _interludeGameCard;
   int _interludeGameDurationMs = _defaultGameDurationMs;
   int? _interludeGameStartedAt;
+  String? _interludeGameTargetUserId;
+  String? _interludeGameTargetDisplayName;
 
   // TV pairing state
   TvConnectionStatus _tvStatus = TvConnectionStatus.disconnected;
@@ -371,6 +373,8 @@ class PartyProvider extends ChangeNotifier {
   InterludeGameCard? get interludeGameCard => _interludeGameCard;
   int get interludeGameDurationMs => _interludeGameDurationMs;
   int? get interludeGameStartedAt => _interludeGameStartedAt;
+  String? get interludeGameTargetUserId => _interludeGameTargetUserId;
+  String? get interludeGameTargetDisplayName => _interludeGameTargetDisplayName;
   TvConnectionStatus get tvStatus => _tvStatus;
   String? get tvStatusMessage => _tvStatusMessage;
   String? get tvNowPlayingVideoId => _tvNowPlayingVideoId;
@@ -621,9 +625,11 @@ class PartyProvider extends ChangeNotifier {
     _interludeGameCard = null;
     _interludeGameDurationMs = _defaultGameDurationMs;
     _interludeGameStartedAt = null;
+    _interludeGameTargetUserId = null;
+    _interludeGameTargetDisplayName = null;
   }
 
-  void onInterludeGameStarted(String activityId, InterludeGameCard card, int gameDurationMs) {
+  void onInterludeGameStarted(String activityId, InterludeGameCard card, int gameDurationMs, {String? targetUserId, String? targetDisplayName}) {
     // Clear vote overlay state so overlays are mutually exclusive
     _interludeOptions = [];
     // Set game state
@@ -631,6 +637,8 @@ class PartyProvider extends ChangeNotifier {
     _interludeGameCard = card;
     _interludeGameDurationMs = gameDurationMs;
     _interludeGameStartedAt = DateTime.now().millisecondsSinceEpoch;
+    _interludeGameTargetUserId = targetUserId;
+    _interludeGameTargetDisplayName = targetDisplayName;
     notifyListeners();
   }
 
@@ -639,6 +647,8 @@ class PartyProvider extends ChangeNotifier {
     _interludeGameCard = null;
     _interludeGameDurationMs = _defaultGameDurationMs;
     _interludeGameStartedAt = null;
+    _interludeGameTargetUserId = null;
+    _interludeGameTargetDisplayName = null;
     notifyListeners();
   }
 

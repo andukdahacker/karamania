@@ -40,6 +40,8 @@ export const interludeGameStartedSchema = z.object({
     emoji: z.string().min(1),
   }),
   gameDurationMs: z.number(),
+  targetUserId: z.string().min(1).optional(),
+  targetDisplayName: z.string().min(1).optional(),
 });
 
 export const interludeGameEndedSchema = z.object({

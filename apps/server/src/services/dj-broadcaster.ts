@@ -196,6 +196,8 @@ export function broadcastInterludeGameStarted(
     activityId: string;
     card: { id: string; title: string; rule: string; emoji: string };
     gameDurationMs: number;
+    targetUserId?: string;
+    targetDisplayName?: string;
   },
 ): void {
   if (!io) {

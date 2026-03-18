@@ -12,6 +12,7 @@ import { broadcastDjState, broadcastDjPause, broadcastDjResume, broadcastCeremon
 import { EVENTS } from '../shared/events.js';
 import { dealCard, clearDealtCards } from '../services/card-dealer.js';
 import { getActiveConnections, removeSession } from '../services/connection-tracker.js';
+import type { TrackedConnection } from '../services/connection-tracker.js';
 import { removeSession as removeActivitySession } from '../services/activity-tracker.js';
 import { DJState } from '../dj-engine/types.js';
 import { appendEvent, flushEventStream, getEventStream, type SessionEvent } from '../services/event-stream.js';
@@ -34,6 +35,7 @@ import { computeSuggestions } from '../services/suggestion-engine.js';
 import { shouldEmitCaptureBubble, markBubbleEmitted, clearCaptureTriggerState, type CaptureTriggerType } from '../services/capture-trigger.js';
 import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged, broadcastInterludeVoteStarted, broadcastInterludeVoteResult, broadcastInterludeGameStarted, broadcastInterludeGameEnded } from '../services/dj-broadcaster.js';
 import { dealCard as dealKingsCupCard, clearSession as clearKingsCupSession } from '../services/kings-cup-dealer.js';
+import { dealDare, selectTarget, clearSession as clearDarePullSession } from '../services/dare-pull-dealer.js';
 import type { QuickPickSong } from '../services/quick-pick.js';
 import {
   startRound as startSpinWheelRound,
@@ -364,6 +366,7 @@ const interludeRevealTimers = new Map<string, NodeJS.Timeout>();
 const interludeGameTimers = new Map<string, NodeJS.Timeout>();
 
 const INTERLUDE_GAME_DURATION_MS = 10_000; // 10s card display
+const DARE_PULL_GAME_DURATION_MS = 15_000; // 15s dare timer
 
 function clearInterludeTimers(sessionId: string): void {
   const revealTimer = interludeRevealTimers.get(sessionId);
@@ -502,11 +505,19 @@ function resolveInterludeTimeout(sessionId: string, context: DJContext): void {
 
 /**
  * Dispatch interlude game after vote reveal. Routes to specific game handler
- * or triggers INTERLUDE_DONE for unhandled activities (forward-compatible for Stories 7.3-7.5).
+ * or triggers INTERLUDE_DONE for unhandled activities (forward-compatible for Stories 7.4-7.5).
  */
 function startInterludeGame(sessionId: string, selectedActivity: string, context: DJContext): void {
   if (selectedActivity === 'kings_cup') {
     executeKingsCup(sessionId);
+  } else if (selectedActivity === 'dare_pull') {
+    const connections = getActiveConnections(sessionId);
+    const target = selectTarget(sessionId, connections);
+    if (target) {
+      executeDarePull(sessionId, target);
+    } else {
+      void processDjTransition(sessionId, context, { type: 'INTERLUDE_DONE' });
+    }
   } else {
     void processDjTransition(sessionId, context, { type: 'INTERLUDE_DONE' });
   }
@@ -530,6 +541,30 @@ function executeKingsCup(sessionId: string): void {
   const gameTimer = setTimeout(() => {
     endInterludeGame(sessionId);
   }, INTERLUDE_GAME_DURATION_MS);
+
+  interludeGameTimers.set(sessionId, gameTimer);
+}
+
+function executeDarePull(sessionId: string, target: TrackedConnection): void {
+  const dare = dealDare(sessionId);
+
+  broadcastInterludeGameStarted(sessionId, {
+    activityId: 'dare_pull',
+    card: { id: dare.id, title: dare.title, rule: dare.dare, emoji: dare.emoji },
+    gameDurationMs: DARE_PULL_GAME_DURATION_MS,
+    targetUserId: target.userId,
+    targetDisplayName: target.displayName,
+  });
+
+  appendEvent(sessionId, {
+    type: 'interlude:gameStarted',
+    ts: Date.now(),
+    data: { activityId: 'dare_pull', cardId: dare.id },
+  });
+
+  const gameTimer = setTimeout(() => {
+    endInterludeGame(sessionId);
+  }, DARE_PULL_GAME_DURATION_MS);
 
   interludeGameTimers.set(sessionId, gameTimer);
 }
@@ -1600,6 +1635,7 @@ export async function endSession(
   clearPeakDetectorState(sessionId);
   clearActivityVoterState(sessionId);
   clearKingsCupSession(sessionId);
+  clearDarePullSession(sessionId);
   clearInterludeTimers(sessionId);
   clearRound(sessionId);
   clearSpinWheelRound(sessionId);

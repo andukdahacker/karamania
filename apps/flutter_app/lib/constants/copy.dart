@@ -286,6 +286,10 @@ class Copy {
   // Kings Cup interlude (Story 7.2)
   static const String kingsCupSubtitle = 'Group Rule';
 
+  // Dare Pull interlude (Story 7.3)
+  static const String darePullSubtitle = 'Dare Challenge';
+  static const String darePullTargetPrefix = 'The dare goes to...';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';
