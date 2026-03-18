@@ -24,6 +24,8 @@ dependencies:
   image_picker: ^1.1.2
   record: ^5.2.0
   path_provider: ^2.1.5
+  connectivity_plus: ^6.1.4
+  shared_preferences: ^2.5.3
   dart_open_fetch_runtime:
     git:
       url: https://github.com/andukdahacker/dart-open-fetch.git

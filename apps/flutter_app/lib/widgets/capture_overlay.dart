@@ -9,6 +9,9 @@ import 'package:karamania/theme/dj_tokens.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:record/record.dart';
+import 'package:karamania/services/upload_queue.dart';
+import 'package:karamania/state/party_provider.dart';
+import 'package:karamania/state/upload_provider.dart';
 
 /// Inline capture overlay — shows mode selector after bubble pop,
 /// then handles photo/video/audio capture without leaving party screen.
@@ -230,10 +233,23 @@ class _CaptureOverlayState extends State<CaptureOverlay>
     );
 
     if (image != null) {
+      final triggerType = provider.captureTriggerType;
+      final sessionId = SocketClient.instance.currentSessionId;
+      final djState = context.read<PartyProvider>().djStateRaw;
       SocketClient.instance.emitCaptureComplete(
         captureType: 'photo',
-        triggerType: provider.captureTriggerType,
+        triggerType: triggerType,
       );
+      if (sessionId != null) {
+        context.read<UploadProvider>().enqueue(UploadItem(
+          filePath: image.path,
+          sessionId: sessionId,
+          captureId: '${DateTime.now().millisecondsSinceEpoch}_photo',
+          captureType: 'photo',
+          triggerType: triggerType,
+          djState: djState,
+        ));
+      }
       provider.onCaptureComplete();
     } else {
       provider.onCaptureCancelled();
@@ -258,11 +274,24 @@ class _CaptureOverlayState extends State<CaptureOverlay>
     stopwatch.stop();
 
     if (video != null) {
+      final triggerType = provider.captureTriggerType;
+      final sessionId = SocketClient.instance.currentSessionId;
+      final djState = context.read<PartyProvider>().djStateRaw;
       SocketClient.instance.emitCaptureComplete(
         captureType: 'video',
-        triggerType: provider.captureTriggerType,
+        triggerType: triggerType,
         durationMs: stopwatch.elapsedMilliseconds,
       );
+      if (sessionId != null) {
+        context.read<UploadProvider>().enqueue(UploadItem(
+          filePath: video.path,
+          sessionId: sessionId,
+          captureId: '${DateTime.now().millisecondsSinceEpoch}_video',
+          captureType: 'video',
+          triggerType: triggerType,
+          djState: djState,
+        ));
+      }
       provider.onCaptureComplete();
     } else {
       provider.onCaptureCancelled();
@@ -333,11 +362,24 @@ class _CaptureOverlayState extends State<CaptureOverlay>
     final durationMs = _audioStopwatch?.elapsedMilliseconds ?? 0;
 
     if (path != null) {
+      final triggerType = provider.captureTriggerType;
+      final sessionId = SocketClient.instance.currentSessionId;
+      final djState = context.read<PartyProvider>().djStateRaw;
       SocketClient.instance.emitCaptureComplete(
         captureType: 'audio',
-        triggerType: provider.captureTriggerType,
+        triggerType: triggerType,
         durationMs: durationMs,
       );
+      if (sessionId != null) {
+        context.read<UploadProvider>().enqueue(UploadItem(
+          filePath: path,
+          sessionId: sessionId,
+          captureId: '${DateTime.now().millisecondsSinceEpoch}_audio',
+          captureType: 'audio',
+          triggerType: triggerType,
+          djState: djState,
+        ));
+      }
       provider.onCaptureComplete();
     } else {
       provider.onCaptureCancelled();

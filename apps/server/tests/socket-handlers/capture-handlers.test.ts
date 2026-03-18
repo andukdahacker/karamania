@@ -24,8 +24,19 @@ vi.mock('../../src/services/event-stream.js', () => ({
   appendEvent: (...args: unknown[]) => mockAppendEvent(...args),
 }));
 
+const mockGetSessionDjState = vi.fn();
+vi.mock('../../src/services/dj-state-store.js', () => ({
+  getSessionDjState: (...args: unknown[]) => mockGetSessionDjState(...args),
+}));
+
+const mockPersistCaptureMetadata = vi.fn();
+vi.mock('../../src/services/capture-service.js', () => ({
+  persistCaptureMetadata: (...args: unknown[]) => mockPersistCaptureMetadata(...args),
+}));
+
 function createMockSocket(overrides: Partial<{ userId: string; sessionId: string; displayName: string }> = {}) {
   const handlers = new Map<string, (data?: unknown) => void>();
+  const emittedEvents: Array<{ event: string; data: unknown }> = [];
 
   return {
     socket: {
@@ -38,8 +49,12 @@ function createMockSocket(overrides: Partial<{ userId: string; sessionId: string
       on: (event: string, handler: (data?: unknown) => void) => {
         handlers.set(event, handler);
       },
+      emit: (event: string, data: unknown) => {
+        emittedEvents.push({ event, data });
+      },
     },
     handlers,
+    emittedEvents,
   };
 }
 
@@ -56,6 +71,7 @@ function createMockIo() {
 describe('capture-handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPersistCaptureMetadata.mockResolvedValue('capture-id-123');
   });
 
   describe('capture:started', () => {
@@ -240,6 +256,78 @@ describe('capture-handlers', () => {
       );
     });
 
+    it('persists capture metadata via capture-service on capture:complete', async () => {
+      const djState = { state: 'song', songCount: 2 };
+      mockGetSessionDjState.mockReturnValue(djState);
+
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCaptureHandlers } = await import('../../src/socket-handlers/capture-handlers.js');
+      registerCaptureHandlers(socket as never, io as never);
+
+      handlers.get('capture:complete')!({
+        captureType: 'photo',
+        triggerType: 'manual',
+      });
+
+      // Allow promise to resolve
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(mockGetSessionDjState).toHaveBeenCalledWith('session-1');
+      expect(mockPersistCaptureMetadata).toHaveBeenCalledWith({
+        sessionId: 'session-1',
+        userId: 'user-1',
+        captureType: 'photo',
+        triggerType: 'manual',
+        djStateAtCapture: djState,
+      });
+    });
+
+    it('emits capture:persisted acknowledgment with captureId after persistence', async () => {
+      mockGetSessionDjState.mockReturnValue(undefined);
+      mockPersistCaptureMetadata.mockResolvedValue('new-capture-id');
+
+      const { socket, handlers, emittedEvents } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCaptureHandlers } = await import('../../src/socket-handlers/capture-handlers.js');
+      registerCaptureHandlers(socket as never, io as never);
+
+      handlers.get('capture:complete')!({
+        captureType: 'audio',
+        triggerType: 'session_end',
+        durationMs: 8000,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(emittedEvents).toContainEqual({
+        event: 'capture:persisted',
+        data: { captureId: 'new-capture-id' },
+      });
+    });
+
+    it('does not emit acknowledgment when persistence fails', async () => {
+      mockGetSessionDjState.mockReturnValue(undefined);
+      mockPersistCaptureMetadata.mockResolvedValue(null);
+
+      const { socket, handlers, emittedEvents } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCaptureHandlers } = await import('../../src/socket-handlers/capture-handlers.js');
+      registerCaptureHandlers(socket as never, io as never);
+
+      handlers.get('capture:complete')!({
+        captureType: 'photo',
+        triggerType: 'manual',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(emittedEvents).toEqual([]);
+    });
+
     it('ignores event when sessionId is missing', async () => {
       const { socket, handlers } = createMockSocket();
       socket.data.sessionId = '';
@@ -308,6 +396,41 @@ describe('capture-handlers', () => {
         triggerType: 'manual',
         durationMs: 'not-a-number',
       });
+
+      expect(mockAppendEvent).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('capture:shared', () => {
+    it('appends capture:shared event to event stream', async () => {
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCaptureHandlers } = await import('../../src/socket-handlers/capture-handlers.js');
+      registerCaptureHandlers(socket as never, io as never);
+
+      handlers.get('capture:shared')!();
+
+      expect(mockAppendEvent).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({
+          type: 'capture:shared',
+          userId: 'user-1',
+          ts: expect.any(Number),
+          data: {},
+        }),
+      );
+    });
+
+    it('ignores capture:shared when sessionId is missing', async () => {
+      const { socket, handlers } = createMockSocket();
+      socket.data.sessionId = '';
+      const { io } = createMockIo();
+
+      const { registerCaptureHandlers } = await import('../../src/socket-handlers/capture-handlers.js');
+      registerCaptureHandlers(socket as never, io as never);
+
+      handlers.get('capture:shared')!();
 
       expect(mockAppendEvent).not.toHaveBeenCalled();
     });

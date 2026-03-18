@@ -272,6 +272,11 @@ class Copy {
   static const String captureRecording = 'Recording...';
   static const String captureRecordingStop = 'Tap to stop';
 
+  // Upload status (Story 6.3)
+  static const String captureUploading = 'Uploading captures';
+  static const String captureUploadComplete = 'Upload complete';
+  static const String captureUploadFailed = 'Upload failed';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

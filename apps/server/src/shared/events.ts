@@ -61,6 +61,8 @@ export const EVENTS = {
   CAPTURE_BUBBLE: 'capture:bubble',
   CAPTURE_STARTED: 'capture:started',
   CAPTURE_COMPLETE: 'capture:complete',
+  CAPTURE_PERSISTED: 'capture:persisted',
+  CAPTURE_SHARED: 'capture:shared',
 
   // Host events
   HOST_SKIP: 'host:skip',

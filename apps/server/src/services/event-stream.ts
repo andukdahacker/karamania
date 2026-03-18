@@ -42,7 +42,8 @@ export type SessionEvent =
   | { type: 'song:manualPlay'; ts: number; data: { videoId: string; title: string; artist: string } }
   | { type: 'capture:bubble'; ts: number; data: { triggerType: 'session_start' | 'reaction_peak' | 'post_ceremony' | 'session_end' } }
   | { type: 'capture:started'; ts: number; userId: string; data: { captureType: 'photo' | 'video' | 'audio'; triggerType: string } }
-  | { type: 'capture:complete'; ts: number; userId: string; data: { captureType: 'photo' | 'video' | 'audio'; triggerType: string; durationMs?: number } };
+  | { type: 'capture:complete'; ts: number; userId: string; data: { captureType: 'photo' | 'video' | 'audio'; triggerType: string; durationMs?: number } }
+  | { type: 'capture:shared'; ts: number; userId: string; data: Record<string, never> };
 
 const streams = new Map<string, SessionEvent[]>();
 

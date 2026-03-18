@@ -12,6 +12,8 @@ import 'package:karamania/socket/client.dart';
 import 'package:karamania/state/timeline_provider.dart';
 import 'package:karamania/api/api_service.dart';
 import 'package:karamania/audio/audio_engine.dart';
+import 'package:karamania/services/upload_queue.dart';
+import 'package:karamania/state/upload_provider.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +45,9 @@ Future<void> bootstrap() async {
     debugPrint('Audio init failed: $e');
   }
 
+  // Upload queue init — load persisted queue and start connectivity listener
+  await UploadQueue.instance.init();
+
   runApp(
     MultiProvider(
       providers: [
@@ -51,6 +56,7 @@ Future<void> bootstrap() async {
         ChangeNotifierProvider(create: (_) => CaptureProvider()),
         ChangeNotifierProvider(create: (_) => TimelineProvider()),
         ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
+        ChangeNotifierProvider(create: (_) => UploadProvider()),
         Provider<SocketClient>(create: (_) => SocketClient.instance),
         Provider<ApiService>(create: (_) => ApiService(baseUrl: AppConfig.instance.serverUrl)),
       ],

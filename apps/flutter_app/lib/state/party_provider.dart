@@ -234,6 +234,8 @@ class PartyProvider extends ChangeNotifier {
   String? _streakDisplayName;
 
   DJState get djState => _djState;
+  /// Serializable snapshot of DJ state for upload tagging.
+  Map<String, dynamic>? get djStateRaw => {'state': _djState.name, 'songCount': _songCount};
   PartyVibe get vibe => _vibe;
   String? get sessionId => _sessionId;
   String? get partyCode => _partyCode;
