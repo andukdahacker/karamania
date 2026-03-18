@@ -33,9 +33,10 @@ import { detectSong } from '../services/song-detection.js';
 import { startRound, getRound, resolveByTimeout, clearRound } from '../services/quick-pick.js';
 import { computeSuggestions } from '../services/suggestion-engine.js';
 import { shouldEmitCaptureBubble, markBubbleEmitted, clearCaptureTriggerState, type CaptureTriggerType } from '../services/capture-trigger.js';
-import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged, broadcastInterludeVoteStarted, broadcastInterludeVoteResult, broadcastInterludeGameStarted, broadcastInterludeGameEnded } from '../services/dj-broadcaster.js';
+import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged, broadcastInterludeVoteStarted, broadcastInterludeVoteResult, broadcastInterludeGameStarted, broadcastInterludeGameEnded, broadcastQuickVoteResult } from '../services/dj-broadcaster.js';
 import { dealCard as dealKingsCupCard, clearSession as clearKingsCupSession } from '../services/kings-cup-dealer.js';
 import { dealDare, selectTarget, clearSession as clearDarePullSession } from '../services/dare-pull-dealer.js';
+import { dealQuestion, startQuickVoteRound, resolveQuickVote, clearSession as clearQuickVoteSession } from '../services/quick-vote-dealer.js';
 import type { QuickPickSong } from '../services/quick-pick.js';
 import {
   startRound as startSpinWheelRound,
@@ -367,6 +368,8 @@ const interludeGameTimers = new Map<string, NodeJS.Timeout>();
 
 const INTERLUDE_GAME_DURATION_MS = 10_000; // 10s card display
 const DARE_PULL_GAME_DURATION_MS = 15_000; // 15s dare timer
+const QUICK_VOTE_VOTING_DURATION_MS = 6_000; // 6s hard voting window
+const QUICK_VOTE_REVEAL_DURATION_MS = 5_000; // 5s results display
 
 function clearInterludeTimers(sessionId: string): void {
   const revealTimer = interludeRevealTimers.get(sessionId);
@@ -518,6 +521,8 @@ function startInterludeGame(sessionId: string, selectedActivity: string, context
     } else {
       void processDjTransition(sessionId, context, { type: 'INTERLUDE_DONE' });
     }
+  } else if (selectedActivity === 'quick_vote') {
+    executeQuickVote(sessionId);
   } else {
     void processDjTransition(sessionId, context, { type: 'INTERLUDE_DONE' });
   }
@@ -567,6 +572,54 @@ function executeDarePull(sessionId: string, target: TrackedConnection): void {
   }, DARE_PULL_GAME_DURATION_MS);
 
   interludeGameTimers.set(sessionId, gameTimer);
+}
+
+function executeQuickVote(sessionId: string): void {
+  const question = dealQuestion(sessionId);
+  startQuickVoteRound(sessionId, question.id);
+
+  broadcastInterludeGameStarted(sessionId, {
+    activityId: 'quick_vote',
+    card: { id: question.id, title: question.question, rule: question.optionA + ' vs ' + question.optionB, emoji: question.emoji },
+    gameDurationMs: QUICK_VOTE_VOTING_DURATION_MS,
+    quickVoteOptions: [{ id: 'A', label: question.optionA }, { id: 'B', label: question.optionB }],
+  });
+
+  appendEvent(sessionId, {
+    type: 'interlude:gameStarted',
+    ts: Date.now(),
+    data: { activityId: 'quick_vote', questionId: question.id },
+  });
+
+  const voteTimer = setTimeout(() => {
+    resolveAndRevealQuickVote(sessionId);
+  }, QUICK_VOTE_VOTING_DURATION_MS);
+
+  interludeGameTimers.set(sessionId, voteTimer);
+}
+
+function resolveAndRevealQuickVote(sessionId: string): void {
+  interludeGameTimers.delete(sessionId);
+
+  const result = resolveQuickVote(sessionId);
+  if (!result) {
+    endInterludeGame(sessionId);
+    return;
+  }
+
+  broadcastQuickVoteResult(sessionId, result);
+
+  appendEvent(sessionId, {
+    type: 'interlude:quickVoteResult',
+    ts: Date.now(),
+    data: result,
+  });
+
+  const revealTimer = setTimeout(() => {
+    endInterludeGame(sessionId);
+  }, QUICK_VOTE_REVEAL_DURATION_MS);
+
+  interludeGameTimers.set(sessionId, revealTimer);
 }
 
 function endInterludeGame(sessionId: string): void {
@@ -1636,6 +1689,7 @@ export async function endSession(
   clearActivityVoterState(sessionId);
   clearKingsCupSession(sessionId);
   clearDarePullSession(sessionId);
+  clearQuickVoteSession(sessionId);
   clearInterludeTimers(sessionId);
   clearRound(sessionId);
   clearSpinWheelRound(sessionId);

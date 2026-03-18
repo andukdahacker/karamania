@@ -30,6 +30,7 @@ import 'package:karamania/widgets/lightstick_mode.dart';
 import 'package:karamania/widgets/interlude_vote_overlay.dart';
 import 'package:karamania/widgets/dare_pull_overlay.dart';
 import 'package:karamania/widgets/kings_cup_overlay.dart';
+import 'package:karamania/widgets/quick_vote_overlay.dart';
 import 'package:karamania/widgets/quick_pick_overlay.dart';
 import 'package:karamania/widgets/spin_the_wheel_overlay.dart';
 import 'package:karamania/widgets/song_mode_toggle.dart';
@@ -308,6 +309,22 @@ class _PartyScreenState extends State<PartyScreen>
                   gameDurationMs: partyProvider.interludeGameDurationMs,
                   targetDisplayName: partyProvider.interludeGameTargetDisplayName!,
                   timerStartedAt: partyProvider.interludeGameStartedAt,
+                ),
+              ),
+            // Quick Vote game overlay — after vote concludes
+            if (partyProvider.interludeGameActivityId == 'quick_vote' &&
+                partyProvider.interludeGameCard != null &&
+                partyProvider.quickVoteOptions.isNotEmpty)
+              Positioned.fill(
+                child: QuickVoteOverlay(
+                  card: partyProvider.interludeGameCard!,
+                  quickVoteOptions: partyProvider.quickVoteOptions,
+                  gameDurationMs: partyProvider.interludeGameDurationMs,
+                  myQuickVote: partyProvider.myQuickVote,
+                  quickVoteResult: partyProvider.quickVoteResult,
+                  timerStartedAt: partyProvider.interludeGameStartedAt,
+                  onVote: (option) =>
+                      SocketClient.instance.emitQuickVoteCast(option),
                 ),
               ),
             // Party card deal overlay — during partyCardDeal state with dealt card

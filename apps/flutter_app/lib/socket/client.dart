@@ -575,11 +575,23 @@ class SocketClient {
       final gameDurationMs = payload['gameDurationMs'] as int;
       final targetUserId = payload['targetUserId'] as String?;
       final targetDisplayName = payload['targetDisplayName'] as String?;
-      _partyProvider?.onInterludeGameStarted(activityId, card, gameDurationMs, targetUserId: targetUserId, targetDisplayName: targetDisplayName);
+      final rawOptions = payload['quickVoteOptions'] as List<dynamic>?;
+      final quickVoteOptions = rawOptions
+          ?.map((o) => QuickVoteOption.fromJson(o as Map<String, dynamic>))
+          .toList();
+      _partyProvider?.onInterludeGameStarted(activityId, card, gameDurationMs, targetUserId: targetUserId, targetDisplayName: targetDisplayName, quickVoteOptions: quickVoteOptions);
     });
 
     on('interlude:gameEnded', (_) {
       _partyProvider?.onInterludeGameEnded();
+    });
+
+    on('interlude:quickVoteResult', (data) {
+      final payload = data as Map<String, dynamic>;
+      final optionACounts = payload['optionACounts'] as int;
+      final optionBCounts = payload['optionBCounts'] as int;
+      final totalVotes = payload['totalVotes'] as int;
+      _partyProvider?.onQuickVoteResult(optionACounts, optionBCounts, totalVotes);
     });
 
     // Host transfer event (AC #4)
@@ -666,6 +678,11 @@ class SocketClient {
   void emitInterludeVote(String optionId) {
     _socket?.emit('interlude:vote', {'optionId': optionId});
     _partyProvider?.updateMyInterludeVote(optionId);
+  }
+
+  void emitQuickVoteCast(String option) {
+    _socket?.emit('interlude:quickVoteCast', {'option': option});
+    _partyProvider?.updateMyQuickVote(option);
   }
 
   void emitSpinWheelAction(String action) {

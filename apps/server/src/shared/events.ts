@@ -92,6 +92,8 @@ export const EVENTS = {
   INTERLUDE_VOTE_RESULT: 'interlude:voteResult',
   INTERLUDE_GAME_STARTED: 'interlude:gameStarted',
   INTERLUDE_GAME_ENDED: 'interlude:gameEnded',
+  QUICK_VOTE_CAST: 'interlude:quickVoteCast',
+  QUICK_VOTE_RESULT: 'interlude:quickVoteResult',
 
   // Auth events
   AUTH_REFRESH_REQUIRED: 'auth:refreshRequired',

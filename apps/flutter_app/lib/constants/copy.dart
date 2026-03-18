@@ -290,6 +290,10 @@ class Copy {
   static const String darePullSubtitle = 'Dare Challenge';
   static const String darePullTargetPrefix = 'The dare goes to...';
 
+  // Quick Vote interlude (Story 7.4)
+  static const String quickVoteTitle = 'QUICK VOTE';
+  static const String quickVoteSubtitle = 'Cast your vote!';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

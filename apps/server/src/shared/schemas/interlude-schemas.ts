@@ -42,6 +42,20 @@ export const interludeGameStartedSchema = z.object({
   gameDurationMs: z.number(),
   targetUserId: z.string().min(1).optional(),
   targetDisplayName: z.string().min(1).optional(),
+  quickVoteOptions: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+  })).length(2).optional(),
+});
+
+export const quickVoteCastSchema = z.object({
+  option: z.enum(['A', 'B']),
+});
+
+export const quickVoteResultSchema = z.object({
+  optionACounts: z.number().int().nonnegative(),
+  optionBCounts: z.number().int().nonnegative(),
+  totalVotes: z.number().int().nonnegative(),
 });
 
 export const interludeGameEndedSchema = z.object({

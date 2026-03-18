@@ -198,6 +198,7 @@ export function broadcastInterludeGameStarted(
     gameDurationMs: number;
     targetUserId?: string;
     targetDisplayName?: string;
+    quickVoteOptions?: Array<{ id: string; label: string }>;
   },
 ): void {
   if (!io) {
@@ -205,6 +206,17 @@ export function broadcastInterludeGameStarted(
     return;
   }
   io.to(sessionId).emit(EVENTS.INTERLUDE_GAME_STARTED, data);
+}
+
+export function broadcastQuickVoteResult(
+  sessionId: string,
+  data: { optionACounts: number; optionBCounts: number; totalVotes: number },
+): void {
+  if (!io) {
+    console.warn('[dj-broadcaster] Cannot broadcast — io not initialized');
+    return;
+  }
+  io.to(sessionId).emit(EVENTS.QUICK_VOTE_RESULT, data);
 }
 
 export function broadcastInterludeGameEnded(

@@ -87,6 +87,7 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastInterludeVoteResult: vi.fn(),
   broadcastInterludeGameStarted: vi.fn(),
   broadcastInterludeGameEnded: vi.fn(),
+  broadcastQuickVoteResult: vi.fn(),
 }));
 
 vi.mock('../../src/services/kings-cup-dealer.js', () => ({
@@ -98,6 +99,15 @@ vi.mock('../../src/services/kings-cup-dealer.js', () => ({
 vi.mock('../../src/services/dare-pull-dealer.js', () => ({
   dealDare: vi.fn().mockReturnValue({ id: 'mock-dare', title: 'Mock Dare', dare: 'Mock dare text', emoji: '🎯' }),
   selectTarget: vi.fn().mockReturnValue(null),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/quick-vote-dealer.js', () => ({
+  dealQuestion: vi.fn().mockReturnValue({ id: 'mock-q', question: 'Mock?', optionA: 'YES', optionB: 'NO', emoji: '⚡' }),
+  startQuickVoteRound: vi.fn(),
+  recordQuickVote: vi.fn().mockReturnValue({ recorded: true, firstVote: true }),
+  resolveQuickVote: vi.fn().mockReturnValue({ optionACounts: 3, optionBCounts: 2, totalVotes: 5 }),
   clearSession: vi.fn(),
   resetAll: vi.fn(),
 }));

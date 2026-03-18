@@ -104,6 +104,32 @@ class InterludeGameCard {
   }
 }
 
+class QuickVoteOption {
+  const QuickVoteOption({required this.id, required this.label});
+
+  final String id;
+  final String label;
+
+  factory QuickVoteOption.fromJson(Map<String, dynamic> json) {
+    return QuickVoteOption(
+      id: (json['id'] as String?) ?? '',
+      label: (json['label'] as String?) ?? '',
+    );
+  }
+}
+
+class QuickVoteResult {
+  const QuickVoteResult({
+    required this.optionACounts,
+    required this.optionBCounts,
+    required this.totalVotes,
+  });
+
+  final int optionACounts;
+  final int optionBCounts;
+  final int totalVotes;
+}
+
 class InterludeOption {
   const InterludeOption({
     required this.id,
@@ -256,6 +282,11 @@ class PartyProvider extends ChangeNotifier {
   String? _interludeGameTargetUserId;
   String? _interludeGameTargetDisplayName;
 
+  // Quick Vote state — populated by interlude:gameStarted (quick_vote) and interlude:quickVoteResult
+  List<QuickVoteOption> _quickVoteOptions = [];
+  String? _myQuickVote;
+  QuickVoteResult? _quickVoteResult;
+
   // TV pairing state
   TvConnectionStatus _tvStatus = TvConnectionStatus.disconnected;
   String? _tvStatusMessage;
@@ -375,6 +406,9 @@ class PartyProvider extends ChangeNotifier {
   int? get interludeGameStartedAt => _interludeGameStartedAt;
   String? get interludeGameTargetUserId => _interludeGameTargetUserId;
   String? get interludeGameTargetDisplayName => _interludeGameTargetDisplayName;
+  List<QuickVoteOption> get quickVoteOptions => _quickVoteOptions;
+  String? get myQuickVote => _myQuickVote;
+  QuickVoteResult? get quickVoteResult => _quickVoteResult;
   TvConnectionStatus get tvStatus => _tvStatus;
   String? get tvStatusMessage => _tvStatusMessage;
   String? get tvNowPlayingVideoId => _tvNowPlayingVideoId;
@@ -627,9 +661,12 @@ class PartyProvider extends ChangeNotifier {
     _interludeGameStartedAt = null;
     _interludeGameTargetUserId = null;
     _interludeGameTargetDisplayName = null;
+    _quickVoteOptions = [];
+    _myQuickVote = null;
+    _quickVoteResult = null;
   }
 
-  void onInterludeGameStarted(String activityId, InterludeGameCard card, int gameDurationMs, {String? targetUserId, String? targetDisplayName}) {
+  void onInterludeGameStarted(String activityId, InterludeGameCard card, int gameDurationMs, {String? targetUserId, String? targetDisplayName, List<QuickVoteOption>? quickVoteOptions}) {
     // Clear vote overlay state so overlays are mutually exclusive
     _interludeOptions = [];
     // Set game state
@@ -639,6 +676,10 @@ class PartyProvider extends ChangeNotifier {
     _interludeGameStartedAt = DateTime.now().millisecondsSinceEpoch;
     _interludeGameTargetUserId = targetUserId;
     _interludeGameTargetDisplayName = targetDisplayName;
+    // Quick Vote options
+    _quickVoteOptions = quickVoteOptions ?? [];
+    _myQuickVote = null;
+    _quickVoteResult = null;
     notifyListeners();
   }
 
@@ -649,6 +690,23 @@ class PartyProvider extends ChangeNotifier {
     _interludeGameStartedAt = null;
     _interludeGameTargetUserId = null;
     _interludeGameTargetDisplayName = null;
+    _quickVoteOptions = [];
+    _myQuickVote = null;
+    _quickVoteResult = null;
+    notifyListeners();
+  }
+
+  void onQuickVoteResult(int optionACounts, int optionBCounts, int totalVotes) {
+    _quickVoteResult = QuickVoteResult(
+      optionACounts: optionACounts,
+      optionBCounts: optionBCounts,
+      totalVotes: totalVotes,
+    );
+    notifyListeners();
+  }
+
+  void updateMyQuickVote(String option) {
+    _myQuickVote = option;
     notifyListeners();
   }
 

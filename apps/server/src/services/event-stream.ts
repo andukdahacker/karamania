@@ -47,8 +47,10 @@ export type SessionEvent =
   | { type: 'interlude:voteStarted'; ts: number; data: { optionCount: number; participantCount: number } }
   | { type: 'interlude:vote'; ts: number; userId: string; data: { optionId: string } }
   | { type: 'interlude:voteResult'; ts: number; data: { winningOptionId: string; totalVotes: number } }
-  | { type: 'interlude:gameStarted'; ts: number; data: { activityId: string; cardId: string } }
-  | { type: 'interlude:gameEnded'; ts: number; data: { activityId: string } };
+  | { type: 'interlude:gameStarted'; ts: number; data: { activityId: string; cardId?: string; questionId?: string } }
+  | { type: 'interlude:gameEnded'; ts: number; data: { activityId: string } }
+  | { type: 'interlude:quickVoteCast'; ts: number; userId: string; data: { option: 'A' | 'B' } }
+  | { type: 'interlude:quickVoteResult'; ts: number; data: { optionACounts: number; optionBCounts: number; totalVotes: number } };
 
 const streams = new Map<string, SessionEvent[]>();
 
