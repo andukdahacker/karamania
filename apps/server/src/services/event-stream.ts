@@ -43,7 +43,10 @@ export type SessionEvent =
   | { type: 'capture:bubble'; ts: number; data: { triggerType: 'session_start' | 'reaction_peak' | 'post_ceremony' | 'session_end' } }
   | { type: 'capture:started'; ts: number; userId: string; data: { captureType: 'photo' | 'video' | 'audio'; triggerType: string } }
   | { type: 'capture:complete'; ts: number; userId: string; data: { captureType: 'photo' | 'video' | 'audio'; triggerType: string; durationMs?: number } }
-  | { type: 'capture:shared'; ts: number; userId: string; data: Record<string, never> };
+  | { type: 'capture:shared'; ts: number; userId: string; data: Record<string, never> }
+  | { type: 'interlude:voteStarted'; ts: number; data: { optionCount: number; participantCount: number } }
+  | { type: 'interlude:vote'; ts: number; userId: string; data: { optionId: string } }
+  | { type: 'interlude:voteResult'; ts: number; data: { winningOptionId: string; totalVotes: number } };
 
 const streams = new Map<string, SessionEvent[]>();
 

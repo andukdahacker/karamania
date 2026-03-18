@@ -25,6 +25,9 @@ export const ACTION_TIER_MAP: Record<string, ParticipationTier> = {
   'sound:play': ParticipationTier.active,
   'hype:fired': ParticipationTier.active,
 
+  // Active (3pts) — interlude voting
+  'interlude:vote': ParticipationTier.active,
+
   // Engaged (5pts) — meaningful participation
   'card:accepted': ParticipationTier.engaged,
   'card:completed': ParticipationTier.engaged,

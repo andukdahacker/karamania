@@ -83,6 +83,17 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastCeremonyAnticipation: (...args: unknown[]) => mockBroadcastCeremonyAnticipation(...args),
   broadcastCeremonyReveal: (...args: unknown[]) => mockBroadcastCeremonyReveal(...args),
   broadcastCeremonyQuick: (...args: unknown[]) => mockBroadcastCeremonyQuick(...args),
+  broadcastInterludeVoteStarted: vi.fn(),
+  broadcastInterludeVoteResult: vi.fn(),
+}));
+
+vi.mock('../../src/services/activity-voter.js', () => ({
+  selectActivityOptions: vi.fn().mockReturnValue([{ id: 'mock', name: 'Mock', description: '', icon: '', universal: true, minParticipants: 2 }]),
+  startVoteRound: vi.fn(),
+  resolveByTimeout: vi.fn(),
+  getVoteCounts: vi.fn().mockReturnValue({}),
+  clearSession: vi.fn(),
+  resetAllRounds: vi.fn(),
 }));
 
 vi.mock('../../src/services/connection-tracker.js', () => ({

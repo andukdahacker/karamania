@@ -27,6 +27,7 @@ import 'package:karamania/widgets/song_over_button.dart';
 import 'package:karamania/widgets/group_card_announcement_overlay.dart';
 import 'package:karamania/widgets/tag_team_flash_widget.dart';
 import 'package:karamania/widgets/lightstick_mode.dart';
+import 'package:karamania/widgets/interlude_vote_overlay.dart';
 import 'package:karamania/widgets/quick_pick_overlay.dart';
 import 'package:karamania/widgets/spin_the_wheel_overlay.dart';
 import 'package:karamania/widgets/song_mode_toggle.dart';
@@ -267,6 +268,22 @@ class _PartyScreenState extends State<PartyScreen>
                   timerDurationMs: partyProvider.spinWheelTimerDurationMs,
                   onSpin: () => SocketClient.instance.emitSpinWheelAction('spin'),
                   onVeto: () => SocketClient.instance.emitSpinWheelAction('veto'),
+                ),
+              ),
+            // Interlude voting overlay — during interlude state
+            if (partyProvider.interludeOptions.isNotEmpty &&
+                (partyProvider.djState == DJState.interlude ||
+                    partyProvider.interludeWinnerOptionId != null))
+              Positioned.fill(
+                child: InterludeVoteOverlay(
+                  options: partyProvider.interludeOptions,
+                  voteCounts: partyProvider.interludeVoteCounts,
+                  myVote: partyProvider.myInterludeVote,
+                  winnerOptionId: partyProvider.interludeWinnerOptionId,
+                  timerDurationMs: partyProvider.interludeVoteDurationMs,
+                  timerStartedAt: partyProvider.timerStartedAt,
+                  onVote: (optionId) =>
+                      SocketClient.instance.emitInterludeVote(optionId),
                 ),
               ),
             // Party card deal overlay — during partyCardDeal state with dealt card

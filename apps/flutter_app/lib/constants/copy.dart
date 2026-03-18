@@ -277,6 +277,12 @@ class Copy {
   static const String captureUploadComplete = 'Upload complete';
   static const String captureUploadFailed = 'Upload failed';
 
+  // Interlude voting (Story 7.1)
+  static const String interludeVotingTitle = "What's Next?";
+  static const String interludeVotingSubtitle = 'Vote for the next activity!';
+  static const String interludeVoteSelected = 'Selected!';
+  static const String interludeVotesLabel = 'votes';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

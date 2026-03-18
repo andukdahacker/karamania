@@ -10,6 +10,7 @@ import { registerLightstickHandlers } from './lightstick-handlers.js';
 import { registerSongHandlers } from './song-handlers.js';
 import { registerTvHandlers } from './tv-handlers.js';
 import { registerCaptureHandlers } from './capture-handlers.js';
+import { registerInterludeHandlers } from './interlude-handlers.js';
 import { handleParticipantJoin, transferHost, isRecoveryFailed, clearRecoveryFailed } from '../services/session-manager.js';
 import { getSessionDjState } from '../services/dj-state-store.js';
 import {
@@ -57,6 +58,7 @@ export function setupSocketHandlers(io: SocketIOServer, logger: FastifyBaseLogge
     registerSongHandlers(s, io);
     registerTvHandlers(s, io);
     registerCaptureHandlers(s, io);
+    registerInterludeHandlers(s, io);
 
     try {
       const joinResult = await handleParticipantJoin({

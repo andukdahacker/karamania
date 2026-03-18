@@ -539,6 +539,34 @@ class SocketClient {
       _captureProvider?.onCaptureBubbleTriggered(triggerType: triggerType);
     });
 
+    // Interlude voting events (Story 7.1)
+    on('interlude:voteStarted', (data) {
+      final payload = data as Map<String, dynamic>;
+      final rawOptions = payload['options'] as List<dynamic>;
+      final options = rawOptions
+          .map((o) => InterludeOption.fromJson(o as Map<String, dynamic>))
+          .toList();
+      final voteDurationMs = payload['voteDurationMs'] as int;
+      final roundId = payload['roundId'] as String;
+      _partyProvider?.onInterludeVoteStarted(options, voteDurationMs, roundId);
+    });
+
+    on('interlude:vote', (data) {
+      final payload = data as Map<String, dynamic>;
+      final voteCounts = (payload['voteCounts'] as Map<String, dynamic>)
+          .map((k, v) => MapEntry(k, v as int));
+      _partyProvider?.onInterludeVoteReceived(voteCounts);
+    });
+
+    on('interlude:voteResult', (data) {
+      final payload = data as Map<String, dynamic>;
+      final winningOptionId = payload['winningOptionId'] as String;
+      final voteCounts = (payload['voteCounts'] as Map<String, dynamic>)
+          .map((k, v) => MapEntry(k, v as int));
+      final totalVotes = payload['totalVotes'] as int;
+      _partyProvider?.onInterludeVoteResult(winningOptionId, voteCounts, totalVotes);
+    });
+
     // Host transfer event (AC #4)
     on('party:hostTransferred', (data) {
       final payload = data as Map<String, dynamic>;
@@ -618,6 +646,11 @@ class SocketClient {
       'vote': vote,
     });
     _partyProvider?.updateMyVote(catalogTrackId, vote);
+  }
+
+  void emitInterludeVote(String optionId) {
+    _socket?.emit('interlude:vote', {'optionId': optionId});
+    _partyProvider?.updateMyInterludeVote(optionId);
   }
 
   void emitSpinWheelAction(String action) {

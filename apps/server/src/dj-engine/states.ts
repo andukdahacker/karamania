@@ -36,10 +36,10 @@ const stateConfigs: Record<DJState, StateConfig> = {
     isPlaceholder: false,
   },
   [DJState.interlude]: {
-    // TODO: Epic 7 implements full interlude behavior
+    // Story 7.1: Democratic activity voting — vote window uses DJ engine 15s timer
     allowedTransitions: ['INTERLUDE_DONE', 'TIMEOUT', 'HOST_SKIP', 'HOST_OVERRIDE', 'END_PARTY'],
     hasTimeout: true,
-    isPlaceholder: true,
+    isPlaceholder: false,
   },
   [DJState.finale]: {
     allowedTransitions: [],

@@ -86,6 +86,11 @@ export const EVENTS = {
   TV_UNPAIR: 'tv:unpair',
   TV_NOW_PLAYING: 'tv:nowPlaying',
 
+  // Interlude events
+  INTERLUDE_VOTE_STARTED: 'interlude:voteStarted',
+  INTERLUDE_VOTE: 'interlude:vote',
+  INTERLUDE_VOTE_RESULT: 'interlude:voteResult',
+
   // Auth events
   AUTH_REFRESH_REQUIRED: 'auth:refreshRequired',
   AUTH_INVALID: 'auth:invalid',

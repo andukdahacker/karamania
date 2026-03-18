@@ -81,6 +81,29 @@ class SpinWheelSegment {
   }
 }
 
+class InterludeOption {
+  const InterludeOption({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.icon,
+  });
+
+  final String id;
+  final String name;
+  final String description;
+  final String icon;
+
+  factory InterludeOption.fromJson(Map<String, dynamic> json) {
+    return InterludeOption(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String,
+      icon: json['icon'] as String,
+    );
+  }
+}
+
 class ReactionEvent {
   const ReactionEvent({
     required this.id,
@@ -194,6 +217,13 @@ class PartyProvider extends ChangeNotifier {
   // Song selection mode
   String _songSelectionMode = 'quickPick'; // 'quickPick' | 'spinWheel'
 
+  // Interlude voting state — populated by interlude:voteStarted event
+  List<InterludeOption> _interludeOptions = [];
+  Map<String, int> _interludeVoteCounts = {};
+  String? _myInterludeVote;
+  String? _interludeWinnerOptionId;
+  int _interludeVoteDurationMs = 15000;
+
   // TV pairing state
   TvConnectionStatus _tvStatus = TvConnectionStatus.disconnected;
   String? _tvStatusMessage;
@@ -302,6 +332,11 @@ class PartyProvider extends ChangeNotifier {
   int get spinWheelTimerDurationMs => _spinWheelTimerDurationMs;
   int get spinWheelParticipantCount => _spinWheelParticipantCount;
   String get songSelectionMode => _songSelectionMode;
+  List<InterludeOption> get interludeOptions => _interludeOptions;
+  Map<String, int> get interludeVoteCounts => _interludeVoteCounts;
+  String? get myInterludeVote => _myInterludeVote;
+  String? get interludeWinnerOptionId => _interludeWinnerOptionId;
+  int get interludeVoteDurationMs => _interludeVoteDurationMs;
   TvConnectionStatus get tvStatus => _tvStatus;
   String? get tvStatusMessage => _tvStatusMessage;
   String? get tvNowPlayingVideoId => _tvNowPlayingVideoId;
@@ -517,6 +552,39 @@ class PartyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Interlude voting methods
+  void onInterludeVoteStarted(List<InterludeOption> options, int voteDurationMs, String roundId) {
+    _interludeOptions = options;
+    _interludeVoteCounts = {};
+    _myInterludeVote = null;
+    _interludeWinnerOptionId = null;
+    _interludeVoteDurationMs = voteDurationMs;
+    notifyListeners();
+  }
+
+  void onInterludeVoteReceived(Map<String, int> voteCounts) {
+    _interludeVoteCounts = voteCounts;
+    notifyListeners();
+  }
+
+  void onInterludeVoteResult(String winningOptionId, Map<String, int> voteCounts, int totalVotes) {
+    _interludeWinnerOptionId = winningOptionId;
+    _interludeVoteCounts = voteCounts;
+    notifyListeners();
+  }
+
+  void updateMyInterludeVote(String optionId) {
+    _myInterludeVote = optionId;
+    notifyListeners();
+  }
+
+  void _clearInterludeState() {
+    _interludeOptions = [];
+    _interludeVoteCounts = {};
+    _myInterludeVote = null;
+    _interludeWinnerOptionId = null;
+  }
+
   void onQuickPickStarted(List<QuickPickSong> songs, int participantCount, int timerDurationMs) {
     _quickPickSongs = songs;
     _quickPickVotes = {};
@@ -711,6 +779,10 @@ class PartyProvider extends ChangeNotifier {
     // Clear ceremony data when transitioning OUT of ceremony state
     if (_djState == DJState.ceremony && state != DJState.ceremony) {
       _clearCeremonyState();
+    }
+    // Clear interlude state when leaving interlude (unless winner showing)
+    if (_djState == DJState.interlude && state != DJState.interlude) {
+      _clearInterludeState();
     }
     // Clear Quick Pick state when leaving songSelection — but preserve if winner
     // is set so the overlay can show the winner highlight before delayed clear
@@ -958,6 +1030,7 @@ class PartyProvider extends ChangeNotifier {
     _timerDurationMs = null;
     _ceremonyType = null;
     _clearCeremonyState();
+    _clearInterludeState();
     _detectedSongTitle = null;
     _detectedArtist = null;
     _detectedThumbnail = null;
@@ -983,6 +1056,7 @@ class PartyProvider extends ChangeNotifier {
     _timerDurationMs = null;
     _ceremonyType = null;
     _clearCeremonyState();
+    _clearInterludeState();
     _detectedSongTitle = null;
     _detectedArtist = null;
     _detectedThumbnail = null;

@@ -19,12 +19,20 @@ import { calculateScoreIncrement, ACTION_TIER_MAP } from '../services/participat
 import { generateAward, AWARD_TEMPLATES, AwardTone, type AwardContext } from '../services/award-generator.js';
 import { clearSessionStreaks } from '../services/streak-tracker.js';
 import { clearSession as clearPeakDetectorState } from '../services/peak-detector.js';
+import {
+  selectActivityOptions,
+  startVoteRound as startActivityVoteRound,
+  resolveByTimeout as resolveActivityByTimeout,
+  getVoteCounts as getActivityVoteCounts,
+  clearSession as clearActivityVoterState,
+} from '../services/activity-voter.js';
+import type { ActivityOption } from '../services/activity-voter.js';
 import { clearPool, markSongSung } from '../services/song-pool.js';
 import { detectSong } from '../services/song-detection.js';
 import { startRound, getRound, resolveByTimeout, clearRound } from '../services/quick-pick.js';
 import { computeSuggestions } from '../services/suggestion-engine.js';
 import { shouldEmitCaptureBubble, markBubbleEmitted, clearCaptureTriggerState, type CaptureTriggerType } from '../services/capture-trigger.js';
-import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged } from '../services/dj-broadcaster.js';
+import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged, broadcastInterludeVoteStarted, broadcastInterludeVoteResult } from '../services/dj-broadcaster.js';
 import type { QuickPickSong } from '../services/quick-pick.js';
 import {
   startRound as startSpinWheelRound,
@@ -346,6 +354,136 @@ async function orchestrateQuickCeremony(
   }, QUICK_CEREMONY_DURATION_MS);
 
   ceremonyRevealTimers.set(sessionId, advanceTimer);
+}
+
+// Track scheduled interlude reveal timers for cleanup
+const interludeRevealTimers = new Map<string, NodeJS.Timeout>();
+
+function clearInterludeTimers(sessionId: string): void {
+  const timer = interludeRevealTimers.get(sessionId);
+  if (timer) {
+    clearTimeout(timer);
+    interludeRevealTimers.delete(sessionId);
+  }
+}
+
+const INTERLUDE_REVEAL_DELAY_MS = 5_000; // 5s result reveal before advancing
+
+/**
+ * Called when DJ engine enters interlude state.
+ * Orchestrates: select options → start vote round → broadcast → (timer handled by DJ engine).
+ */
+function onInterludeStateEntered(sessionId: string, context: DJContext): void {
+  const sessionStartedAt = typeof context.metadata.sessionStartedAt === 'number'
+    ? context.metadata.sessionStartedAt
+    : Date.now();
+  const interludeCount = typeof context.metadata.interludeCount === 'number'
+    ? context.metadata.interludeCount
+    : 0;
+
+  const options = selectActivityOptions(
+    sessionId,
+    context.participantCount,
+    sessionStartedAt,
+    interludeCount,
+  );
+
+  if (options.length === 0) {
+    // No eligible activities — skip interlude
+    void processDjTransition(sessionId, context, { type: 'INTERLUDE_DONE' });
+    return;
+  }
+
+  startActivityVoteRound(sessionId, options, context.participantCount, interludeCount);
+
+  broadcastInterludeVoteStarted(sessionId, {
+    options: options.map(o => ({ id: o.id, name: o.name, description: o.description, icon: o.icon })),
+    voteDurationMs: context.timerDurationMs ?? 15_000,
+    roundId: `${sessionId}-interlude-${Date.now()}`,
+  });
+
+  appendEvent(sessionId, {
+    type: 'interlude:voteStarted',
+    ts: Date.now(),
+    data: { optionCount: options.length, participantCount: context.participantCount },
+  });
+}
+
+/**
+ * Shared finalization for interlude vote resolution (majority or timeout).
+ * Broadcasts result, updates metadata, schedules reveal delay, then advances DJ state.
+ */
+function finalizeInterludeVote(
+  sessionId: string,
+  context: DJContext,
+  winner: ActivityOption,
+): void {
+  const voteCounts = getActivityVoteCounts(sessionId);
+  const totalVotes = Object.values(voteCounts).reduce((sum, c) => sum + c, 0);
+
+  broadcastInterludeVoteResult(sessionId, {
+    winningOptionId: winner.id,
+    voteCounts,
+    totalVotes,
+  });
+
+  appendEvent(sessionId, {
+    type: 'interlude:voteResult',
+    ts: Date.now(),
+    data: { winningOptionId: winner.id, totalVotes },
+  });
+
+  // Write selectedActivity to context.metadata for Stories 7.2-7.6
+  const updatedContext: DJContext = {
+    ...context,
+    metadata: {
+      ...context.metadata,
+      selectedActivity: winner.id,
+    },
+  };
+  setSessionDjState(sessionId, updatedContext);
+
+  // Schedule reveal delay then advance
+  const revealTimer = setTimeout(async () => {
+    interludeRevealTimers.delete(sessionId);
+    const currentContext = getSessionDjState(sessionId);
+    if (!currentContext || currentContext.state !== DJState.interlude) return;
+    try {
+      await processDjTransition(sessionId, currentContext, { type: 'INTERLUDE_DONE' });
+    } catch {
+      // Already transitioned (e.g., HOST_SKIP raced) — safe to ignore
+    }
+  }, INTERLUDE_REVEAL_DELAY_MS);
+
+  interludeRevealTimers.set(sessionId, revealTimer);
+}
+
+/**
+ * Called from interlude-handlers when majority winner is reached.
+ * Resolves the vote early, broadcasts result, schedules reveal delay then INTERLUDE_DONE.
+ */
+export function handleInterludeVoteWinner(sessionId: string, winner: ActivityOption): void {
+  const context = getSessionDjState(sessionId);
+  if (!context || context.state !== DJState.interlude) return;
+
+  // Cancel the DJ engine timer — we're resolving early
+  cancelSessionTimer(sessionId);
+
+  finalizeInterludeVote(sessionId, context, winner);
+}
+
+/**
+ * Resolve interlude vote by timeout — called from handleRecoveryTimeout when DJ engine timer fires.
+ */
+function resolveInterludeTimeout(sessionId: string, context: DJContext): void {
+  const winner = resolveActivityByTimeout(sessionId);
+  if (!winner) {
+    // No round or already resolved — just advance
+    void processDjTransition(sessionId, context, { type: 'TIMEOUT' });
+    return;
+  }
+
+  finalizeInterludeVote(sessionId, context, winner);
 }
 
 function orchestrateCardDeal(
@@ -946,6 +1084,12 @@ async function handleRecoveryTimeout(sessionId: string): Promise<void> {
     // Fallback: generic TIMEOUT
   }
 
+  // Interlude resolution: when interlude timer fires
+  if (context.state === DJState.interlude) {
+    resolveInterludeTimeout(sessionId, context);
+    return;
+  }
+
   await processDjTransition(sessionId, context, { type: 'TIMEOUT' });
 }
 
@@ -1131,6 +1275,16 @@ export async function processDjTransition(
       // Quick ceremony — immediate award flash, auto-advances after 10s
       void orchestrateQuickCeremony(sessionId, newContext);
     }
+  }
+
+  // Cancel any pending interlude reveal if skipping out of interlude
+  if (context.state === DJState.interlude) {
+    clearInterludeTimers(sessionId);
+  }
+
+  // Orchestrate interlude voting when entering interlude state
+  if (newContext.state === DJState.interlude) {
+    onInterludeStateEntered(sessionId, newContext);
   }
 
   // Session start capture bubble — delayed so clients render party screen first
@@ -1375,6 +1529,8 @@ export async function endSession(
   clearPool(sessionId);
   clearCaptureTriggerState(sessionId);
   clearPeakDetectorState(sessionId);
+  clearActivityVoterState(sessionId);
+  clearInterludeTimers(sessionId);
   clearRound(sessionId);
   clearSpinWheelRound(sessionId);
   sessionModes.delete(sessionId);

@@ -160,6 +160,36 @@ export function broadcastModeChanged(sessionId: string, mode: string, userId: st
   io.to(sessionId).emit(EVENTS.SONG_MODE_CHANGED, { mode, userId, displayName });
 }
 
+export function broadcastInterludeVoteStarted(
+  sessionId: string,
+  data: {
+    options: Array<{ id: string; name: string; description: string; icon: string }>;
+    voteDurationMs: number;
+    roundId: string;
+  },
+): void {
+  if (!io) {
+    console.warn('[dj-broadcaster] Cannot broadcast — io not initialized');
+    return;
+  }
+  io.to(sessionId).emit(EVENTS.INTERLUDE_VOTE_STARTED, data);
+}
+
+export function broadcastInterludeVoteResult(
+  sessionId: string,
+  data: {
+    winningOptionId: string;
+    voteCounts: Record<string, number>;
+    totalVotes: number;
+  },
+): void {
+  if (!io) {
+    console.warn('[dj-broadcaster] Cannot broadcast — io not initialized');
+    return;
+  }
+  io.to(sessionId).emit(EVENTS.INTERLUDE_VOTE_RESULT, data);
+}
+
 export function broadcastCardDealt(
   sessionId: string,
   data: {

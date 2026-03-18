@@ -106,8 +106,8 @@ development_status:
   epic-6-retrospective: optional
 
   # Epic 7: Interlude Games & Icebreaker (6 stories)
-  epic-7: backlog
-  7-1-democratic-activity-voting: backlog
+  epic-7: in-progress
+  7-1-democratic-activity-voting: done
   7-2-kings-cup-interlude: backlog
   7-3-dare-pull-interlude: backlog
   7-4-quick-vote-interlude: backlog
