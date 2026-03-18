@@ -32,7 +32,8 @@ import { detectSong } from '../services/song-detection.js';
 import { startRound, getRound, resolveByTimeout, clearRound } from '../services/quick-pick.js';
 import { computeSuggestions } from '../services/suggestion-engine.js';
 import { shouldEmitCaptureBubble, markBubbleEmitted, clearCaptureTriggerState, type CaptureTriggerType } from '../services/capture-trigger.js';
-import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged, broadcastInterludeVoteStarted, broadcastInterludeVoteResult } from '../services/dj-broadcaster.js';
+import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged, broadcastInterludeVoteStarted, broadcastInterludeVoteResult, broadcastInterludeGameStarted, broadcastInterludeGameEnded } from '../services/dj-broadcaster.js';
+import { dealCard as dealKingsCupCard, clearSession as clearKingsCupSession } from '../services/kings-cup-dealer.js';
 import type { QuickPickSong } from '../services/quick-pick.js';
 import {
   startRound as startSpinWheelRound,
@@ -359,11 +360,21 @@ async function orchestrateQuickCeremony(
 // Track scheduled interlude reveal timers for cleanup
 const interludeRevealTimers = new Map<string, NodeJS.Timeout>();
 
+// Track scheduled interlude game timers for cleanup
+const interludeGameTimers = new Map<string, NodeJS.Timeout>();
+
+const INTERLUDE_GAME_DURATION_MS = 10_000; // 10s card display
+
 function clearInterludeTimers(sessionId: string): void {
-  const timer = interludeRevealTimers.get(sessionId);
-  if (timer) {
-    clearTimeout(timer);
+  const revealTimer = interludeRevealTimers.get(sessionId);
+  if (revealTimer) {
+    clearTimeout(revealTimer);
     interludeRevealTimers.delete(sessionId);
+  }
+  const gameTimer = interludeGameTimers.get(sessionId);
+  if (gameTimer) {
+    clearTimeout(gameTimer);
+    interludeGameTimers.delete(sessionId);
   }
 }
 
@@ -443,15 +454,18 @@ function finalizeInterludeVote(
   };
   setSessionDjState(sessionId, updatedContext);
 
-  // Schedule reveal delay then advance
-  const revealTimer = setTimeout(async () => {
+  // Schedule reveal delay then dispatch interlude game
+  const revealTimer = setTimeout(() => {
     interludeRevealTimers.delete(sessionId);
     const currentContext = getSessionDjState(sessionId);
     if (!currentContext || currentContext.state !== DJState.interlude) return;
-    try {
-      await processDjTransition(sessionId, currentContext, { type: 'INTERLUDE_DONE' });
-    } catch {
-      // Already transitioned (e.g., HOST_SKIP raced) — safe to ignore
+    const selectedActivity = typeof currentContext.metadata.selectedActivity === 'string'
+      ? currentContext.metadata.selectedActivity
+      : null;
+    if (selectedActivity) {
+      startInterludeGame(sessionId, selectedActivity, currentContext);
+    } else {
+      void processDjTransition(sessionId, currentContext, { type: 'INTERLUDE_DONE' });
     }
   }, INTERLUDE_REVEAL_DELAY_MS);
 
@@ -484,6 +498,61 @@ function resolveInterludeTimeout(sessionId: string, context: DJContext): void {
   }
 
   finalizeInterludeVote(sessionId, context, winner);
+}
+
+/**
+ * Dispatch interlude game after vote reveal. Routes to specific game handler
+ * or triggers INTERLUDE_DONE for unhandled activities (forward-compatible for Stories 7.3-7.5).
+ */
+function startInterludeGame(sessionId: string, selectedActivity: string, context: DJContext): void {
+  if (selectedActivity === 'kings_cup') {
+    executeKingsCup(sessionId);
+  } else {
+    void processDjTransition(sessionId, context, { type: 'INTERLUDE_DONE' });
+  }
+}
+
+function executeKingsCup(sessionId: string): void {
+  const card = dealKingsCupCard(sessionId);
+
+  broadcastInterludeGameStarted(sessionId, {
+    activityId: 'kings_cup',
+    card,
+    gameDurationMs: INTERLUDE_GAME_DURATION_MS,
+  });
+
+  appendEvent(sessionId, {
+    type: 'interlude:gameStarted',
+    ts: Date.now(),
+    data: { activityId: 'kings_cup', cardId: card.id },
+  });
+
+  const gameTimer = setTimeout(() => {
+    endInterludeGame(sessionId);
+  }, INTERLUDE_GAME_DURATION_MS);
+
+  interludeGameTimers.set(sessionId, gameTimer);
+}
+
+function endInterludeGame(sessionId: string): void {
+  interludeGameTimers.delete(sessionId);
+
+  const currentContext = getSessionDjState(sessionId);
+  if (!currentContext || currentContext.state !== DJState.interlude) return;
+
+  const selectedActivity = typeof currentContext.metadata.selectedActivity === 'string'
+    ? currentContext.metadata.selectedActivity
+    : 'unknown';
+
+  broadcastInterludeGameEnded(sessionId, { activityId: selectedActivity });
+
+  appendEvent(sessionId, {
+    type: 'interlude:gameEnded',
+    ts: Date.now(),
+    data: { activityId: selectedActivity },
+  });
+
+  void processDjTransition(sessionId, currentContext, { type: 'INTERLUDE_DONE' });
 }
 
 function orchestrateCardDeal(
@@ -1530,6 +1599,7 @@ export async function endSession(
   clearCaptureTriggerState(sessionId);
   clearPeakDetectorState(sessionId);
   clearActivityVoterState(sessionId);
+  clearKingsCupSession(sessionId);
   clearInterludeTimers(sessionId);
   clearRound(sessionId);
   clearSpinWheelRound(sessionId);

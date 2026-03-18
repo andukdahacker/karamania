@@ -283,6 +283,9 @@ class Copy {
   static const String interludeVoteSelected = 'Selected!';
   static const String interludeVotesLabel = 'votes';
 
+  // Kings Cup interlude (Story 7.2)
+  static const String kingsCupSubtitle = 'Group Rule';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

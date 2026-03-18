@@ -85,6 +85,14 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastCeremonyQuick: (...args: unknown[]) => mockBroadcastCeremonyQuick(...args),
   broadcastInterludeVoteStarted: vi.fn(),
   broadcastInterludeVoteResult: vi.fn(),
+  broadcastInterludeGameStarted: vi.fn(),
+  broadcastInterludeGameEnded: vi.fn(),
+}));
+
+vi.mock('../../src/services/kings-cup-dealer.js', () => ({
+  dealCard: vi.fn().mockReturnValue({ id: 'mock-card', title: 'Mock', rule: 'Mock rule', emoji: '🃏' }),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
 }));
 
 vi.mock('../../src/services/activity-voter.js', () => ({

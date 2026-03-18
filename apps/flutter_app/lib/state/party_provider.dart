@@ -81,6 +81,29 @@ class SpinWheelSegment {
   }
 }
 
+class InterludeGameCard {
+  const InterludeGameCard({
+    required this.id,
+    required this.title,
+    required this.rule,
+    required this.emoji,
+  });
+
+  final String id;
+  final String title;
+  final String rule;
+  final String emoji;
+
+  factory InterludeGameCard.fromJson(Map<String, dynamic> json) {
+    return InterludeGameCard(
+      id: (json['id'] as String?) ?? '',
+      title: (json['title'] as String?) ?? '',
+      rule: (json['rule'] as String?) ?? '',
+      emoji: (json['emoji'] as String?) ?? '',
+    );
+  }
+}
+
 class InterludeOption {
   const InterludeOption({
     required this.id,
@@ -224,6 +247,13 @@ class PartyProvider extends ChangeNotifier {
   String? _interludeWinnerOptionId;
   int _interludeVoteDurationMs = 15000;
 
+  // Interlude game state — populated by interlude:gameStarted event
+  static const int _defaultGameDurationMs = 10000;
+  String? _interludeGameActivityId;
+  InterludeGameCard? _interludeGameCard;
+  int _interludeGameDurationMs = _defaultGameDurationMs;
+  int? _interludeGameStartedAt;
+
   // TV pairing state
   TvConnectionStatus _tvStatus = TvConnectionStatus.disconnected;
   String? _tvStatusMessage;
@@ -337,6 +367,10 @@ class PartyProvider extends ChangeNotifier {
   String? get myInterludeVote => _myInterludeVote;
   String? get interludeWinnerOptionId => _interludeWinnerOptionId;
   int get interludeVoteDurationMs => _interludeVoteDurationMs;
+  String? get interludeGameActivityId => _interludeGameActivityId;
+  InterludeGameCard? get interludeGameCard => _interludeGameCard;
+  int get interludeGameDurationMs => _interludeGameDurationMs;
+  int? get interludeGameStartedAt => _interludeGameStartedAt;
   TvConnectionStatus get tvStatus => _tvStatus;
   String? get tvStatusMessage => _tvStatusMessage;
   String? get tvNowPlayingVideoId => _tvNowPlayingVideoId;
@@ -583,6 +617,29 @@ class PartyProvider extends ChangeNotifier {
     _interludeVoteCounts = {};
     _myInterludeVote = null;
     _interludeWinnerOptionId = null;
+    _interludeGameActivityId = null;
+    _interludeGameCard = null;
+    _interludeGameDurationMs = _defaultGameDurationMs;
+    _interludeGameStartedAt = null;
+  }
+
+  void onInterludeGameStarted(String activityId, InterludeGameCard card, int gameDurationMs) {
+    // Clear vote overlay state so overlays are mutually exclusive
+    _interludeOptions = [];
+    // Set game state
+    _interludeGameActivityId = activityId;
+    _interludeGameCard = card;
+    _interludeGameDurationMs = gameDurationMs;
+    _interludeGameStartedAt = DateTime.now().millisecondsSinceEpoch;
+    notifyListeners();
+  }
+
+  void onInterludeGameEnded() {
+    _interludeGameActivityId = null;
+    _interludeGameCard = null;
+    _interludeGameDurationMs = _defaultGameDurationMs;
+    _interludeGameStartedAt = null;
+    notifyListeners();
   }
 
   void onQuickPickStarted(List<QuickPickSong> songs, int participantCount, int timerDurationMs) {

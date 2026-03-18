@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/constants/party_cards.dart';
-import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus, ReactionEvent, QuickPickSong, VoteTally, SpinWheelSegment, TvConnectionStatus;
+import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus, ReactionEvent, QuickPickSong, VoteTally, SpinWheelSegment, TvConnectionStatus, InterludeGameCard, InterludeOption;
 import 'package:karamania/theme/dj_theme.dart';
 
 void main() {
@@ -795,6 +795,50 @@ void main() {
         async.elapse(const Duration(seconds: 1));
         expect(provider.showMomentCard, isFalse);
       });
+    });
+  });
+
+  group('PartyProvider interlude game', () {
+    late PartyProvider provider;
+
+    setUp(() {
+      provider = PartyProvider(wakelockToggle: (_) {});
+    });
+
+    test('onInterludeGameStarted clears vote overlay state for mutual exclusivity', () {
+      // Set up vote overlay state
+      provider.onInterludeVoteStarted(
+        [const InterludeOption(id: 'kings_cup', name: 'Kings Cup', description: '', icon: '👑')],
+        15000,
+        'round-1',
+      );
+      expect(provider.interludeOptions, isNotEmpty);
+
+      // Start game — should clear vote overlay
+      provider.onInterludeGameStarted(
+        'kings_cup',
+        const InterludeGameCard(id: 'group-toast', title: 'Toast', rule: 'Cheers!', emoji: '🥂'),
+        10000,
+      );
+
+      expect(provider.interludeOptions, isEmpty);
+      expect(provider.interludeGameActivityId, 'kings_cup');
+      expect(provider.interludeGameCard, isNotNull);
+    });
+
+    test('onInterludeGameEnded clears all game fields', () {
+      provider.onInterludeGameStarted(
+        'kings_cup',
+        const InterludeGameCard(id: 'group-toast', title: 'Toast', rule: 'Cheers!', emoji: '🥂'),
+        10000,
+      );
+      expect(provider.interludeGameCard, isNotNull);
+
+      provider.onInterludeGameEnded();
+
+      expect(provider.interludeGameActivityId, isNull);
+      expect(provider.interludeGameCard, isNull);
+      expect(provider.interludeGameStartedAt, isNull);
     });
   });
 

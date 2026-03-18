@@ -90,6 +90,8 @@ export const EVENTS = {
   INTERLUDE_VOTE_STARTED: 'interlude:voteStarted',
   INTERLUDE_VOTE: 'interlude:vote',
   INTERLUDE_VOTE_RESULT: 'interlude:voteResult',
+  INTERLUDE_GAME_STARTED: 'interlude:gameStarted',
+  INTERLUDE_GAME_ENDED: 'interlude:gameEnded',
 
   // Auth events
   AUTH_REFRESH_REQUIRED: 'auth:refreshRequired',

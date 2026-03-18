@@ -46,7 +46,9 @@ export type SessionEvent =
   | { type: 'capture:shared'; ts: number; userId: string; data: Record<string, never> }
   | { type: 'interlude:voteStarted'; ts: number; data: { optionCount: number; participantCount: number } }
   | { type: 'interlude:vote'; ts: number; userId: string; data: { optionId: string } }
-  | { type: 'interlude:voteResult'; ts: number; data: { winningOptionId: string; totalVotes: number } };
+  | { type: 'interlude:voteResult'; ts: number; data: { winningOptionId: string; totalVotes: number } }
+  | { type: 'interlude:gameStarted'; ts: number; data: { activityId: string; cardId: string } }
+  | { type: 'interlude:gameEnded'; ts: number; data: { activityId: string } };
 
 const streams = new Map<string, SessionEvent[]>();
 

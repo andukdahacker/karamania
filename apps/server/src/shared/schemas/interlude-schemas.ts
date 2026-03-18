@@ -30,3 +30,18 @@ export const activityVoteResultSchema = z.object({
   voteCounts: z.record(z.string(), z.number()),
   totalVotes: z.number(),
 });
+
+export const interludeGameStartedSchema = z.object({
+  activityId: z.string().min(1),
+  card: z.object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    rule: z.string().min(1),
+    emoji: z.string().min(1),
+  }),
+  gameDurationMs: z.number(),
+});
+
+export const interludeGameEndedSchema = z.object({
+  activityId: z.string().min(1),
+});

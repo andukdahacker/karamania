@@ -190,6 +190,34 @@ export function broadcastInterludeVoteResult(
   io.to(sessionId).emit(EVENTS.INTERLUDE_VOTE_RESULT, data);
 }
 
+export function broadcastInterludeGameStarted(
+  sessionId: string,
+  data: {
+    activityId: string;
+    card: { id: string; title: string; rule: string; emoji: string };
+    gameDurationMs: number;
+  },
+): void {
+  if (!io) {
+    console.warn('[dj-broadcaster] Cannot broadcast — io not initialized');
+    return;
+  }
+  io.to(sessionId).emit(EVENTS.INTERLUDE_GAME_STARTED, data);
+}
+
+export function broadcastInterludeGameEnded(
+  sessionId: string,
+  data: {
+    activityId: string;
+  },
+): void {
+  if (!io) {
+    console.warn('[dj-broadcaster] Cannot broadcast — io not initialized');
+    return;
+  }
+  io.to(sessionId).emit(EVENTS.INTERLUDE_GAME_ENDED, data);
+}
+
 export function broadcastCardDealt(
   sessionId: string,
   data: {

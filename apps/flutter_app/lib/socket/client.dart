@@ -567,6 +567,19 @@ class SocketClient {
       _partyProvider?.onInterludeVoteResult(winningOptionId, voteCounts, totalVotes);
     });
 
+    on('interlude:gameStarted', (data) {
+      final payload = data as Map<String, dynamic>;
+      final activityId = payload['activityId'] as String;
+      final cardJson = payload['card'] as Map<String, dynamic>;
+      final card = InterludeGameCard.fromJson(cardJson);
+      final gameDurationMs = payload['gameDurationMs'] as int;
+      _partyProvider?.onInterludeGameStarted(activityId, card, gameDurationMs);
+    });
+
+    on('interlude:gameEnded', (_) {
+      _partyProvider?.onInterludeGameEnded();
+    });
+
     // Host transfer event (AC #4)
     on('party:hostTransferred', (data) {
       final payload = data as Map<String, dynamic>;
