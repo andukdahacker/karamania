@@ -14,9 +14,29 @@ class MockApiService extends ApiService {
   ApiException? mockError;
 
   @override
-  Future<PlaylistImportResult> importPlaylist(String playlistUrl) async {
+  Future<PlaylistImportResult> importPlaylist(String playlistUrl, {String? sessionId}) async {
     if (mockError != null) throw mockError!;
     return mockResult!;
+  }
+
+  @override
+  Future<({String captureId, String storagePath})> createCapture({
+    required String sessionId,
+    required String captureType,
+    required String triggerType,
+    String? userId,
+    String? token,
+  }) async {
+    return (captureId: 'mock-capture-id', storagePath: '$sessionId/mock-capture-id.jpg');
+  }
+
+  @override
+  Future<({String uploadUrl, String storagePath})> getUploadUrl({
+    required String sessionId,
+    required String captureId,
+    String? token,
+  }) async {
+    return (uploadUrl: 'https://storage.googleapis.com/mock-upload', storagePath: '$sessionId/$captureId.jpg');
   }
 }
 

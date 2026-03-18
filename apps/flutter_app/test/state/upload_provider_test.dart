@@ -22,6 +22,7 @@ void main() {
         captureId: 'cap-1',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap.jpg',
       ));
       expect(provider.hasActiveUploads, true);
       provider.dispose();
@@ -41,6 +42,7 @@ void main() {
         captureId: 'cap-1',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap.jpg',
       ));
       expect(provider.items.length, 1);
       provider.dispose();
@@ -63,6 +65,7 @@ void main() {
         captureId: 'cap-1',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap.jpg',
       ));
 
       expect(notifyCount, greaterThanOrEqualTo(1));
@@ -77,6 +80,7 @@ void main() {
         captureId: 'cap-done',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap.jpg',
         status: UploadStatus.completed,
       );
       UploadQueue.instance.enqueue(item);
@@ -97,6 +101,7 @@ void main() {
         captureId: 'cap-after-dispose',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap.jpg',
       ));
     });
   });

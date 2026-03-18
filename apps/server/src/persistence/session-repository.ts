@@ -188,6 +188,26 @@ export async function updateTopAward(
     .execute();
 }
 
+export async function isSessionParticipant(sessionId: string, userId: string): Promise<boolean> {
+  const participant = await db
+    .selectFrom('session_participants')
+    .select('id')
+    .where('session_id', '=', sessionId)
+    .where('user_id', '=', userId)
+    .executeTakeFirst();
+
+  if (participant) return true;
+
+  const host = await db
+    .selectFrom('sessions')
+    .select('id')
+    .where('id', '=', sessionId)
+    .where('host_user_id', '=', userId)
+    .executeTakeFirst();
+
+  return !!host;
+}
+
 export async function updateStatus(sessionId: string, status: string) {
   const values: Record<string, unknown> = { status };
   if (status === 'ended') {

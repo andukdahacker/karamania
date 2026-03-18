@@ -124,13 +124,15 @@ void main() {
       final captureProvider = CaptureProvider();
       final uploadProvider = UploadProvider();
 
-      // Add a pending upload item
-      UploadQueue.instance.enqueue(UploadItem(
+      // Add a pending upload item without triggering processQueue
+      // (processQueue would start async upload which creates timers)
+      UploadQueue.instance.addItemWithoutProcessing(UploadItem(
         filePath: '/tmp/test.jpg',
         sessionId: 'session-1',
         captureId: 'cap-progress',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap-progress.jpg',
       ));
 
       await tester.pumpWidget(_wrapWithProvider(
@@ -144,6 +146,7 @@ void main() {
       expect(find.byKey(const Key('capture-upload-progress')), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
+      UploadQueue.instance.clearAll();
       captureProvider.dispose();
       uploadProvider.dispose();
     });

@@ -132,6 +132,97 @@ class ApiService {
     }
   }
 
+  /// Create capture metadata on server, returns captureId and storagePath.
+  Future<({String captureId, String storagePath})> createCapture({
+    required String sessionId,
+    required String captureType,
+    required String triggerType,
+    String? userId,
+    String? token,
+  }) async {
+    _authMiddleware.token = token;
+    try {
+      final basePath = _baseUrl.endsWith('/')
+          ? _baseUrl.substring(0, _baseUrl.length - 1)
+          : _baseUrl;
+      final url = Uri.parse('$basePath/api/sessions/$sessionId/captures');
+      final bodyMap = <String, dynamic>{
+        'captureType': captureType,
+        'triggerType': triggerType,
+      };
+      if (userId != null) bodyMap['userId'] = userId;
+
+      final request = runtime.HttpRequest(
+        method: 'POST',
+        url: url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(bodyMap),
+      );
+      final response = await _chain.send(request);
+
+      if (response.statusCode == 201) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = json['data'] as Map<String, dynamic>;
+        return (
+          captureId: data['id'] as String,
+          storagePath: data['storagePath'] as String,
+        );
+      }
+
+      try {
+        final errorJson = jsonDecode(response.body) as Map<String, dynamic>;
+        final parsed = ErrorResponse.fromJson(errorJson);
+        throw ApiException(code: parsed.error.code, message: parsed.error.message);
+      } catch (e) {
+        if (e is ApiException) rethrow;
+        throw ApiException(code: 'UNKNOWN', message: 'Request failed (status ${response.statusCode})');
+      }
+    } finally {
+      _authMiddleware.token = null;
+    }
+  }
+
+  /// Get a signed upload URL for a capture (used by guest users).
+  Future<({String uploadUrl, String storagePath})> getUploadUrl({
+    required String sessionId,
+    required String captureId,
+    String? token,
+  }) async {
+    _authMiddleware.token = token;
+    try {
+      final basePath = _baseUrl.endsWith('/')
+          ? _baseUrl.substring(0, _baseUrl.length - 1)
+          : _baseUrl;
+      final url = Uri.parse('$basePath/api/sessions/$sessionId/captures/$captureId/upload-url');
+      final request = runtime.HttpRequest(
+        method: 'GET',
+        url: url,
+        headers: {'Content-Type': 'application/json'},
+      );
+      final response = await _chain.send(request);
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = json['data'] as Map<String, dynamic>;
+        return (
+          uploadUrl: data['uploadUrl'] as String,
+          storagePath: data['storagePath'] as String,
+        );
+      }
+
+      try {
+        final errorJson = jsonDecode(response.body) as Map<String, dynamic>;
+        final parsed = ErrorResponse.fromJson(errorJson);
+        throw ApiException(code: parsed.error.code, message: parsed.error.message);
+      } catch (e) {
+        if (e is ApiException) rethrow;
+        throw ApiException(code: 'UNKNOWN', message: 'Request failed (status ${response.statusCode})');
+      }
+    } finally {
+      _authMiddleware.token = null;
+    }
+  }
+
   ApiException _mapException(runtime.ApiException e) {
     final parsed = e.parsedBody;
     if (parsed is ErrorResponse) {

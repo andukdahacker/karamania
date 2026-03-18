@@ -15,6 +15,7 @@ class UploadProvider extends ChangeNotifier {
   bool get isProcessing => UploadQueue.instance.isProcessing;
   int get pendingCount => UploadQueue.instance.pendingCount;
   double get progress => UploadQueue.instance.progress;
+  double get currentUploadProgress => UploadQueue.instance.currentUploadProgress;
   List<UploadItem> get items => UploadQueue.instance.items;
 
   void enqueue(UploadItem item) {

@@ -48,17 +48,26 @@ Future<void> bootstrap() async {
   // Upload queue init — load persisted queue and start connectivity listener
   await UploadQueue.instance.init();
 
+  final apiService = ApiService(baseUrl: AppConfig.instance.serverUrl);
+  final authProvider = AuthProvider();
+
+  // Configure upload queue with API access for guest upload fallback
+  UploadQueue.instance.configure(
+    apiService: apiService,
+    tokenProvider: () => authProvider.currentToken,
+  );
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => PartyProvider()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => CaptureProvider()),
         ChangeNotifierProvider(create: (_) => TimelineProvider()),
         ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
         ChangeNotifierProvider(create: (_) => UploadProvider()),
         Provider<SocketClient>(create: (_) => SocketClient.instance),
-        Provider<ApiService>(create: (_) => ApiService(baseUrl: AppConfig.instance.serverUrl)),
+        Provider<ApiService>.value(value: apiService),
       ],
       child: const KaramaniaApp(),
     ),

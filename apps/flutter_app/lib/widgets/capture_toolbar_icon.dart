@@ -28,7 +28,7 @@ class CaptureToolbarIcon extends StatelessWidget {
               width: 28,
               height: 28,
               child: CircularProgressIndicator(
-                value: uploadProvider.progress,
+                value: uploadProvider.currentUploadProgress,
                 strokeWidth: 2,
                 color: Theme.of(context)
                     .colorScheme

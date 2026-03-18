@@ -14,6 +14,7 @@ export const envSchema = z.object({
   FIREBASE_PROJECT_ID: z.string(),
   FIREBASE_CLIENT_EMAIL: z.email(),
   FIREBASE_PRIVATE_KEY: z.string(),
+  FIREBASE_STORAGE_BUCKET: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
   SENTRY_DSN: z.string().optional(),

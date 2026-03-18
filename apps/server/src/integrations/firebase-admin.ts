@@ -1,5 +1,6 @@
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getAuth, type DecodedIdToken } from 'firebase-admin/auth';
+import { getStorage } from 'firebase-admin/storage';
 import { config } from '../config.js';
 
 export type { DecodedIdToken };
@@ -13,6 +14,7 @@ export function initializeFirebaseAdmin(): void {
         clientEmail: config.FIREBASE_CLIENT_EMAIL,
         privateKey: config.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
       }),
+      storageBucket: config.FIREBASE_STORAGE_BUCKET,
     });
   } catch {
     if (config.NODE_ENV === 'development') {
@@ -21,6 +23,10 @@ export function initializeFirebaseAdmin(): void {
     }
     throw new Error('Firebase Admin SDK initialization failed');
   }
+}
+
+export function getStorageBucket(): ReturnType<ReturnType<typeof getStorage>['bucket']> {
+  return getStorage().bucket();
 }
 
 export async function verifyFirebaseToken(idToken: string): Promise<DecodedIdToken> {

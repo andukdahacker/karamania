@@ -477,6 +477,41 @@ describe('session-repository', () => {
     });
   });
 
+  describe('isSessionParticipant', () => {
+    it('returns true when user is a participant', async () => {
+      mockExecuteTakeFirst.mockResolvedValueOnce({ id: 'p1' });
+
+      const { isSessionParticipant } = await import('../../src/persistence/session-repository.js');
+      const result = await isSessionParticipant('session-1', 'user-1');
+
+      expect(result).toBe(true);
+      expect(mockWhere).toHaveBeenCalledWith('session_id', '=', 'session-1');
+      expect(mockWhere).toHaveBeenCalledWith('user_id', '=', 'user-1');
+    });
+
+    it('returns true when user is the host (not in participants)', async () => {
+      mockExecuteTakeFirst
+        .mockResolvedValueOnce(undefined)  // Not in session_participants
+        .mockResolvedValueOnce({ id: 'session-1' }); // Is host
+
+      const { isSessionParticipant } = await import('../../src/persistence/session-repository.js');
+      const result = await isSessionParticipant('session-1', 'host-user');
+
+      expect(result).toBe(true);
+    });
+
+    it('returns false when user is neither participant nor host', async () => {
+      mockExecuteTakeFirst
+        .mockResolvedValueOnce(undefined)  // Not in session_participants
+        .mockResolvedValueOnce(undefined); // Not host
+
+      const { isSessionParticipant } = await import('../../src/persistence/session-repository.js');
+      const result = await isSessionParticipant('session-1', 'stranger');
+
+      expect(result).toBe(false);
+    });
+  });
+
   describe('getParticipantScore', () => {
     it('returns participation_score when participant exists', async () => {
       mockExecuteTakeFirst.mockResolvedValue({ participation_score: 42 });

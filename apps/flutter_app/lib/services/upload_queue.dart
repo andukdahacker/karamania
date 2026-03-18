@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:karamania/api/api_service.dart';
+import 'package:karamania/services/media_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Status of a single upload item in the queue.
@@ -17,6 +20,7 @@ class UploadItem {
     required this.captureId,
     required this.captureType,
     required this.triggerType,
+    required this.storagePath,
     this.djState,
     this.status = UploadStatus.pending,
     this.retryCount = 0,
@@ -28,6 +32,7 @@ class UploadItem {
   final String captureId;
   final String captureType;
   final String triggerType;
+  final String storagePath;
   final Map<String, dynamic>? djState;
   UploadStatus status;
   int retryCount;
@@ -39,6 +44,7 @@ class UploadItem {
         'captureId': captureId,
         'captureType': captureType,
         'triggerType': triggerType,
+        'storagePath': storagePath,
         'djState': djState,
         'status': status.name,
         'retryCount': retryCount,
@@ -51,6 +57,7 @@ class UploadItem {
         captureId: json['captureId'] as String,
         captureType: json['captureType'] as String,
         triggerType: json['triggerType'] as String,
+        storagePath: json['storagePath'] as String,
         djState: json['djState'] as Map<String, dynamic>?,
         status: UploadStatus.values.byName(json['status'] as String),
         retryCount: json['retryCount'] as int,
@@ -71,6 +78,8 @@ class UploadQueue {
   bool _isProcessing = false;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   VoidCallback? _onChanged;
+  ApiService? _apiService;
+  Future<String?> Function()? _tokenProvider;
 
   List<UploadItem> get items => List.unmodifiable(_items);
   bool get isProcessing => _isProcessing;
@@ -92,6 +101,15 @@ class UploadQueue {
   /// Set a callback for when the queue state changes.
   set onChanged(VoidCallback? callback) {
     _onChanged = callback;
+  }
+
+  /// Configure API access for guest upload fallback.
+  void configure({
+    required ApiService apiService,
+    required Future<String?> Function() tokenProvider,
+  }) {
+    _apiService = apiService;
+    _tokenProvider = tokenProvider;
   }
 
   /// Initialize — load persisted queue and start connectivity listener.
@@ -160,16 +178,66 @@ class UploadQueue {
     _onChanged?.call();
   }
 
-  /// Placeholder upload — stores file locally. Story 6.4 replaces with Firebase.
+  /// Current file upload progress (0.0 to 1.0) for the actively uploading file.
+  double _currentUploadProgress = 0.0;
+  double get currentUploadProgress => _currentUploadProgress;
+
+  /// Upload file — uses Firebase SDK for authenticated users,
+  /// server-signed URL for guest users.
   Future<bool> _uploadFile(UploadItem item) async {
+    _currentUploadProgress = 0.0;
+
+    bool hasFirebaseAuth;
     try {
-      final file = File(item.filePath);
-      if (!await file.exists()) return false;
-      // Placeholder: file exists locally, metadata created via REST.
-      // Story 6.4 will upload to Firebase Storage here.
-      return true;
+      hasFirebaseAuth = FirebaseAuth.instance.currentUser != null;
+    } catch (_) {
+      hasFirebaseAuth = false;
+    }
+
+    if (hasFirebaseAuth) {
+      final success = await MediaStorageService.instance.uploadFile(
+        item.filePath,
+        item.storagePath,
+        onProgress: (progress) {
+          _currentUploadProgress = progress;
+          _onChanged?.call();
+        },
+      );
+      if (success) _currentUploadProgress = 1.0;
+      return success;
+    }
+
+    // Guest path: get signed upload URL from server, then HTTP PUT
+    if (_apiService == null || _tokenProvider == null) {
+      debugPrint('Guest upload failed: API service not configured');
+      return false;
+    }
+
+    try {
+      final token = await _tokenProvider!();
+      final result = await _apiService!.getUploadUrl(
+        sessionId: item.sessionId,
+        captureId: item.captureId,
+        token: token,
+      );
+
+      final ext = item.storagePath.split('.').last.toLowerCase();
+      const contentTypes = {'jpg': 'image/jpeg', 'mp4': 'video/mp4', 'm4a': 'audio/mp4'};
+      final contentType = contentTypes[ext] ?? 'application/octet-stream';
+
+      final success = await MediaStorageService.instance.uploadViaSignedUrl(
+        item.filePath,
+        result.uploadUrl,
+        contentType,
+        onProgress: (progress) {
+          _currentUploadProgress = progress;
+          _onChanged?.call();
+        },
+      );
+      if (success) _currentUploadProgress = 1.0;
+      return success;
     } catch (e) {
-      debugPrint('Upload failed for ${item.captureId}: $e');
+      debugPrint('Guest upload failed: $e');
       return false;
     }
   }
@@ -239,5 +307,11 @@ class UploadQueue {
   void clearAll() {
     _items.clear();
     _isProcessing = false;
+  }
+
+  @visibleForTesting
+  void addItemWithoutProcessing(UploadItem item) {
+    _items.add(item);
+    _onChanged?.call();
   }
 }

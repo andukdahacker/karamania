@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +10,7 @@ import 'package:karamania/theme/dj_tokens.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:record/record.dart';
+import 'package:karamania/api/api_service.dart';
 import 'package:karamania/services/upload_queue.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/state/upload_provider.dart';
@@ -235,21 +237,24 @@ class _CaptureOverlayState extends State<CaptureOverlay>
     if (image != null) {
       final triggerType = provider.captureTriggerType;
       final sessionId = SocketClient.instance.currentSessionId;
+      final userId = SocketClient.instance.currentUserId;
+      if (!mounted) return;
       final djState = context.read<PartyProvider>().djStateRaw;
       SocketClient.instance.emitCaptureComplete(
         captureType: 'photo',
         triggerType: triggerType,
       );
       if (sessionId != null) {
-        context.read<UploadProvider>().enqueue(UploadItem(
+        await _enqueueWithServerMetadata(
           filePath: image.path,
           sessionId: sessionId,
-          captureId: '${DateTime.now().millisecondsSinceEpoch}_photo',
           captureType: 'photo',
           triggerType: triggerType,
+          userId: userId,
           djState: djState,
-        ));
+        );
       }
+      if (!mounted) return;
       provider.onCaptureComplete();
     } else {
       provider.onCaptureCancelled();
@@ -276,6 +281,8 @@ class _CaptureOverlayState extends State<CaptureOverlay>
     if (video != null) {
       final triggerType = provider.captureTriggerType;
       final sessionId = SocketClient.instance.currentSessionId;
+      final userId = SocketClient.instance.currentUserId;
+      if (!mounted) return;
       final djState = context.read<PartyProvider>().djStateRaw;
       SocketClient.instance.emitCaptureComplete(
         captureType: 'video',
@@ -283,15 +290,16 @@ class _CaptureOverlayState extends State<CaptureOverlay>
         durationMs: stopwatch.elapsedMilliseconds,
       );
       if (sessionId != null) {
-        context.read<UploadProvider>().enqueue(UploadItem(
+        await _enqueueWithServerMetadata(
           filePath: video.path,
           sessionId: sessionId,
-          captureId: '${DateTime.now().millisecondsSinceEpoch}_video',
           captureType: 'video',
           triggerType: triggerType,
+          userId: userId,
           djState: djState,
-        ));
+        );
       }
+      if (!mounted) return;
       provider.onCaptureComplete();
     } else {
       provider.onCaptureCancelled();
@@ -355,7 +363,7 @@ class _CaptureOverlayState extends State<CaptureOverlay>
     }
   }
 
-  void _onAudioComplete(CaptureProvider provider, String? path) {
+  Future<void> _onAudioComplete(CaptureProvider provider, String? path) async {
     _pulseController.stop();
     _pulseController.value = 1.0;
     _audioStopwatch?.stop();
@@ -364,6 +372,8 @@ class _CaptureOverlayState extends State<CaptureOverlay>
     if (path != null) {
       final triggerType = provider.captureTriggerType;
       final sessionId = SocketClient.instance.currentSessionId;
+      final userId = SocketClient.instance.currentUserId;
+      if (!mounted) return;
       final djState = context.read<PartyProvider>().djStateRaw;
       SocketClient.instance.emitCaptureComplete(
         captureType: 'audio',
@@ -371,15 +381,16 @@ class _CaptureOverlayState extends State<CaptureOverlay>
         durationMs: durationMs,
       );
       if (sessionId != null) {
-        context.read<UploadProvider>().enqueue(UploadItem(
+        await _enqueueWithServerMetadata(
           filePath: path,
           sessionId: sessionId,
-          captureId: '${DateTime.now().millisecondsSinceEpoch}_audio',
           captureType: 'audio',
           triggerType: triggerType,
+          userId: userId,
           djState: djState,
-        ));
+        );
       }
+      if (!mounted) return;
       provider.onCaptureComplete();
     } else {
       provider.onCaptureCancelled();
@@ -387,5 +398,42 @@ class _CaptureOverlayState extends State<CaptureOverlay>
     _activeRecorder?.dispose();
     _activeRecorder = null;
     _audioStopwatch = null;
+  }
+
+  Future<void> _enqueueWithServerMetadata({
+    required String filePath,
+    required String sessionId,
+    required String captureType,
+    required String triggerType,
+    String? userId,
+    Map<String, dynamic>? djState,
+  }) async {
+    if (!mounted) return;
+    final apiService = context.read<ApiService>();
+    final uploadProvider = context.read<UploadProvider>();
+    try {
+      final result = await apiService.createCapture(
+        sessionId: sessionId,
+        captureType: captureType,
+        triggerType: triggerType,
+        userId: userId,
+      );
+      uploadProvider.enqueue(UploadItem(
+        filePath: filePath,
+        sessionId: sessionId,
+        captureId: result.captureId,
+        captureType: captureType,
+        triggerType: triggerType,
+        storagePath: result.storagePath,
+        djState: djState,
+      ));
+    } catch (e) {
+      debugPrint('Failed to create capture metadata: $e');
+      // Cleanup the local file since it cannot be uploaded without server metadata
+      try {
+        final file = File(filePath);
+        if (await file.exists()) await file.delete();
+      } catch (_) {}
+    }
   }
 }

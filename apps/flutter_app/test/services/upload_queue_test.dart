@@ -14,6 +14,7 @@ void main() {
         captureId: 'cap-1',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap-1.jpg',
         djState: {'state': 'song', 'songCount': 3},
         status: UploadStatus.pending,
         retryCount: 2,
@@ -28,6 +29,7 @@ void main() {
       expect(restored.captureId, item.captureId);
       expect(restored.captureType, item.captureType);
       expect(restored.triggerType, item.triggerType);
+      expect(restored.storagePath, item.storagePath);
       expect(restored.djState, item.djState);
       expect(restored.status, item.status);
       expect(restored.retryCount, item.retryCount);
@@ -42,6 +44,7 @@ void main() {
         captureId: 'cap-2',
         captureType: 'video',
         triggerType: 'session_start',
+        storagePath: 'session-1/cap-2.mp4',
       );
 
       final json = item.toJson();
@@ -49,6 +52,23 @@ void main() {
 
       final restored = UploadItem.fromJson(json);
       expect(restored.djState, isNull);
+    });
+
+    test('storagePath is serialized and deserialized correctly', () {
+      final item = UploadItem(
+        filePath: '/tmp/capture.m4a',
+        sessionId: 'session-1',
+        captureId: 'cap-3',
+        captureType: 'audio',
+        triggerType: 'manual',
+        storagePath: 'session-1/cap-3.m4a',
+      );
+
+      final json = item.toJson();
+      expect(json['storagePath'], 'session-1/cap-3.m4a');
+
+      final restored = UploadItem.fromJson(json);
+      expect(restored.storagePath, 'session-1/cap-3.m4a');
     });
   });
 
@@ -60,6 +80,7 @@ void main() {
         captureId: 'cap-1',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap-1.jpg',
       );
 
       UploadQueue.instance.enqueue(item);
@@ -75,6 +96,7 @@ void main() {
         captureId: 'cap-1',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap-1.jpg',
       );
       final item2 = UploadItem(
         filePath: '/tmp/b.jpg',
@@ -82,6 +104,7 @@ void main() {
         captureId: 'cap-1',
         captureType: 'video',
         triggerType: 'manual',
+        storagePath: 'session-1/cap-1.mp4',
       );
 
       UploadQueue.instance.enqueue(item1);
@@ -103,6 +126,7 @@ void main() {
         captureId: 'cap-1',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap-1.jpg',
       ));
 
       expect(UploadQueue.instance.hasActiveUploads, true);
@@ -117,14 +141,13 @@ void main() {
 
   group('UploadQueue.pendingCount', () {
     test('returns number of pending items', () {
-      // Enqueue two items — processQueue will start processing but the second
-      // item should still be pending since uploads are sequential
       UploadQueue.instance.enqueue(UploadItem(
         filePath: '/tmp/a.jpg',
         sessionId: 'session-1',
         captureId: 'cap-1',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap-1.jpg',
       ));
       UploadQueue.instance.enqueue(UploadItem(
         filePath: '/tmp/b.jpg',
@@ -132,38 +155,35 @@ void main() {
         captureId: 'cap-2',
         captureType: 'video',
         triggerType: 'manual',
+        storagePath: 'session-1/cap-2.mp4',
       ));
 
-      // At least one item should be in the queue
       expect(UploadQueue.instance.items.length, 2);
     });
   });
 
   group('UploadQueue.clearFinished', () {
     test('removes completed and failed items from queue', () async {
-      // Enqueue items and wait for processQueue to complete
       UploadQueue.instance.enqueue(UploadItem(
         filePath: '/tmp/nonexistent_1.jpg',
         sessionId: 'session-1',
         captureId: 'cap-fail',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap-fail.jpg',
       ));
 
-      // Wait for queue processing to settle
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      // After processing, files that don't exist are marked as failed (retries)
-      // or completed (if file exists as placeholder). Clear the queue first.
       UploadQueue.instance.clearAll();
 
-      // Now test the clearFinished logic by manipulating items directly
       final item1 = UploadItem(
         filePath: '/tmp/a.jpg',
         sessionId: 'session-1',
         captureId: 'cap-c1',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap-c1.jpg',
         status: UploadStatus.completed,
       );
       final item2 = UploadItem(
@@ -172,17 +192,22 @@ void main() {
         captureId: 'cap-c2',
         captureType: 'video',
         triggerType: 'manual',
+        storagePath: 'session-1/cap-c2.mp4',
         status: UploadStatus.failed,
       );
 
-      // Enqueue completed/failed items (they won't be reprocessed since status
-      // prevents them from being picked by processQueue)
       UploadQueue.instance.enqueue(item1);
       UploadQueue.instance.enqueue(item2);
 
       UploadQueue.instance.clearFinished();
 
       expect(UploadQueue.instance.items.isEmpty, true);
+    });
+  });
+
+  group('UploadQueue.currentUploadProgress', () {
+    test('starts at 0.0', () {
+      expect(UploadQueue.instance.currentUploadProgress, 0.0);
     });
   });
 
@@ -197,9 +222,9 @@ void main() {
         captureId: 'cap-1',
         captureType: 'photo',
         triggerType: 'manual',
+        storagePath: 'session-1/cap-1.jpg',
       ));
 
-      // At least one notification for enqueue
       expect(callCount, greaterThanOrEqualTo(1));
 
       UploadQueue.instance.onChanged = null;
