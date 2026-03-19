@@ -140,6 +140,15 @@ vi.mock('../../src/services/peak-detector.js', () => ({
   clearAllSessions: vi.fn(),
 }));
 
+vi.mock('../../src/services/icebreaker-dealer.js', () => ({
+  dealQuestion: vi.fn().mockReturnValue({ id: 'mock-q', question: 'Mock?', options: [{ id: 'a', label: 'A', emoji: '🅰️' }, { id: 'b', label: 'B', emoji: '🅱️' }, { id: 'c', label: 'C', emoji: '©️' }, { id: 'd', label: 'D', emoji: '🇩' }] }),
+  startIcebreakerRound: vi.fn(),
+  recordIcebreakerVote: vi.fn().mockReturnValue({ recorded: true, firstVote: true }),
+  resolveIcebreaker: vi.fn().mockReturnValue({ optionCounts: { a: 3, b: 2, c: 1, d: 0 }, totalVotes: 6, winnerOptionId: 'a' }),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
 describe('session-manager DJ functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -172,21 +181,21 @@ describe('session-manager DJ functions', () => {
   });
 
   describe('initializeDjState', () => {
-    it('creates context, transitions to songSelection, persists, and returns { djContext, sideEffects }', async () => {
+    it('creates context, transitions to icebreaker, persists, and returns { djContext, sideEffects }', async () => {
       const lobbyContext = createTestDJContext({ sessionId: 'session-1', participantCount: 5 });
-      const songSelectionContext = createTestDJContext({
+      const icebreakerContext = createTestDJContext({
         sessionId: 'session-1',
         participantCount: 5,
-        state: 'songSelection' as const,
+        state: 'icebreaker' as const,
       });
       const sideEffects = [
         { type: 'cancelTimer', data: {} },
-        { type: 'broadcast', data: { from: 'lobby', to: 'songSelection' } },
-        { type: 'persist', data: { context: { state: 'songSelection' } } },
+        { type: 'broadcast', data: { from: 'lobby', to: 'icebreaker' } },
+        { type: 'persist', data: { context: { state: 'icebreaker' } } },
       ];
 
       mockCreateDJContext.mockReturnValue(lobbyContext);
-      mockProcessTransition.mockReturnValue({ newContext: songSelectionContext, sideEffects });
+      mockProcessTransition.mockReturnValue({ newContext: icebreakerContext, sideEffects });
       mockUpdateDjState.mockResolvedValue(undefined);
 
       const { initializeDjState } = await import('../../src/services/session-manager.js');
@@ -194,45 +203,45 @@ describe('session-manager DJ functions', () => {
 
       expect(mockCreateDJContext).toHaveBeenCalledWith('session-1', 5);
       expect(mockProcessTransition).toHaveBeenCalledWith(lobbyContext, { type: 'SESSION_STARTED' }, expect.any(Number));
-      expect(mockUpdateDjState).toHaveBeenCalledWith('session-1', { state: 'songSelection' });
-      expect(result.djContext).toEqual(songSelectionContext);
+      expect(mockUpdateDjState).toHaveBeenCalledWith('session-1', { state: 'icebreaker' });
+      expect(result.djContext).toEqual(icebreakerContext);
       expect(result.sideEffects).toEqual(sideEffects);
     });
 
     it('stores context in dj-state-store', async () => {
       const lobbyContext = createTestDJContext({ sessionId: 'session-1', participantCount: 5 });
-      const songSelectionContext = createTestDJContext({
+      const icebreakerContext = createTestDJContext({
         sessionId: 'session-1',
         participantCount: 5,
-        state: 'songSelection' as const,
+        state: 'icebreaker' as const,
       });
 
       mockCreateDJContext.mockReturnValue(lobbyContext);
       mockProcessTransition.mockReturnValue({
-        newContext: songSelectionContext,
+        newContext: icebreakerContext,
         sideEffects: [],
       });
 
       const { initializeDjState } = await import('../../src/services/session-manager.js');
       await initializeDjState('session-1', 5);
 
-      expect(mockSetSessionDjState).toHaveBeenCalledWith('session-1', songSelectionContext);
+      expect(mockSetSessionDjState).toHaveBeenCalledWith('session-1', icebreakerContext);
     });
 
     it('does not call persistDjState when no persist side effect is returned', async () => {
       const lobbyContext = createTestDJContext({ sessionId: 'session-1', participantCount: 5 });
-      const songSelectionContext = createTestDJContext({
+      const icebreakerContext = createTestDJContext({
         sessionId: 'session-1',
         participantCount: 5,
-        state: 'songSelection' as const,
+        state: 'icebreaker' as const,
       });
 
       mockCreateDJContext.mockReturnValue(lobbyContext);
       mockProcessTransition.mockReturnValue({
-        newContext: songSelectionContext,
+        newContext: icebreakerContext,
         sideEffects: [
           { type: 'cancelTimer', data: {} },
-          { type: 'broadcast', data: { from: 'lobby', to: 'songSelection' } },
+          { type: 'broadcast', data: { from: 'lobby', to: 'icebreaker' } },
         ],
       });
 

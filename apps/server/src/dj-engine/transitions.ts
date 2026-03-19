@@ -49,6 +49,9 @@ function validateOverrideTarget(targetState: DJState): void {
 function computeNextState(context: DJContext, event: DJTransition): DJState {
   switch (event.type) {
     case 'SESSION_STARTED':
+      return DJState.icebreaker;
+
+    case 'ICEBREAKER_DONE':
       return DJState.songSelection;
 
     case 'SONG_SELECTED':
@@ -59,6 +62,8 @@ function computeNextState(context: DJContext, event: DJTransition): DJState {
     case 'INTERLUDE_DONE':
     case 'TIMEOUT':
     case 'HOST_SKIP':
+      // Icebreaker is NOT part of the core cycle — guard before getNextCycleState
+      if (context.state === DJState.icebreaker) return DJState.songSelection;
       return getNextCycleState(context.state, context.participantCount);
 
     case 'HOST_OVERRIDE':

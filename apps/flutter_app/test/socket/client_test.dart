@@ -108,6 +108,7 @@ void main() {
     test('DJState.values.byName correctly maps all server state strings', () {
       final stateMap = {
         'lobby': DJState.lobby,
+        'icebreaker': DJState.icebreaker,
         'songSelection': DJState.songSelection,
         'partyCardDeal': DJState.partyCardDeal,
         'song': DJState.song,

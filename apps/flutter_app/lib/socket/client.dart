@@ -594,6 +594,27 @@ class SocketClient {
       _partyProvider?.onQuickVoteResult(optionACounts, optionBCounts, totalVotes);
     });
 
+    // Icebreaker events (Story 7.6)
+    on('icebreaker:started', (data) {
+      final payload = data as Map<String, dynamic>;
+      final question = payload['question'] as String;
+      final rawOptions = payload['options'] as List<dynamic>;
+      final options = rawOptions
+          .map((o) => IcebreakerOption.fromJson(o as Map<String, dynamic>))
+          .toList();
+      final voteDurationMs = payload['voteDurationMs'] as int;
+      _partyProvider?.onIcebreakerStarted(question, options, voteDurationMs);
+    });
+
+    on('icebreaker:result', (data) {
+      final payload = data as Map<String, dynamic>;
+      final optionCounts = (payload['optionCounts'] as Map<String, dynamic>)
+          .map((k, v) => MapEntry(k, v as int));
+      final totalVotes = payload['totalVotes'] as int;
+      final winnerOptionId = payload['winnerOptionId'] as String;
+      _partyProvider?.onIcebreakerResult(optionCounts, totalVotes, winnerOptionId);
+    });
+
     // Host transfer event (AC #4)
     on('party:hostTransferred', (data) {
       final payload = data as Map<String, dynamic>;
@@ -683,6 +704,10 @@ class SocketClient {
   void emitQuickVoteCast(String option) {
     _socket?.emit('interlude:quickVoteCast', {'option': option});
     _partyProvider?.updateMyQuickVote(option);
+  }
+
+  void emitIcebreakerVote(String optionId) {
+    _socket?.emit('icebreaker:vote', {'optionId': optionId});
   }
 
   void emitSpinWheelAction(String action) {

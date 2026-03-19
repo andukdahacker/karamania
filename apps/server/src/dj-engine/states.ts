@@ -14,6 +14,11 @@ const stateConfigs: Record<DJState, StateConfig> = {
     hasTimeout: false,
     isPlaceholder: false,
   },
+  [DJState.icebreaker]: {
+    allowedTransitions: ['ICEBREAKER_DONE', 'TIMEOUT', 'HOST_SKIP', 'END_PARTY'],
+    hasTimeout: true,
+    isPlaceholder: false,
+  },
   [DJState.songSelection]: {
     allowedTransitions: ['SONG_SELECTED', 'TIMEOUT', 'HOST_SKIP', 'HOST_OVERRIDE', 'END_PARTY'],
     hasTimeout: true,

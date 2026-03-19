@@ -50,6 +50,7 @@ enum PartyVibe {
 /// DJ engine states matching server-side state machine.
 enum DJState {
   lobby,
+  icebreaker,
   songSelection,
   partyCardDeal,
   song,
@@ -64,6 +65,8 @@ Color djStateBackgroundColor(DJState state, PartyVibe vibe) {
   switch (state) {
     case DJState.lobby:
       return const Color(0xFF0A0A1A);
+    case DJState.icebreaker:
+      return const Color(0xFF0F0A1E); // Same as songSelection — pre-game vibe
     case DJState.songSelection:
       return const Color(0xFF0F0A1E);
     case DJState.partyCardDeal:

@@ -115,6 +115,15 @@ vi.mock('../../src/services/quick-vote-dealer.js', () => ({
   resetAll: vi.fn(),
 }));
 
+vi.mock('../../src/services/icebreaker-dealer.js', () => ({
+  dealQuestion: vi.fn().mockReturnValue({ id: 'mock-q', question: 'Mock?', options: [{ id: 'a', label: 'A', emoji: '🅰️' }, { id: 'b', label: 'B', emoji: '🅱️' }, { id: 'c', label: 'C', emoji: '©️' }, { id: 'd', label: 'D', emoji: '🇩' }] }),
+  startIcebreakerRound: vi.fn(),
+  recordIcebreakerVote: vi.fn().mockReturnValue({ recorded: true, firstVote: true }),
+  resolveIcebreaker: vi.fn().mockReturnValue({ optionCounts: { a: 3, b: 2, c: 1, d: 0 }, totalVotes: 6, winnerOptionId: 'a' }),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
 const mockDealSingAlongPrompt = vi.fn();
 const mockClearSingAlongSession = vi.fn();
 vi.mock('../../src/services/singalong-dealer.js', () => ({

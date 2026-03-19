@@ -74,6 +74,7 @@ class Copy {
 
   // DJ state labels
   static const String djStateLobby = 'Lobby';
+  static const String djStateIcebreaker = 'Icebreaker';
   static const String djStateSongSelection = 'Song Selection';
   static const String djStatePartyCardDeal = 'Party Card Deal';
   static const String djStateSong = 'Song';
@@ -85,6 +86,8 @@ class Copy {
     switch (state) {
       case DJState.lobby:
         return djStateLobby;
+      case DJState.icebreaker:
+        return djStateIcebreaker;
       case DJState.songSelection:
         return djStateSongSelection;
       case DJState.partyCardDeal:
@@ -296,6 +299,11 @@ class Copy {
 
   // Group Sing-Along interlude (Story 7.5)
   static const String singAlongSubtitle = 'EVERYONE SING!';
+
+  // Icebreaker (Story 7.6)
+  static const String icebreakerSubtitle = 'FIRST QUESTION';
+  static const String icebreakerWaiting = 'Waiting for everyone...';
+  static const String icebreakerNote = 'Everyone answers. Results revealed together.';
 
   // Dialogs
   static const String cancel = 'CANCEL';

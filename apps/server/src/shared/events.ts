@@ -95,6 +95,11 @@ export const EVENTS = {
   QUICK_VOTE_CAST: 'interlude:quickVoteCast',
   QUICK_VOTE_RESULT: 'interlude:quickVoteResult',
 
+  // Icebreaker events
+  ICEBREAKER_STARTED: 'icebreaker:started',
+  ICEBREAKER_VOTE: 'icebreaker:vote',
+  ICEBREAKER_RESULT: 'icebreaker:result',
+
   // Auth events
   AUTH_REFRESH_REQUIRED: 'auth:refreshRequired',
   AUTH_INVALID: 'auth:invalid',

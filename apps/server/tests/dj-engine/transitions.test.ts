@@ -8,10 +8,10 @@ const NOW = 1_000_000;
 
 describe('transition', () => {
   describe('SESSION_STARTED', () => {
-    it('transitions from lobby to songSelection', () => {
+    it('transitions from lobby to icebreaker', () => {
       const ctx = createTestDJContext();
       const result = transition(ctx, { type: 'SESSION_STARTED' }, NOW);
-      expect(result.state).toBe(DJState.songSelection);
+      expect(result.state).toBe(DJState.icebreaker);
     });
 
     it('sets sessionStartedAt to provided now value', () => {
@@ -29,6 +29,19 @@ describe('transition', () => {
     it('rejects from non-lobby state', () => {
       const ctx = createTestDJContextInState(DJState.songSelection);
       expect(() => transition(ctx, { type: 'SESSION_STARTED' }, NOW)).toThrow(DJEngineError);
+    });
+  });
+
+  describe('ICEBREAKER_DONE', () => {
+    it('transitions from icebreaker to songSelection', () => {
+      const ctx = createTestDJContextInState(DJState.icebreaker);
+      const result = transition(ctx, { type: 'ICEBREAKER_DONE' }, NOW);
+      expect(result.state).toBe(DJState.songSelection);
+    });
+
+    it('rejects from wrong state', () => {
+      const ctx = createTestDJContextInState(DJState.songSelection);
+      expect(() => transition(ctx, { type: 'ICEBREAKER_DONE' }, NOW)).toThrow(DJEngineError);
     });
   });
 
@@ -106,6 +119,7 @@ describe('transition', () => {
   describe('TIMEOUT', () => {
     it('auto-advances from each timed state', () => {
       const cases: [DJState, DJState][] = [
+        [DJState.icebreaker, DJState.songSelection],
         [DJState.songSelection, DJState.partyCardDeal],
         [DJState.partyCardDeal, DJState.song],
         [DJState.song, DJState.ceremony],
@@ -138,6 +152,12 @@ describe('transition', () => {
       expect(result.state).toBe(DJState.interlude);
     });
 
+    it('advances from icebreaker to songSelection', () => {
+      const ctx = createTestDJContextInState(DJState.icebreaker);
+      const result = transition(ctx, { type: 'HOST_SKIP' }, NOW);
+      expect(result.state).toBe(DJState.songSelection);
+    });
+
     it('rejects from lobby', () => {
       const ctx = createTestDJContext();
       expect(() => transition(ctx, { type: 'HOST_SKIP' }, NOW)).toThrow(DJEngineError);
@@ -166,7 +186,7 @@ describe('transition', () => {
   describe('END_PARTY', () => {
     it('transitions any mid-cycle state to finale', () => {
       const states: DJState[] = [
-        DJState.lobby, DJState.songSelection, DJState.partyCardDeal,
+        DJState.lobby, DJState.icebreaker, DJState.songSelection, DJState.partyCardDeal,
         DJState.song, DJState.ceremony, DJState.interlude,
       ];
 
@@ -198,7 +218,7 @@ describe('transition', () => {
     it('appends new state to cycleHistory', () => {
       const ctx = createTestDJContext();
       const result = transition(ctx, { type: 'SESSION_STARTED' }, NOW);
-      expect(result.cycleHistory).toContain(DJState.songSelection);
+      expect(result.cycleHistory).toContain(DJState.icebreaker);
       expect(result.cycleHistory.length).toBe(ctx.cycleHistory.length + 1);
     });
   });

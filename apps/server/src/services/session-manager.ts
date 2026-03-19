@@ -33,11 +33,12 @@ import { detectSong } from '../services/song-detection.js';
 import { startRound, getRound, resolveByTimeout, clearRound } from '../services/quick-pick.js';
 import { computeSuggestions } from '../services/suggestion-engine.js';
 import { shouldEmitCaptureBubble, markBubbleEmitted, clearCaptureTriggerState, type CaptureTriggerType } from '../services/capture-trigger.js';
-import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged, broadcastInterludeVoteStarted, broadcastInterludeVoteResult, broadcastInterludeGameStarted, broadcastInterludeGameEnded, broadcastQuickVoteResult } from '../services/dj-broadcaster.js';
+import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged, broadcastInterludeVoteStarted, broadcastInterludeVoteResult, broadcastInterludeGameStarted, broadcastInterludeGameEnded, broadcastQuickVoteResult, broadcastIcebreakerStarted, broadcastIcebreakerResult } from '../services/dj-broadcaster.js';
 import { dealCard as dealKingsCupCard, clearSession as clearKingsCupSession } from '../services/kings-cup-dealer.js';
 import { dealDare, selectTarget, clearSession as clearDarePullSession } from '../services/dare-pull-dealer.js';
 import { dealQuestion, startQuickVoteRound, resolveQuickVote, clearSession as clearQuickVoteSession } from '../services/quick-vote-dealer.js';
 import { dealPrompt as dealSingAlongPrompt, clearSession as clearSingAlongSession } from '../services/singalong-dealer.js';
+import { dealQuestion as dealIcebreakerQuestion, startIcebreakerRound, resolveIcebreaker, clearSession as clearIcebreakerSession } from '../services/icebreaker-dealer.js';
 import type { QuickPickSong } from '../services/quick-pick.js';
 import {
   startRound as startSpinWheelRound,
@@ -387,6 +388,71 @@ function clearInterludeTimers(sessionId: string): void {
 }
 
 const INTERLUDE_REVEAL_DELAY_MS = 5_000; // 5s result reveal before advancing
+
+// Icebreaker reveal timers
+const icebreakerRevealTimers = new Map<string, NodeJS.Timeout>();
+const ICEBREAKER_REVEAL_DELAY_MS = 5_000; // 5s result reveal before advancing to songSelection
+
+function clearIcebreakerTimers(sessionId: string): void {
+  const revealTimer = icebreakerRevealTimers.get(sessionId);
+  if (revealTimer) {
+    clearTimeout(revealTimer);
+    icebreakerRevealTimers.delete(sessionId);
+  }
+}
+
+/**
+ * Called when DJ engine enters icebreaker state.
+ * Orchestrates: deal question → start round → broadcast.
+ */
+function onIcebreakerStateEntered(sessionId: string, context: DJContext): void {
+  const question = dealIcebreakerQuestion();
+  startIcebreakerRound(sessionId, question.id, question.options.map(o => o.id));
+
+  broadcastIcebreakerStarted(sessionId, {
+    question: question.question,
+    options: question.options.map(o => ({ id: o.id, label: o.label, emoji: o.emoji })),
+    voteDurationMs: context.timerDurationMs ?? 6_000,
+  });
+
+  appendEvent(sessionId, {
+    type: 'icebreaker:started',
+    ts: Date.now(),
+    data: { questionId: question.id },
+  });
+}
+
+/**
+ * Resolve icebreaker by timeout — called from handleRecoveryTimeout when DJ engine timer fires.
+ */
+function resolveIcebreakerTimeout(sessionId: string, context: DJContext): void {
+  // Get active participant IDs so non-voters are assigned a random option (AC #3)
+  const connections = getActiveConnections(sessionId);
+  const participantIds = connections.map(c => c.userId);
+  const result = resolveIcebreaker(sessionId, participantIds);
+  if (!result) {
+    void processDjTransition(sessionId, context, { type: 'ICEBREAKER_DONE' });
+    return;
+  }
+
+  broadcastIcebreakerResult(sessionId, result);
+
+  appendEvent(sessionId, {
+    type: 'icebreaker:result',
+    ts: Date.now(),
+    data: result,
+  });
+
+  // Schedule reveal delay then advance to songSelection
+  const revealTimer = setTimeout(() => {
+    icebreakerRevealTimers.delete(sessionId);
+    const currentContext = getSessionDjState(sessionId);
+    if (!currentContext || currentContext.state !== DJState.icebreaker) return;
+    void processDjTransition(sessionId, currentContext, { type: 'ICEBREAKER_DONE' });
+  }, ICEBREAKER_REVEAL_DELAY_MS);
+
+  icebreakerRevealTimers.set(sessionId, revealTimer);
+}
 
 /**
  * Called when DJ engine enters interlude state.
@@ -1268,6 +1334,12 @@ async function handleRecoveryTimeout(sessionId: string): Promise<void> {
     // Fallback: generic TIMEOUT
   }
 
+  // Icebreaker resolution: when icebreaker timer fires (6s hard deadline)
+  if (context.state === DJState.icebreaker) {
+    resolveIcebreakerTimeout(sessionId, context);
+    return;
+  }
+
   // Interlude resolution: when interlude timer fires
   if (context.state === DJState.interlude) {
     resolveInterludeTimeout(sessionId, context);
@@ -1461,6 +1533,16 @@ export async function processDjTransition(
     }
   }
 
+  // Cancel any pending icebreaker reveal if leaving icebreaker
+  if (context.state === DJState.icebreaker) {
+    clearIcebreakerTimers(sessionId);
+  }
+
+  // Orchestrate icebreaker when entering icebreaker state
+  if (newContext.state === DJState.icebreaker) {
+    onIcebreakerStateEntered(sessionId, newContext);
+  }
+
   // Cancel any pending interlude reveal if skipping out of interlude
   if (context.state === DJState.interlude) {
     clearInterludeTimers(sessionId);
@@ -1471,12 +1553,11 @@ export async function processDjTransition(
     onInterludeStateEntered(sessionId, newContext);
   }
 
-  // Session start capture bubble — delayed so clients render party screen first
-  // Architecture target: 10s after icebreaker (Story 7.6). Interim: 3s after lobby→songSelection.
-  if (context.state === DJState.lobby && newContext.state === DJState.songSelection) {
+  // Session start capture bubble — 10s after icebreaker→songSelection
+  if (context.state === DJState.icebreaker && newContext.state === DJState.songSelection) {
     setTimeout(() => {
       emitCaptureBubble(sessionId, 'session_start', newContext.state);
-    }, 3000);
+    }, 10_000);
   }
 
   // Song selection mode initialization when entering songSelection
@@ -1714,11 +1795,13 @@ export async function endSession(
   clearCaptureTriggerState(sessionId);
   clearPeakDetectorState(sessionId);
   clearActivityVoterState(sessionId);
+  clearIcebreakerSession(sessionId);
   clearKingsCupSession(sessionId);
   clearDarePullSession(sessionId);
   clearQuickVoteSession(sessionId);
   clearSingAlongSession(sessionId);
   clearInterludeTimers(sessionId);
+  clearIcebreakerTimers(sessionId);
   clearRound(sessionId);
   clearSpinWheelRound(sessionId);
   sessionModes.delete(sessionId);

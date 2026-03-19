@@ -187,22 +187,22 @@ describe('session-manager capture bubble triggers', () => {
     vi.useRealTimers();
   });
 
-  it('emits capture:bubble with session_start on lobby→songSelection after 3s delay', async () => {
-    const oldContext = createTestDJContext({ state: DJState.lobby });
+  it('emits capture:bubble with session_start on icebreaker→songSelection after 10s delay', async () => {
+    const oldContext = createTestDJContext({ state: DJState.icebreaker });
     const newContext = createTestDJContext({ state: DJState.songSelection });
 
     vi.mocked(processTransition).mockReturnValue({
       newContext,
-      sideEffects: [{ type: 'broadcast', data: { from: DJState.lobby, to: DJState.songSelection } }],
+      sideEffects: [{ type: 'broadcast', data: { from: DJState.icebreaker, to: DJState.songSelection } }],
     });
 
-    await processDjTransition('session-1', oldContext, { type: 'SESSION_STARTED' });
+    await processDjTransition('session-1', oldContext, { type: 'ICEBREAKER_DONE' });
 
     // Should NOT emit immediately
     expect(mockEmit).not.toHaveBeenCalledWith('capture:bubble', expect.anything());
 
-    // Advance past 3s delay
-    vi.advanceTimersByTime(3000);
+    // Advance past 10s delay
+    vi.advanceTimersByTime(10_000);
 
     expect(mockShouldEmitCaptureBubble).toHaveBeenCalledWith('session-1', DJState.songSelection);
     expect(mockMarkBubbleEmitted).toHaveBeenCalledWith('session-1');
@@ -213,16 +213,16 @@ describe('session-manager capture bubble triggers', () => {
   });
 
   it('appends capture:bubble event to event stream on session start', async () => {
-    const oldContext = createTestDJContext({ state: DJState.lobby });
+    const oldContext = createTestDJContext({ state: DJState.icebreaker });
     const newContext = createTestDJContext({ state: DJState.songSelection });
 
     vi.mocked(processTransition).mockReturnValue({
       newContext,
-      sideEffects: [{ type: 'broadcast', data: { from: DJState.lobby, to: DJState.songSelection } }],
+      sideEffects: [{ type: 'broadcast', data: { from: DJState.icebreaker, to: DJState.songSelection } }],
     });
 
-    await processDjTransition('session-1', oldContext, { type: 'SESSION_STARTED' });
-    vi.advanceTimersByTime(3000);
+    await processDjTransition('session-1', oldContext, { type: 'ICEBREAKER_DONE' });
+    vi.advanceTimersByTime(10_000);
 
     expect(mockAppendEvent).toHaveBeenCalledWith('session-1', expect.objectContaining({
       type: 'capture:bubble',

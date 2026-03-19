@@ -7,6 +7,7 @@
  */
 export const DJState = {
   lobby: 'lobby',
+  icebreaker: 'icebreaker',
   songSelection: 'songSelection',
   partyCardDeal: 'partyCardDeal',
   song: 'song',
@@ -37,6 +38,7 @@ export type DJTransition =
   | { type: 'SONG_SELECTED' }
   | { type: 'SONG_ENDED' }
   | { type: 'CEREMONY_DONE' }
+  | { type: 'ICEBREAKER_DONE' }
   | { type: 'INTERLUDE_DONE' }
   | { type: 'CARD_DEALT' }
   | { type: 'CARD_DONE' }

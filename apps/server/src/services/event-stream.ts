@@ -50,7 +50,10 @@ export type SessionEvent =
   | { type: 'interlude:gameStarted'; ts: number; data: { activityId: string; cardId?: string; questionId?: string } }
   | { type: 'interlude:gameEnded'; ts: number; data: { activityId: string } }
   | { type: 'interlude:quickVoteCast'; ts: number; userId: string; data: { option: 'A' | 'B' } }
-  | { type: 'interlude:quickVoteResult'; ts: number; data: { optionACounts: number; optionBCounts: number; totalVotes: number } };
+  | { type: 'interlude:quickVoteResult'; ts: number; data: { optionACounts: number; optionBCounts: number; totalVotes: number } }
+  | { type: 'icebreaker:started'; ts: number; data: { questionId: string } }
+  | { type: 'icebreaker:vote'; ts: number; userId: string; data: { optionId: string } }
+  | { type: 'icebreaker:result'; ts: number; data: { optionCounts: Record<string, number>; totalVotes: number; winnerOptionId: string } };
 
 const streams = new Map<string, SessionEvent[]>();
 

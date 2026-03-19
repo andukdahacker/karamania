@@ -7,6 +7,7 @@ describe('createTimerConfig', () => {
   it('returns default durations for all states', () => {
     const config = createTimerConfig();
     expect(config[DJState.lobby]).toBe(0);
+    expect(config[DJState.icebreaker]).toBe(6_000);
     expect(config[DJState.songSelection]).toBe(15_000);
     expect(config[DJState.partyCardDeal]).toBe(15_000);
     expect(config[DJState.song]).toBe(180_000);

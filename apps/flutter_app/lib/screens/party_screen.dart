@@ -27,6 +27,7 @@ import 'package:karamania/widgets/song_over_button.dart';
 import 'package:karamania/widgets/group_card_announcement_overlay.dart';
 import 'package:karamania/widgets/tag_team_flash_widget.dart';
 import 'package:karamania/widgets/lightstick_mode.dart';
+import 'package:karamania/widgets/icebreaker_overlay.dart';
 import 'package:karamania/widgets/interlude_vote_overlay.dart';
 import 'package:karamania/widgets/dare_pull_overlay.dart';
 import 'package:karamania/widgets/kings_cup_overlay.dart';
@@ -272,6 +273,24 @@ class _PartyScreenState extends State<PartyScreen>
                   timerDurationMs: partyProvider.spinWheelTimerDurationMs,
                   onSpin: () => SocketClient.instance.emitSpinWheelAction('spin'),
                   onVeto: () => SocketClient.instance.emitSpinWheelAction('veto'),
+                ),
+              ),
+            // Icebreaker overlay — at session start (Story 7.6)
+            if (partyProvider.djState == DJState.icebreaker &&
+                partyProvider.icebreakerOptions.isNotEmpty)
+              Positioned.fill(
+                child: IcebreakerOverlay(
+                  question: partyProvider.icebreakerQuestion!,
+                  options: partyProvider.icebreakerOptions,
+                  myVote: partyProvider.myIcebreakerVote,
+                  result: partyProvider.icebreakerResult,
+                  winnerOptionId: partyProvider.icebreakerWinnerOptionId,
+                  voteDurationMs: partyProvider.icebreakerVoteDurationMs,
+                  timerStartedAt: partyProvider.timerStartedAt,
+                  onVote: (optionId) {
+                    partyProvider.onIcebreakerVoted(optionId);
+                    SocketClient.instance.emitIcebreakerVote(optionId);
+                  },
                 ),
               ),
             // Interlude voting overlay — during interlude state

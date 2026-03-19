@@ -54,6 +54,7 @@ class StateTransitionAudio {
         DJState.interlude => SoundCue.interludeStart,
         DJState.partyCardDeal => SoundCue.partyCardDeal,
         DJState.lobby => null,
+        DJState.icebreaker => null,
         DJState.songSelection => null,
         DJState.finale => null,
       };

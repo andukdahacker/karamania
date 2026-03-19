@@ -232,6 +232,24 @@ export function broadcastInterludeGameEnded(
   io.to(sessionId).emit(EVENTS.INTERLUDE_GAME_ENDED, data);
 }
 
+export function broadcastIcebreakerStarted(sessionId: string, data: {
+  question: string;
+  options: Array<{ id: string; label: string; emoji: string }>;
+  voteDurationMs: number;
+}): void {
+  if (!io) return;
+  io.to(sessionId).emit(EVENTS.ICEBREAKER_STARTED, data);
+}
+
+export function broadcastIcebreakerResult(sessionId: string, data: {
+  optionCounts: Record<string, number>;
+  totalVotes: number;
+  winnerOptionId: string;
+}): void {
+  if (!io) return;
+  io.to(sessionId).emit(EVENTS.ICEBREAKER_RESULT, data);
+}
+
 export function broadcastCardDealt(
   sessionId: string,
   data: {

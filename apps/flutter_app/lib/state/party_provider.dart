@@ -130,6 +130,22 @@ class QuickVoteResult {
   final int totalVotes;
 }
 
+class IcebreakerOption {
+  const IcebreakerOption({required this.id, required this.label, required this.emoji});
+
+  final String id;
+  final String label;
+  final String emoji;
+
+  factory IcebreakerOption.fromJson(Map<String, dynamic> json) {
+    return IcebreakerOption(
+      id: (json['id'] as String?) ?? '',
+      label: (json['label'] as String?) ?? '',
+      emoji: (json['emoji'] as String?) ?? '',
+    );
+  }
+}
+
 class InterludeOption {
   const InterludeOption({
     required this.id,
@@ -287,6 +303,14 @@ class PartyProvider extends ChangeNotifier {
   String? _myQuickVote;
   QuickVoteResult? _quickVoteResult;
 
+  // Icebreaker state — populated by icebreaker:started event
+  String? _icebreakerQuestion;
+  List<IcebreakerOption> _icebreakerOptions = [];
+  String? _myIcebreakerVote;
+  Map<String, int>? _icebreakerResult;
+  String? _icebreakerWinnerOptionId;
+  int _icebreakerVoteDurationMs = 6000;
+
   // TV pairing state
   TvConnectionStatus _tvStatus = TvConnectionStatus.disconnected;
   String? _tvStatusMessage;
@@ -409,6 +433,12 @@ class PartyProvider extends ChangeNotifier {
   List<QuickVoteOption> get quickVoteOptions => _quickVoteOptions;
   String? get myQuickVote => _myQuickVote;
   QuickVoteResult? get quickVoteResult => _quickVoteResult;
+  String? get icebreakerQuestion => _icebreakerQuestion;
+  List<IcebreakerOption> get icebreakerOptions => _icebreakerOptions;
+  String? get myIcebreakerVote => _myIcebreakerVote;
+  Map<String, int>? get icebreakerResult => _icebreakerResult;
+  String? get icebreakerWinnerOptionId => _icebreakerWinnerOptionId;
+  int get icebreakerVoteDurationMs => _icebreakerVoteDurationMs;
   TvConnectionStatus get tvStatus => _tvStatus;
   String? get tvStatusMessage => _tvStatusMessage;
   String? get tvNowPlayingVideoId => _tvNowPlayingVideoId;
@@ -666,6 +696,37 @@ class PartyProvider extends ChangeNotifier {
     _quickVoteResult = null;
   }
 
+  // Icebreaker methods (Story 7.6)
+  void onIcebreakerStarted(String question, List<IcebreakerOption> options, int voteDurationMs) {
+    _icebreakerQuestion = question;
+    _icebreakerOptions = options;
+    _myIcebreakerVote = null;
+    _icebreakerResult = null;
+    _icebreakerWinnerOptionId = null;
+    _icebreakerVoteDurationMs = voteDurationMs;
+    notifyListeners();
+  }
+
+  void onIcebreakerVoted(String optionId) {
+    _myIcebreakerVote = optionId;
+    notifyListeners();
+  }
+
+  void onIcebreakerResult(Map<String, int> optionCounts, int totalVotes, String winnerOptionId) {
+    _icebreakerResult = optionCounts;
+    _icebreakerWinnerOptionId = winnerOptionId;
+    notifyListeners();
+  }
+
+  void _clearIcebreakerState() {
+    _icebreakerQuestion = null;
+    _icebreakerOptions = [];
+    _myIcebreakerVote = null;
+    _icebreakerResult = null;
+    _icebreakerWinnerOptionId = null;
+    _icebreakerVoteDurationMs = 6000;
+  }
+
   void onInterludeGameStarted(String activityId, InterludeGameCard card, int gameDurationMs, {String? targetUserId, String? targetDisplayName, List<QuickVoteOption>? quickVoteOptions}) {
     // Clear vote overlay state so overlays are mutually exclusive
     _interludeOptions = [];
@@ -904,6 +965,10 @@ class PartyProvider extends ChangeNotifier {
     // Clear ceremony data when transitioning OUT of ceremony state
     if (_djState == DJState.ceremony && state != DJState.ceremony) {
       _clearCeremonyState();
+    }
+    // Clear icebreaker state when leaving icebreaker
+    if (_djState == DJState.icebreaker && state != DJState.icebreaker) {
+      _clearIcebreakerState();
     }
     // Clear interlude state when leaving interlude (unless winner showing)
     if (_djState == DJState.interlude && state != DJState.interlude) {

@@ -38,12 +38,13 @@ void main() {
   });
 
   group('DJState', () {
-    test('has exactly 7 values', () {
-      expect(DJState.values.length, 7);
+    test('has exactly 8 values', () {
+      expect(DJState.values.length, 8);
     });
 
     test('contains all expected states', () {
       expect(DJState.values, contains(DJState.lobby));
+      expect(DJState.values, contains(DJState.icebreaker));
       expect(DJState.values, contains(DJState.songSelection));
       expect(DJState.values, contains(DJState.partyCardDeal));
       expect(DJState.values, contains(DJState.song));

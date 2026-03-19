@@ -71,7 +71,7 @@ describe('processTransition', () => {
       const broadcast = sideEffects.find((e): e is Extract<DJSideEffect, { type: 'broadcast' }> => e.type === 'broadcast');
       expect(broadcast).toBeDefined();
       expect(broadcast!.data.from).toBe(DJState.lobby);
-      expect(broadcast!.data.to).toBe(DJState.songSelection);
+      expect(broadcast!.data.to).toBe(DJState.icebreaker);
     });
 
     it('schedules timer for timed states', () => {
@@ -79,7 +79,7 @@ describe('processTransition', () => {
       const { sideEffects } = processTransition(ctx, { type: 'SESSION_STARTED' }, NOW);
       const timer = sideEffects.find((e): e is Extract<DJSideEffect, { type: 'scheduleTimer' }> => e.type === 'scheduleTimer');
       expect(timer).toBeDefined();
-      expect(timer!.data.durationMs).toBe(15_000); // songSelection default (15s Quick Pick)
+      expect(timer!.data.durationMs).toBe(6_000); // icebreaker default (6s)
       expect(timer!.data.transitionEvent).toBe('TIMEOUT');
     });
 
@@ -104,7 +104,7 @@ describe('processTransition', () => {
       expect(persist).toBeDefined();
       const data = persist!.data as { context: Record<string, unknown> };
       expect(data.context).toBeDefined();
-      expect((data.context as Record<string, unknown>).state).toBe(DJState.songSelection);
+      expect((data.context as Record<string, unknown>).state).toBe(DJState.icebreaker);
     });
   });
 
@@ -112,7 +112,7 @@ describe('processTransition', () => {
     const ctx = createTestDJContext();
     const { newContext } = processTransition(ctx, { type: 'SESSION_STARTED' }, NOW);
     expect(newContext.timerStartedAt).toBe(NOW);
-    expect(newContext.timerDurationMs).toBe(15_000);
+    expect(newContext.timerDurationMs).toBe(6_000);
   });
 
   it('throws DJEngineError for invalid transitions', () => {
@@ -121,11 +121,16 @@ describe('processTransition', () => {
   });
 
   describe('full cycle test', () => {
-    it('completes full cycle: lobby -> songSelection -> partyCardDeal -> song -> ceremony -> interlude -> songSelection', () => {
+    it('completes full cycle: lobby -> icebreaker -> songSelection -> partyCardDeal -> song -> ceremony -> interlude -> songSelection', () => {
       let ctx = createDJContext('cycle-test', 3);
 
-      // lobby -> songSelection
-      const r1 = processTransition(ctx, { type: 'SESSION_STARTED' }, NOW);
+      // lobby -> icebreaker
+      const r0 = processTransition(ctx, { type: 'SESSION_STARTED' }, NOW);
+      expect(r0.newContext.state).toBe(DJState.icebreaker);
+      ctx = r0.newContext;
+
+      // icebreaker -> songSelection
+      const r1 = processTransition(ctx, { type: 'ICEBREAKER_DONE' }, NOW);
       expect(r1.newContext.state).toBe(DJState.songSelection);
       ctx = r1.newContext;
 
