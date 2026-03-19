@@ -294,6 +294,9 @@ class Copy {
   static const String quickVoteTitle = 'QUICK VOTE';
   static const String quickVoteSubtitle = 'Cast your vote!';
 
+  // Group Sing-Along interlude (Story 7.5)
+  static const String singAlongSubtitle = 'EVERYONE SING!';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

@@ -112,6 +112,12 @@ vi.mock('../../src/services/quick-vote-dealer.js', () => ({
   resetAll: vi.fn(),
 }));
 
+vi.mock('../../src/services/singalong-dealer.js', () => ({
+  dealPrompt: vi.fn().mockReturnValue({ id: 'mock-prompt', title: 'Mock Song', lyric: 'Mock lyric line!', emoji: '🎤' }),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
 vi.mock('../../src/services/activity-voter.js', () => ({
   selectActivityOptions: vi.fn().mockReturnValue([{ id: 'mock', name: 'Mock', description: '', icon: '', universal: true, minParticipants: 2 }]),
   startVoteRound: vi.fn(),

@@ -84,12 +84,12 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastInterludeVoteResult: vi.fn(),
   broadcastInterludeGameStarted: (...args: unknown[]) => mockBroadcastInterludeGameStarted(...args),
   broadcastInterludeGameEnded: (...args: unknown[]) => mockBroadcastInterludeGameEnded(...args),
+  broadcastQuickVoteResult: vi.fn(),
   broadcastCardDealt: vi.fn(),
   broadcastQuickPickStarted: vi.fn(),
   broadcastSpinWheelStarted: vi.fn(),
   broadcastSpinWheelResult: vi.fn(),
   broadcastModeChanged: vi.fn(),
-  broadcastQuickVoteResult: vi.fn(),
   getIO: vi.fn(),
 }));
 
@@ -99,28 +99,27 @@ vi.mock('../../src/services/kings-cup-dealer.js', () => ({
   resetAll: vi.fn(),
 }));
 
-const mockDealDare = vi.fn();
-const mockSelectTarget = vi.fn();
-const mockClearDarePullSession = vi.fn();
 vi.mock('../../src/services/dare-pull-dealer.js', () => ({
-  dealDare: (...args: unknown[]) => mockDealDare(...args),
-  selectTarget: (...args: unknown[]) => mockSelectTarget(...args),
-  clearSession: (...args: unknown[]) => mockClearDarePullSession(...args),
+  dealDare: vi.fn().mockReturnValue({ id: 'mock-dare', title: 'Mock Dare', dare: 'Mock dare text', emoji: '🎯' }),
+  selectTarget: vi.fn().mockReturnValue(null),
+  clearSession: vi.fn(),
   resetAll: vi.fn(),
 }));
 
 vi.mock('../../src/services/quick-vote-dealer.js', () => ({
-  dealQuestion: vi.fn().mockReturnValue({ id: 'mock-q', question: 'Mock?', optionA: 'YES', optionB: 'NO', emoji: '⚡' }),
+  dealQuestion: vi.fn().mockReturnValue({ id: 'mock-q', question: 'Mock?', optionA: 'A', optionB: 'B', emoji: '❓' }),
   startQuickVoteRound: vi.fn(),
   recordQuickVote: vi.fn().mockReturnValue({ recorded: true, firstVote: true }),
-  resolveQuickVote: vi.fn().mockReturnValue({ optionACounts: 3, optionBCounts: 2, totalVotes: 5 }),
+  resolveQuickVote: vi.fn(),
   clearSession: vi.fn(),
   resetAll: vi.fn(),
 }));
 
+const mockDealSingAlongPrompt = vi.fn();
+const mockClearSingAlongSession = vi.fn();
 vi.mock('../../src/services/singalong-dealer.js', () => ({
-  dealPrompt: vi.fn().mockReturnValue({ id: 'mock-prompt', title: 'Mock Song', lyric: 'Mock lyric line!', emoji: '🎤' }),
-  clearSession: vi.fn(),
+  dealPrompt: (...args: unknown[]) => mockDealSingAlongPrompt(...args),
+  clearSession: (...args: unknown[]) => mockClearSingAlongSession(...args),
   resetAll: vi.fn(),
 }));
 
@@ -133,10 +132,9 @@ vi.mock('../../src/services/activity-voter.js', () => ({
   resetAllRounds: vi.fn(),
 }));
 
-const mockGetActiveConnections = vi.fn();
 vi.mock('../../src/services/connection-tracker.js', () => ({
   removeSession: vi.fn(),
-  getActiveConnections: (...args: unknown[]) => mockGetActiveConnections(...args),
+  getActiveConnections: vi.fn().mockReturnValue([]),
   trackConnection: vi.fn(),
   trackDisconnection: vi.fn(),
   isUserConnected: vi.fn(),
@@ -225,130 +223,111 @@ vi.mock('../../src/integrations/lounge-api.js', () => ({
   createLoungeApiClient: vi.fn(),
 }));
 
-describe('session-manager dare pull dispatch', () => {
-  const mockDare = { id: 'air-guitar', title: 'Air Guitar Solo!', dare: 'Shred an imaginary guitar for 10 seconds', emoji: '🎸' };
-  const mockTarget = { socketId: 'socket-1', userId: 'user-1', displayName: 'Alice', connectedAt: Date.now(), isHost: false };
+describe('session-manager group sing-along dispatch', () => {
+  const mockPrompt = { id: 'bohemian-rhapsody', title: 'Bohemian Rhapsody', lyric: 'Is this the real life? Is this just fantasy?', emoji: '🎸' };
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     mockGetEventStream.mockReturnValue([]);
-    mockDealDare.mockReturnValue(mockDare);
-    mockSelectTarget.mockReturnValue(mockTarget);
-    mockGetActiveConnections.mockReturnValue([mockTarget]);
+    mockDealSingAlongPrompt.mockReturnValue(mockPrompt);
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  describe('startInterludeGame dispatches to executeDarePull', () => {
-    it('dispatches to executeDarePull when selectedActivity is dare_pull', async () => {
+  describe('startInterludeGame dispatches to executeGroupSingAlong', () => {
+    it('dispatches to executeGroupSingAlong when selectedActivity is group_singalong', async () => {
       const interludeContext = createTestDJContext({
         sessionId: 'session-1',
         state: DJState.interlude,
-        metadata: { selectedActivity: 'dare_pull' },
+        metadata: { selectedActivity: 'group_singalong' },
       });
 
       mockGetSessionDjState.mockReturnValue(interludeContext);
 
       const { handleInterludeVoteWinner } = await import('../../src/services/session-manager.js');
       handleInterludeVoteWinner('session-1', {
-        id: 'dare_pull',
-        name: 'Dare Pull',
+        id: 'group_singalong',
+        name: 'Group Sing-Along',
         description: '',
-        icon: '🎯',
-        universal: false,
-        minParticipants: 3,
+        icon: '🎤',
+        universal: true,
+        minParticipants: 2,
       });
 
       // Advance past reveal delay (5s)
       vi.advanceTimersByTime(5_000);
 
-      expect(mockGetActiveConnections).toHaveBeenCalledWith('session-1');
-      expect(mockSelectTarget).toHaveBeenCalledWith('session-1', [mockTarget]);
-      expect(mockDealDare).toHaveBeenCalledWith('session-1');
+      expect(mockDealSingAlongPrompt).toHaveBeenCalledWith('session-1');
+    });
+
+    it('broadcasts interlude:gameStarted with prompt data mapped to card shape', async () => {
+      const interludeContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.interlude,
+        metadata: { selectedActivity: 'group_singalong' },
+      });
+
+      mockGetSessionDjState.mockReturnValue(interludeContext);
+
+      const { handleInterludeVoteWinner } = await import('../../src/services/session-manager.js');
+      handleInterludeVoteWinner('session-1', {
+        id: 'group_singalong',
+        name: 'Group Sing-Along',
+        description: '',
+        icon: '🎤',
+        universal: true,
+        minParticipants: 2,
+      });
+
+      vi.advanceTimersByTime(5_000);
+
       expect(mockBroadcastInterludeGameStarted).toHaveBeenCalledWith('session-1', {
-        activityId: 'dare_pull',
-        card: { id: mockDare.id, title: mockDare.title, rule: mockDare.dare, emoji: mockDare.emoji },
+        activityId: 'group_singalong',
+        card: {
+          id: 'bohemian-rhapsody',
+          title: 'Bohemian Rhapsody',
+          rule: 'Is this the real life? Is this just fantasy?',
+          emoji: '🎸',
+        },
         gameDurationMs: 15_000,
-        targetUserId: 'user-1',
-        targetDisplayName: 'Alice',
       });
     });
 
-    it('broadcasts interlude:gameStarted with dare card data and target info', async () => {
+    it('gameDurationMs is 15000 (15 seconds)', async () => {
       const interludeContext = createTestDJContext({
         sessionId: 'session-1',
         state: DJState.interlude,
-        metadata: { selectedActivity: 'dare_pull' },
+        metadata: { selectedActivity: 'group_singalong' },
       });
 
       mockGetSessionDjState.mockReturnValue(interludeContext);
 
       const { handleInterludeVoteWinner } = await import('../../src/services/session-manager.js');
       handleInterludeVoteWinner('session-1', {
-        id: 'dare_pull',
-        name: 'Dare Pull',
+        id: 'group_singalong',
+        name: 'Group Sing-Along',
         description: '',
-        icon: '🎯',
-        universal: false,
-        minParticipants: 3,
+        icon: '🎤',
+        universal: true,
+        minParticipants: 2,
       });
 
       vi.advanceTimersByTime(5_000);
 
-      const call = mockBroadcastInterludeGameStarted.mock.calls[0]!;
-      const data = call[1] as { targetUserId: string; targetDisplayName: string; card: { rule: string } };
-      expect(data.targetUserId).toBe('user-1');
-      expect(data.targetDisplayName).toBe('Alice');
-      expect(data.card.rule).toBe(mockDare.dare);
-    });
-
-    it('falls back to INTERLUDE_DONE when no active connections', async () => {
-      mockGetActiveConnections.mockReturnValue([]);
-      mockSelectTarget.mockReturnValue(null);
-
-      const interludeContext = createTestDJContext({
-        sessionId: 'session-1',
-        state: DJState.interlude,
-        metadata: { selectedActivity: 'dare_pull' },
-      });
-
-      mockGetSessionDjState.mockReturnValue(interludeContext);
-      mockProcessTransition.mockReturnValue({
-        newContext: createTestDJContext({ sessionId: 'session-1', state: DJState.songSelection }),
-        sideEffects: [],
-      });
-
-      const { handleInterludeVoteWinner } = await import('../../src/services/session-manager.js');
-      handleInterludeVoteWinner('session-1', {
-        id: 'dare_pull',
-        name: 'Dare Pull',
-        description: '',
-        icon: '🎯',
-        universal: false,
-        minParticipants: 3,
-      });
-
-      vi.advanceTimersByTime(5_000);
-
-      expect(mockDealDare).not.toHaveBeenCalled();
-      expect(mockBroadcastInterludeGameStarted).not.toHaveBeenCalled();
-      expect(mockProcessTransition).toHaveBeenCalledWith(
-        interludeContext,
-        expect.objectContaining({ type: 'INTERLUDE_DONE' }),
-        expect.any(Number),
-      );
+      const call = mockBroadcastInterludeGameStarted.mock.calls[0];
+      expect(call[1].gameDurationMs).toBe(15_000);
     });
   });
 
-  describe('dare pull game timer', () => {
-    it('fires gameEnded after 15s', async () => {
+  describe('game timer', () => {
+    it('fires after 15s and triggers endInterludeGame', async () => {
       const interludeContext = createTestDJContext({
         sessionId: 'session-1',
         state: DJState.interlude,
-        metadata: { selectedActivity: 'dare_pull' },
+        metadata: { selectedActivity: 'group_singalong' },
       });
 
       mockGetSessionDjState.mockReturnValue(interludeContext);
@@ -359,66 +338,59 @@ describe('session-manager dare pull dispatch', () => {
 
       const { handleInterludeVoteWinner } = await import('../../src/services/session-manager.js');
       handleInterludeVoteWinner('session-1', {
-        id: 'dare_pull',
-        name: 'Dare Pull',
+        id: 'group_singalong',
+        name: 'Group Sing-Along',
         description: '',
-        icon: '🎯',
-        universal: false,
-        minParticipants: 3,
+        icon: '🎤',
+        universal: true,
+        minParticipants: 2,
       });
 
-      // Advance past reveal delay (5s) — starts game
+      // Advance past reveal delay (5s)
       vi.advanceTimersByTime(5_000);
       expect(mockBroadcastInterludeGameEnded).not.toHaveBeenCalled();
 
-      // Advance game timer (15s for dare pull)
+      // Advance game timer (15s)
       vi.advanceTimersByTime(15_000);
 
       expect(mockBroadcastInterludeGameEnded).toHaveBeenCalledWith('session-1', {
-        activityId: 'dare_pull',
+        activityId: 'group_singalong',
       });
     });
 
-    it('triggers INTERLUDE_DONE after dare pull gameEnded', async () => {
+    it('appends interlude:gameStarted event to event stream', async () => {
       const interludeContext = createTestDJContext({
         sessionId: 'session-1',
         state: DJState.interlude,
-        metadata: { selectedActivity: 'dare_pull' },
+        metadata: { selectedActivity: 'group_singalong' },
       });
 
       mockGetSessionDjState.mockReturnValue(interludeContext);
-      mockProcessTransition.mockReturnValue({
-        newContext: createTestDJContext({ sessionId: 'session-1', state: DJState.songSelection }),
-        sideEffects: [],
-      });
 
       const { handleInterludeVoteWinner } = await import('../../src/services/session-manager.js');
       handleInterludeVoteWinner('session-1', {
-        id: 'dare_pull',
-        name: 'Dare Pull',
+        id: 'group_singalong',
+        name: 'Group Sing-Along',
         description: '',
-        icon: '🎯',
-        universal: false,
-        minParticipants: 3,
+        icon: '🎤',
+        universal: true,
+        minParticipants: 2,
       });
 
-      // Advance past reveal (5s) + game (15s)
-      vi.advanceTimersByTime(20_000);
+      vi.advanceTimersByTime(5_000);
 
-      expect(mockProcessTransition).toHaveBeenCalledWith(
-        interludeContext,
-        expect.objectContaining({ type: 'INTERLUDE_DONE' }),
-        expect.any(Number),
-      );
+      expect(mockAppendEvent).toHaveBeenCalledWith('session-1', expect.objectContaining({
+        type: 'interlude:gameStarted',
+        data: { activityId: 'group_singalong', cardId: 'bohemian-rhapsody' },
+      }));
     });
   });
 
   describe('session cleanup', () => {
-    it('clears dare pull session data on session end', async () => {
+    it('clears sing-along session tracking during teardown', async () => {
       const lobbyContext = createTestDJContext({
         sessionId: 'session-1',
         state: DJState.lobby,
-        songCount: 3,
       });
       const finaleContext = createTestDJContext({
         sessionId: 'session-1',
@@ -433,36 +405,50 @@ describe('session-manager dare pull dispatch', () => {
       const { endSession } = await import('../../src/services/session-manager.js');
       await endSession('session-1', 'host-1');
 
-      expect(mockClearDarePullSession).toHaveBeenCalledWith('session-1');
+      expect(mockClearSingAlongSession).toHaveBeenCalledWith('session-1');
     });
   });
 
-  describe('event stream', () => {
-    it('appends interlude:gameStarted event with dare_pull activityId', async () => {
+  describe('HOST_SKIP during display', () => {
+    it('cancels game timer when HOST_SKIP is processed', async () => {
       const interludeContext = createTestDJContext({
         sessionId: 'session-1',
         state: DJState.interlude,
-        metadata: { selectedActivity: 'dare_pull' },
+        metadata: { selectedActivity: 'group_singalong' },
       });
 
       mockGetSessionDjState.mockReturnValue(interludeContext);
-
-      const { handleInterludeVoteWinner } = await import('../../src/services/session-manager.js');
-      handleInterludeVoteWinner('session-1', {
-        id: 'dare_pull',
-        name: 'Dare Pull',
-        description: '',
-        icon: '🎯',
-        universal: false,
-        minParticipants: 3,
+      const songSelectionContext = createTestDJContext({
+        sessionId: 'session-1',
+        state: DJState.songSelection,
+      });
+      mockProcessTransition.mockReturnValue({
+        newContext: songSelectionContext,
+        sideEffects: [],
       });
 
-      vi.advanceTimersByTime(5_000);
+      const { handleInterludeVoteWinner, processDjTransition } = await import('../../src/services/session-manager.js');
+      handleInterludeVoteWinner('session-1', {
+        id: 'group_singalong',
+        name: 'Group Sing-Along',
+        description: '',
+        icon: '🎤',
+        universal: true,
+        minParticipants: 2,
+      });
 
-      expect(mockAppendEvent).toHaveBeenCalledWith('session-1', expect.objectContaining({
-        type: 'interlude:gameStarted',
-        data: { activityId: 'dare_pull', cardId: 'air-guitar' },
-      }));
+      // Advance past reveal delay (5s) — game starts
+      vi.advanceTimersByTime(5_000);
+      expect(mockBroadcastInterludeGameStarted).toHaveBeenCalled();
+
+      // HOST_SKIP during display
+      await processDjTransition('session-1', interludeContext, { type: 'HOST_SKIP' });
+
+      // Advance past game duration — timer should NOT fire
+      vi.advanceTimersByTime(15_000);
+
+      // gameEnded should NOT be called since timer was cancelled by HOST_SKIP
+      expect(mockBroadcastInterludeGameEnded).not.toHaveBeenCalled();
     });
   });
 });

@@ -31,6 +31,7 @@ import 'package:karamania/widgets/interlude_vote_overlay.dart';
 import 'package:karamania/widgets/dare_pull_overlay.dart';
 import 'package:karamania/widgets/kings_cup_overlay.dart';
 import 'package:karamania/widgets/quick_vote_overlay.dart';
+import 'package:karamania/widgets/group_singalong_overlay.dart';
 import 'package:karamania/widgets/quick_pick_overlay.dart';
 import 'package:karamania/widgets/spin_the_wheel_overlay.dart';
 import 'package:karamania/widgets/song_mode_toggle.dart';
@@ -325,6 +326,16 @@ class _PartyScreenState extends State<PartyScreen>
                   timerStartedAt: partyProvider.interludeGameStartedAt,
                   onVote: (option) =>
                       SocketClient.instance.emitQuickVoteCast(option),
+                ),
+              ),
+            // Group Sing-Along game overlay — after vote concludes
+            if (partyProvider.interludeGameActivityId == 'group_singalong' &&
+                partyProvider.interludeGameCard != null)
+              Positioned.fill(
+                child: GroupSingAlongOverlay(
+                  card: partyProvider.interludeGameCard!,
+                  gameDurationMs: partyProvider.interludeGameDurationMs,
+                  timerStartedAt: partyProvider.interludeGameStartedAt,
                 ),
               ),
             // Party card deal overlay — during partyCardDeal state with dealt card

@@ -37,6 +37,7 @@ import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWhee
 import { dealCard as dealKingsCupCard, clearSession as clearKingsCupSession } from '../services/kings-cup-dealer.js';
 import { dealDare, selectTarget, clearSession as clearDarePullSession } from '../services/dare-pull-dealer.js';
 import { dealQuestion, startQuickVoteRound, resolveQuickVote, clearSession as clearQuickVoteSession } from '../services/quick-vote-dealer.js';
+import { dealPrompt as dealSingAlongPrompt, clearSession as clearSingAlongSession } from '../services/singalong-dealer.js';
 import type { QuickPickSong } from '../services/quick-pick.js';
 import {
   startRound as startSpinWheelRound,
@@ -370,6 +371,7 @@ const INTERLUDE_GAME_DURATION_MS = 10_000; // 10s card display
 const DARE_PULL_GAME_DURATION_MS = 15_000; // 15s dare timer
 const QUICK_VOTE_VOTING_DURATION_MS = 6_000; // 6s hard voting window
 const QUICK_VOTE_REVEAL_DURATION_MS = 5_000; // 5s results display
+const SINGALONG_GAME_DURATION_MS = 15_000; // 15s — longer than Kings Cup (10s) to give group time to start singing; not specified in UX spec, tunable
 
 function clearInterludeTimers(sessionId: string): void {
   const revealTimer = interludeRevealTimers.get(sessionId);
@@ -508,7 +510,7 @@ function resolveInterludeTimeout(sessionId: string, context: DJContext): void {
 
 /**
  * Dispatch interlude game after vote reveal. Routes to specific game handler
- * or triggers INTERLUDE_DONE for unhandled activities (forward-compatible for Stories 7.4-7.5).
+ * or triggers INTERLUDE_DONE for unhandled activities.
  */
 function startInterludeGame(sessionId: string, selectedActivity: string, context: DJContext): void {
   if (selectedActivity === 'kings_cup') {
@@ -523,6 +525,8 @@ function startInterludeGame(sessionId: string, selectedActivity: string, context
     }
   } else if (selectedActivity === 'quick_vote') {
     executeQuickVote(sessionId);
+  } else if (selectedActivity === 'group_singalong') {
+    executeGroupSingAlong(sessionId);
   } else {
     void processDjTransition(sessionId, context, { type: 'INTERLUDE_DONE' });
   }
@@ -596,6 +600,29 @@ function executeQuickVote(sessionId: string): void {
   }, QUICK_VOTE_VOTING_DURATION_MS);
 
   interludeGameTimers.set(sessionId, voteTimer);
+}
+
+function executeGroupSingAlong(sessionId: string): void {
+  const prompt = dealSingAlongPrompt(sessionId);
+
+  broadcastInterludeGameStarted(sessionId, {
+    activityId: 'group_singalong',
+    // prompt.lyric maps to card.rule for InterludeGameCard reuse — Flutter overlay displays rule field as lyric text
+    card: { id: prompt.id, title: prompt.title, rule: prompt.lyric, emoji: prompt.emoji },
+    gameDurationMs: SINGALONG_GAME_DURATION_MS,
+  });
+
+  appendEvent(sessionId, {
+    type: 'interlude:gameStarted',
+    ts: Date.now(),
+    data: { activityId: 'group_singalong', cardId: prompt.id },
+  });
+
+  const gameTimer = setTimeout(() => {
+    endInterludeGame(sessionId);
+  }, SINGALONG_GAME_DURATION_MS);
+
+  interludeGameTimers.set(sessionId, gameTimer);
 }
 
 function resolveAndRevealQuickVote(sessionId: string): void {
@@ -1690,6 +1717,7 @@ export async function endSession(
   clearKingsCupSession(sessionId);
   clearDarePullSession(sessionId);
   clearQuickVoteSession(sessionId);
+  clearSingAlongSession(sessionId);
   clearInterludeTimers(sessionId);
   clearRound(sessionId);
   clearSpinWheelRound(sessionId);
