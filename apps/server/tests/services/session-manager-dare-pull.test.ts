@@ -90,6 +90,7 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastSpinWheelResult: vi.fn(),
   broadcastModeChanged: vi.fn(),
   broadcastQuickVoteResult: vi.fn(),
+  broadcastFinaleAwards: vi.fn(),
   getIO: vi.fn(),
 }));
 
@@ -177,6 +178,20 @@ vi.mock('../../src/services/award-generator.js', () => ({
   generateAward: vi.fn().mockReturnValue({ award: 'Star', tone: 'hype' }),
   AWARD_TEMPLATES: [],
   AwardTone: { hype: 'hype' },
+}));
+
+vi.mock('../../src/services/finale-award-generator.js', () => ({
+  analyzeSessionForAwards: vi.fn().mockReturnValue([]),
+  generateFinaleAwards: vi.fn().mockReturnValue([]),
+  FinaleAwardCategory: {
+    performer: 'performer',
+    hypeLeader: 'hypeLeader',
+    socialButterfly: 'socialButterfly',
+    crowdFavorite: 'crowdFavorite',
+    partyStarter: 'partyStarter',
+    vibeKeeper: 'vibeKeeper',
+    everyone: 'everyone',
+  },
 }));
 
 vi.mock('../../src/services/streak-tracker.js', () => ({

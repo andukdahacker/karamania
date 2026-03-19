@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/constants/party_cards.dart';
+import 'package:karamania/models/finale_award.dart';
 import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus, ReactionEvent, QuickPickSong, VoteTally, SpinWheelSegment, TvConnectionStatus, InterludeGameCard, InterludeOption;
 import 'package:karamania/theme/dj_theme.dart';
 
@@ -1835,6 +1836,83 @@ void main() {
       provider.onDjStateUpdate(state: DJState.ceremony);
 
       expect(provider.hasLastQueuedSong, isFalse);
+    });
+  });
+
+  group('PartyProvider finale awards (Story 8.1)', () {
+    late PartyProvider provider;
+
+    setUp(() {
+      provider = PartyProvider(wakelockToggle: (_) {});
+    });
+
+    test('finaleAwards is null initially', () {
+      expect(provider.finaleAwards, isNull);
+    });
+
+    test('setFinaleAwards stores awards correctly', () {
+      final awards = [
+        FinaleAward(
+          userId: 'u1',
+          displayName: 'Alice',
+          category: 'hypeLeader',
+          title: 'Reaction Machine',
+          tone: 'hype',
+          reason: 'Sent 47 reactions tonight',
+        ),
+        FinaleAward(
+          userId: 'u2',
+          displayName: 'Bob',
+          category: 'everyone',
+          title: 'Enigmatic Presence',
+          tone: 'wholesome',
+          reason: 'A vital part of tonight',
+        ),
+      ];
+
+      provider.setFinaleAwards(awards);
+
+      expect(provider.finaleAwards, isNotNull);
+      expect(provider.finaleAwards!.length, 2);
+      expect(provider.finaleAwards![0].userId, 'u1');
+      expect(provider.finaleAwards![0].title, 'Reaction Machine');
+      expect(provider.finaleAwards![1].displayName, 'Bob');
+    });
+
+    test('clearFinaleAwards resets to null', () {
+      provider.setFinaleAwards([
+        FinaleAward(
+          userId: 'u1',
+          displayName: 'Alice',
+          category: 'performer',
+          title: 'Voice of the Night',
+          tone: 'wholesome',
+          reason: 'Performed 3 songs tonight',
+        ),
+      ]);
+
+      expect(provider.finaleAwards, isNotNull);
+
+      provider.clearFinaleAwards();
+
+      expect(provider.finaleAwards, isNull);
+    });
+
+    test('onSessionEnded clears finale awards', () {
+      provider.setFinaleAwards([
+        FinaleAward(
+          userId: 'u1',
+          displayName: 'Alice',
+          category: 'everyone',
+          title: 'The Anchor',
+          tone: 'wholesome',
+          reason: 'A vital part of tonight',
+        ),
+      ]);
+
+      provider.onSessionEnded();
+
+      expect(provider.finaleAwards, isNull);
     });
   });
 }

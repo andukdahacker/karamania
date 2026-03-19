@@ -7,6 +7,7 @@ import 'package:karamania/audio/audio_engine.dart';
 import 'package:karamania/audio/sound_cue.dart';
 import 'package:karamania/audio/state_transition_audio.dart';
 import 'package:karamania/constants/party_cards.dart';
+import 'package:karamania/models/finale_award.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/capture_provider.dart';
@@ -613,6 +614,15 @@ class SocketClient {
       final totalVotes = payload['totalVotes'] as int;
       final winnerOptionId = payload['winnerOptionId'] as String;
       _partyProvider?.onIcebreakerResult(optionCounts, totalVotes, winnerOptionId);
+    });
+
+    // Finale awards event (Story 8.1)
+    on('finale:awards', (data) {
+      final rawAwards = data as List<dynamic>;
+      final awards = rawAwards
+          .map((a) => FinaleAward.fromJson(a as Map<String, dynamic>))
+          .toList();
+      _partyProvider?.setFinaleAwards(awards);
     });
 
     // Host transfer event (AC #4)

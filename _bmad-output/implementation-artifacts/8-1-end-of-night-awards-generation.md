@@ -1,6 +1,6 @@
 # Story 8.1: End-of-Night Awards Generation
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,56 +22,56 @@ So that every participant feels valued whether they sang, cheered, or played alo
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Define end-of-night award types and template pool (AC: #1, #6)
-  - [ ] 1.1 Create `apps/server/src/services/finale-award-generator.ts` — NEW service for end-of-night awards (separate from per-song `award-generator.ts`)
-  - [ ] 1.2 Define `FinaleAwardCategory` enum: `performer` (sang songs), `hypeLeader` (most reactions sent), `socialButterfly` (most card completions), `crowdFavorite` (received most reactions during songs), `partyStarter` (highest participation score), `vibeKeeper` (most diverse activity types across session — measured by distinct action categories used: reactions, soundboard, voting, cards, captures), `everyone` (participation award for all). Categories are skippable when no qualifying data exists (e.g., `socialButterfly` skipped if zero cards dealt)
-  - [ ] 1.3 Create finale award template pool (minimum 35 templates) with explicit category distribution: 6 performer, 5 hypeLeader, 4 socialButterfly, 4 crowdFavorite, 4 partyStarter, 4 vibeKeeper, 8 everyone (character-trait). Tone distribution per category: mix of comedic/hype/absurd/wholesome — ensure `everyone` templates are equally prestigious, not "consolation prize" framing. Reuse `AwardTone` type from existing `award-generator.ts`
-  - [ ] 1.4 Ensure all templates for non-performers celebrate character traits, not absence of singing (face-saving principle). Examples: "Enigmatic Presence", "The Cool Observer", "Most Mysterious Energy", "Vibe Architect", "Silent Force", "The Anchor". Score-categorized: high participation score → impressive titles ("Hype Lord", "Party Engine"), low participation score → character celebrations ("Enigmatic Presence", "The Zen Master"). NEVER reference performance failure or skill level
+- [x] Task 1: Define end-of-night award types and template pool (AC: #1, #6)
+  - [x] 1.1 Create `apps/server/src/services/finale-award-generator.ts` — NEW service for end-of-night awards (separate from per-song `award-generator.ts`)
+  - [x] 1.2 Define `FinaleAwardCategory` enum: `performer` (sang songs), `hypeLeader` (most reactions sent), `socialButterfly` (most card completions), `crowdFavorite` (received most reactions during songs), `partyStarter` (highest participation score), `vibeKeeper` (most diverse activity types across session — measured by distinct action categories used: reactions, soundboard, voting, cards, captures), `everyone` (participation award for all). Categories are skippable when no qualifying data exists (e.g., `socialButterfly` skipped if zero cards dealt)
+  - [x] 1.3 Create finale award template pool (minimum 35 templates) with explicit category distribution: 6 performer, 5 hypeLeader, 4 socialButterfly, 4 crowdFavorite, 4 partyStarter, 4 vibeKeeper, 8 everyone (character-trait). Tone distribution per category: mix of comedic/hype/absurd/wholesome — ensure `everyone` templates are equally prestigious, not "consolation prize" framing. Reuse `AwardTone` type from existing `award-generator.ts`
+  - [x] 1.4 Ensure all templates for non-performers celebrate character traits, not absence of singing (face-saving principle). Examples: "Enigmatic Presence", "The Cool Observer", "Most Mysterious Energy", "Vibe Architect", "Silent Force", "The Anchor". Score-categorized: high participation score → impressive titles ("Hype Lord", "Party Engine"), low participation score → character celebrations ("Enigmatic Presence", "The Zen Master"). NEVER reference performance failure or skill level
 
-- [ ] Task 2: Build session analysis engine (AC: #2, #3, #4)
-  - [ ] 2.1 Create `analyzeSessionForAwards(sessionId: string)` function that aggregates data from three sources:
+- [x] Task 2: Build session analysis engine (AC: #2, #3, #4)
+  - [x] 2.1 Create `analyzeSessionForAwards(sessionId: string)` function that aggregates data from three sources:
     - Event stream: `getEventStream(sessionId)` from `event-stream.ts` — scan for reaction counts per user, card events, song events, streaks, soundboard usage, vote participation. **Card data MUST come from event stream scanning** (`card:accepted`, `card:dismissed` events per user), NOT from `cardStatsCache` which only stores session-level totals `{ dealt, accepted }` without per-user breakdown
     - Participation scores: from score cache (`scoreCache` Map in session-manager, key pattern `${sessionId}:${userId}`) or DB fallback via `sessionRepo.getParticipants(sessionId)`
     - Per-song awards: from `sessionAwards` Map in session-manager (key: sessionId → string[] of awarded titles)
-  - [ ] 2.2 Define `SessionAnalysis` interface containing per-participant stats: `{ userId: string, displayName: string, participationScore: number, reactionsSent: number, reactionsReceived: number, songsPerformed: number, cardsAccepted: number, cardsCompleted: number, streakMax: number, soundboardUses: number, votesParticipated: number, distinctActionCategories: number, perSongAwards: string[] }` — `displayName` is required for Story 8.2 rendering, `distinctActionCategories` drives `vibeKeeper` assignment
-  - [ ] 2.3 Implement event stream scanning: iterate through `SessionEvent[]` array, build per-user stats by matching `userId` fields across event types. **Correct event names**: `reaction:sent`, `card:accepted`, `card:dismissed`, `participation:scored`, `ceremony:awardGenerated`, `sound:play` (NOT `sound:played`), `dj:stateChanged`. Note: `card:completed` event type does NOT exist in the current SessionEvent union — card completion must be inferred from `card:accepted` events (a card accepted = challenge taken on). If `card:completed` is added to event-stream.ts during this story, add the type to the SessionEvent union first
+  - [x] 2.2 Define `SessionAnalysis` interface containing per-participant stats: `{ userId: string, displayName: string, participationScore: number, reactionsSent: number, reactionsReceived: number, songsPerformed: number, cardsAccepted: number, cardsCompleted: number, streakMax: number, soundboardUses: number, votesParticipated: number, distinctActionCategories: number, perSongAwards: string[] }` — `displayName` is required for Story 8.2 rendering, `distinctActionCategories` drives `vibeKeeper` assignment
+  - [x] 2.3 Implement event stream scanning: iterate through `SessionEvent[]` array, build per-user stats by matching `userId` fields across event types. **Correct event names**: `reaction:sent`, `card:accepted`, `card:dismissed`, `participation:scored`, `ceremony:awardGenerated`, `sound:play` (NOT `sound:played`), `dj:stateChanged`. Note: `card:completed` event type does NOT exist in the current SessionEvent union — card completion must be inferred from `card:accepted` events (a card accepted = challenge taken on). If `card:completed` is added to event-stream.ts during this story, add the type to the SessionEvent union first
 
-- [ ] Task 3: Implement award assignment algorithm (AC: #1, #2, #3, #5, #6)
-  - [ ] 3.1 Create `generateFinaleAwards(analysis: SessionAnalysis[], participantCount: number)` — returns `FinaleAward[]` where each participant gets 1-3 awards
-  - [ ] 3.2 Award assignment rules:
+- [x] Task 3: Implement award assignment algorithm (AC: #1, #2, #3, #5, #6)
+  - [x] 3.1 Create `generateFinaleAwards(analysis: SessionAnalysis[], participantCount: number)` — returns `FinaleAward[]` where each participant gets 1-3 awards
+  - [x] 3.2 Award assignment rules:
     - Step 1: Assign category-specific awards to top performers in each category. "Top" = highest absolute value in that metric. Ties broken by higher participation score, then random. Skip category if no qualifying data (e.g., skip `socialButterfly` if zero cards dealt in session). Assignments: highest reactionsSent → hypeLeader, most cardsAccepted → socialButterfly, most reactionsReceived → crowdFavorite, highest participationScore → partyStarter, highest distinctActionCategories → vibeKeeper
     - Step 2: Assign performer awards to anyone who sang (using per-song awards as context — e.g., "Tonight's Headliner" for most songs, "One-Hit Wonder" for exactly 1 song)
     - Step 3: Assign character-trait awards to anyone not yet awarded — use `everyone` category templates. High participation score (>= 75th percentile) → impressive titles ("Party Engine", "Hype Lord"). Low participation score (< 25th percentile) → character celebrations ("Enigmatic Presence", "The Zen Master"). Middle → contextual based on their top activity type
     - Step 4: Guarantee EVERY participant has at least 1 award. The `everyone` category is the safety net but its templates are equally prestigious — not consolation prizes
-  - [ ] 3.3 Use weighted random selection. **CRITICAL**: `weightedRandomSelect` in `award-generator.ts` is NOT exported — either export it first or copy the implementation into `finale-award-generator.ts`. Dedup rules: exact title match, per-user scope (same user can't get same title twice across per-song + finale awards), session-wide for finale batch (no two participants get same finale title). If all templates in a category are exhausted, fall back to `everyone` category templates
-  - [ ] 3.4 Define `FinaleAward` interface: `{ userId: string, displayName: string, category: FinaleAwardCategory, title: string, tone: AwardTone, reason: string }` — `displayName` included for Story 8.2 rendering without extra lookups. `reason` is a data-driven one-liner (e.g., "Sent 47 reactions tonight", "Accepted 3 dares"). Max 60 characters for mobile display. Reasons must be specific (names, counts, song titles) per UX spec: "Specific = 'I want that'"
+  - [x] 3.3 Use weighted random selection. **CRITICAL**: `weightedRandomSelect` in `award-generator.ts` is NOT exported — either export it first or copy the implementation into `finale-award-generator.ts`. Dedup rules: exact title match, per-user scope (same user can't get same title twice across per-song + finale awards), session-wide for finale batch (no two participants get same finale title). If all templates in a category are exhausted, fall back to `everyone` category templates
+  - [x] 3.4 Define `FinaleAward` interface: `{ userId: string, displayName: string, category: FinaleAwardCategory, title: string, tone: AwardTone, reason: string }` — `displayName` included for Story 8.2 rendering without extra lookups. `reason` is a data-driven one-liner (e.g., "Sent 47 reactions tonight", "Accepted 3 dares"). Max 60 characters for mobile display. Reasons must be specific (names, counts, song titles) per UX spec: "Specific = 'I want that'"
 
-- [ ] Task 4: Integrate with session end flow (AC: #5)
-  - [ ] 4.1 In `session-manager.ts`, add `generateEndOfNightAwards(sessionId: string)` orchestration function
-  - [ ] 4.2 Call this function in `endSession()` AFTER the `END_PARTY` transition to finale state but BEFORE flushing event stream to DB (awards need to read the in-memory event stream)
-  - [ ] 4.3 Store generated awards in a new in-memory cache: `const finaleAwards = new Map<string, FinaleAward[]>()` — keyed by sessionId
-  - [ ] 4.4 Add `clearFinaleAwards(sessionId)` to session cleanup flow
-  - [ ] 4.5 Append `finale:awardsGenerated` event to event stream (with full awards array) BEFORE calling `flushEventStream`. Then persist awards to DB: update each participant's `top_award` to their primary (first) finale award (overwriting the per-song top_award — per-song awards preserved in event stream JSON for Epic 9 detail views)
-  - [ ] 4.6 Broadcast awards to ALL clients via new `broadcastFinaleAwards(sessionId, awards)` in `dj-broadcaster.ts` — emit single `finale:awards` event containing the complete `FinaleAward[]` array (all participants' awards). Payload includes `displayName` per award so clients can render the awards parade (Story 8.2) without additional lookups
+- [x] Task 4: Integrate with session end flow (AC: #5)
+  - [x] 4.1 In `session-manager.ts`, add `generateEndOfNightAwards(sessionId: string)` orchestration function
+  - [x] 4.2 Call this function in `endSession()` AFTER the `END_PARTY` transition to finale state but BEFORE flushing event stream to DB (awards need to read the in-memory event stream)
+  - [x] 4.3 Store generated awards in a new in-memory cache: `const finaleAwards = new Map<string, FinaleAward[]>()` — keyed by sessionId
+  - [x] 4.4 Add `clearFinaleAwards(sessionId)` to session cleanup flow
+  - [x] 4.5 Append `finale:awardsGenerated` event to event stream (with full awards array) BEFORE calling `flushEventStream`. Then persist awards to DB: update each participant's `top_award` to their primary (first) finale award (overwriting the per-song top_award — per-song awards preserved in event stream JSON for Epic 9 detail views)
+  - [x] 4.6 Broadcast awards to ALL clients via new `broadcastFinaleAwards(sessionId, awards)` in `dj-broadcaster.ts` — emit single `finale:awards` event containing the complete `FinaleAward[]` array (all participants' awards). Payload includes `displayName` per award so clients can render the awards parade (Story 8.2) without additional lookups
 
-- [ ] Task 5: Add Socket.io event and schemas (AC: #5)
-  - [ ] 5.1 Add `finale:awards` event constant to `shared/events.ts`
-  - [ ] 5.2 Create `shared/schemas/finale-schemas.ts` with Zod schemas for `FinaleAward` (userId, displayName, category, title, tone, reason) and `FinaleAwardsPayload` (array of awards)
-  - [ ] 5.3a Add `finale:awardsGenerated` event type to `SessionEvent` union in `event-stream.ts`: `{ type: 'finale:awardsGenerated'; ts: number; data: { awards: Array<{ userId: string; title: string; category: string }> } }`
-  - [ ] 5.4 No REST endpoint needed — this is purely Socket.io driven during live session
+- [x] Task 5: Add Socket.io event and schemas (AC: #5)
+  - [x] 5.1 Add `finale:awards` event constant to `shared/events.ts`
+  - [x] 5.2 Create `shared/schemas/finale-schemas.ts` with Zod schemas for `FinaleAward` (userId, displayName, category, title, tone, reason) and `FinaleAwardsPayload` (array of awards)
+  - [x] 5.3a Add `finale:awardsGenerated` event type to `SessionEvent` union in `event-stream.ts`: `{ type: 'finale:awardsGenerated'; ts: number; data: { awards: Array<{ userId: string; title: string; category: string }> } }`
+  - [x] 5.4 No REST endpoint needed — this is purely Socket.io driven during live session
 
-- [ ] Task 6: Flutter state consumption (AC: #5)
-  - [ ] 6.1 Add `FinaleAward` model to `apps/flutter_app/lib/models/finale_award.dart` — mirror server `FinaleAward` shape in camelCase: `userId`, `displayName`, `category`, `title`, `tone`, `reason`. Use null-safe `fromJson` factory (code review tip from 7.2)
-  - [ ] 6.2 Add `finaleAwards` field to `PartyProvider` — `List<FinaleAward>?`, set on `finale:awards` event
-  - [ ] 6.3 Add `finale:awards` listener in `SocketClient` — parse payload, call `partyProvider.setFinaleAwards(awards)`
-  - [ ] 6.4 Add `clearFinaleAwards()` to party provider reset (when leaving party)
+- [x] Task 6: Flutter state consumption (AC: #5)
+  - [x] 6.1 Add `FinaleAward` model to `apps/flutter_app/lib/models/finale_award.dart` — mirror server `FinaleAward` shape in camelCase: `userId`, `displayName`, `category`, `title`, `tone`, `reason`. Use null-safe `fromJson` factory (code review tip from 7.2)
+  - [x] 6.2 Add `finaleAwards` field to `PartyProvider` — `List<FinaleAward>?`, set on `finale:awards` event
+  - [x] 6.3 Add `finale:awards` listener in `SocketClient` — parse payload, call `partyProvider.setFinaleAwards(awards)`
+  - [x] 6.4 Add `clearFinaleAwards()` to party provider reset (when leaving party)
 
-- [ ] Task 7: Tests (AC: #1-6)
-  - [ ] 7.1 Unit tests for `finale-award-generator.ts`: template pool validity (min 30, all categories covered, all tones present), award generation with various session profiles (all-singers, no-singers, mixed, solo participant), dedup against per-song awards, every-participant guarantee
-  - [ ] 7.2 Unit tests for session analysis: event stream scanning correctness, handling empty events, handling missing participants
-  - [ ] 7.3 Integration tests in `session-manager-finale.test.ts`: end-session generates awards before event stream flush, awards broadcast to clients, cleanup on session end, awards persist to DB
-  - [ ] 7.4 Flutter widget tests: PartyProvider receives and stores finale awards, SocketClient listener parsing, clear on party leave
-  - [ ] 7.5 Mock compatibility: add `finale-award-generator.js` mock to ALL existing session-manager test files that mock services (ceremony, interlude-game, dare-pull, quick-vote, singalong, icebreaker — 6 files)
+- [x] Task 7: Tests (AC: #1-6)
+  - [x] 7.1 Unit tests for `finale-award-generator.ts`: template pool validity (min 30, all categories covered, all tones present), award generation with various session profiles (all-singers, no-singers, mixed, solo participant), dedup against per-song awards, every-participant guarantee
+  - [x] 7.2 Unit tests for session analysis: event stream scanning correctness, handling empty events, handling missing participants
+  - [x] 7.3 Integration tests in `session-manager-finale.test.ts`: end-session generates awards before event stream flush, awards broadcast to clients, cleanup on session end, awards persist to DB
+  - [x] 7.4 Flutter widget tests: PartyProvider receives and stores finale awards, SocketClient listener parsing, clear on party leave
+  - [x] 7.5 Mock compatibility: add `finale-award-generator.js` mock to ALL existing session-manager test files that mock services (ceremony, interlude-game, dare-pull, quick-vote, singalong, icebreaker — 6 files)
 
 ## Dev Notes
 
@@ -242,10 +242,47 @@ Story 8.2 (Finale Ceremony Sequence) will consume the output of this story. The 
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Task 1: Created `finale-award-generator.ts` with `FinaleAwardCategory` enum (7 categories), 35 `FinaleAwardTemplate` entries meeting all per-category minimums (6 performer, 5 hypeLeader, 4 socialButterfly, 4 crowdFavorite, 4 partyStarter, 4 vibeKeeper, 8 everyone). All tones represented. `everyone` templates use character-trait framing only — no performance references. Exported `weightedRandomSelect` from `award-generator.ts`.
+- Task 2: Implemented `analyzeSessionForAwards()` — scans event stream for per-user stats (reactions sent/received, cards accepted, songs performed, soundboard uses, votes, distinct action categories). Correctly uses `card:accepted` events (not `cardStatsCache`), `ceremony:awardGenerated` for performer tracking, and `sound:play` (not `sound:played`).
+- Task 3: Implemented `generateFinaleAwards()` with 4-step algorithm: (1) category-specific awards to top performers, (2) performer awards to singers, (3) character-trait awards for unawarded participants, (4) every-participant guarantee. Dedup against per-song awards and session-wide. Awards sorted by category priority then participation score descending. Reasons are data-driven with 60-char max.
+- Task 4: Integrated into `session-manager.ts` — `generateEndOfNightAwards()` orchestration function reads event stream, participants, and per-song awards. Called in `endSession()` AFTER card:sessionStats but BEFORE flushEventStream. `finaleAwards` in-memory cache added. `clearFinaleAwards()` in cleanup flow. Error-isolated with try/catch. `updateTopAward` fire-and-forget for primary award per user.
+- Task 5: Added `FINALE_AWARDS` event constant to `shared/events.ts`. Created `shared/schemas/finale-schemas.ts` with Zod schemas (`.min(1)` validation). Added `finale:awardsGenerated` to `SessionEvent` union in `event-stream.ts`.
+- Task 6: Created `FinaleAward` Dart model with null-safe `fromJson`. Added `finaleAwards` field to `PartyProvider` with `setFinaleAwards()`, `clearFinaleAwards()`, cleared on `onSessionEnded()`. Added `finale:awards` listener in `SocketClient`.
+- Task 7: 30 unit tests for finale-award-generator (template pool, session analysis, award generation). 4 integration tests for session-manager finale flow. 4 Flutter tests for PartyProvider finale awards. Mock compatibility added to 6 existing session-manager test files. All 95 server test files pass (1306 tests). Flutter tests pass with 0 new failures.
+
+### Change Log
+
+- 2026-03-19: Implemented Story 8.1 — End-of-Night Awards Generation (all 7 tasks)
+- 2026-03-19: Code review fixes — 9 issues (1H, 5M, 3L): H1 crowdFavorite sole-singer edge case, M1 score-based prestige routing for everyone templates, M2 specific reasons for everyone awards, M3 removed unsafe type cast in selectFromPool, M4 auto-fixed by M3, M5 added SocketClient finale:awards parsing tests, L1 accepted (valid pattern), L2 fixed Step C→D comment, L3 fixed per-song dedup to per-user scope
+
 ### File List
+
+**New files:**
+- `apps/server/src/services/finale-award-generator.ts` — Finale award types, session analysis, generation algorithm
+- `apps/server/src/shared/schemas/finale-schemas.ts` — Zod schemas for FinaleAward, FinaleAwardsPayload
+- `apps/flutter_app/lib/models/finale_award.dart` — FinaleAward Dart model
+- `apps/server/tests/services/finale-award-generator.test.ts` — Unit tests (30 tests)
+- `apps/server/tests/services/session-manager-finale.test.ts` — Integration tests (4 tests)
+
+**Modified files:**
+- `apps/server/src/services/award-generator.ts` — Exported `weightedRandomSelect`
+- `apps/server/src/services/event-stream.ts` — Added `finale:awardsGenerated` to SessionEvent union
+- `apps/server/src/services/session-manager.ts` — Added `generateEndOfNightAwards`, `finaleAwardsCache`, integrated into `endSession`
+- `apps/server/src/services/dj-broadcaster.ts` — Added `broadcastFinaleAwards`
+- `apps/server/src/shared/events.ts` — Added `FINALE_AWARDS` constant
+- `apps/flutter_app/lib/state/party_provider.dart` — Added `finaleAwards`, `setFinaleAwards()`, `clearFinaleAwards()`
+- `apps/flutter_app/lib/socket/client.dart` — Added `finale:awards` listener
+- `apps/flutter_app/test/state/party_provider_test.dart` — Added 4 finale award tests
+- `apps/server/tests/services/session-manager-awards.test.ts` — Added finale-award-generator mock + broadcastFinaleAwards mock
+- `apps/server/tests/services/session-manager-interlude-game.test.ts` — Added finale-award-generator mock + broadcastFinaleAwards mock
+- `apps/server/tests/services/session-manager-dare-pull.test.ts` — Added finale-award-generator mock + broadcastFinaleAwards mock
+- `apps/server/tests/services/session-manager-quick-vote.test.ts` — Added finale-award-generator mock + broadcastFinaleAwards mock
+- `apps/server/tests/services/session-manager-singalong.test.ts` — Added finale-award-generator mock + broadcastFinaleAwards mock
+- `apps/server/tests/services/session-manager-icebreaker.test.ts` — Added finale-award-generator mock + broadcastFinaleAwards mock
+- `apps/flutter_app/test/socket/client_test.dart` — Added 3 finale:awards parsing tests (code review fix M5)

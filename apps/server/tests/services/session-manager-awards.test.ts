@@ -83,6 +83,7 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastCeremonyAnticipation: vi.fn(),
   broadcastCeremonyReveal: vi.fn(),
   broadcastCeremonyQuick: vi.fn(),
+  broadcastFinaleAwards: vi.fn(),
 }));
 
 vi.mock('../../src/services/connection-tracker.js', () => ({
@@ -97,6 +98,20 @@ vi.mock('../../src/services/capture-trigger.js', () => ({
   shouldEmitCaptureBubble: vi.fn().mockReturnValue(false),
   markBubbleEmitted: vi.fn(),
   clearCaptureTriggerState: vi.fn(),
+}));
+
+vi.mock('../../src/services/finale-award-generator.js', () => ({
+  analyzeSessionForAwards: vi.fn().mockReturnValue([]),
+  generateFinaleAwards: vi.fn().mockReturnValue([]),
+  FinaleAwardCategory: {
+    performer: 'performer',
+    hypeLeader: 'hypeLeader',
+    socialButterfly: 'socialButterfly',
+    crowdFavorite: 'crowdFavorite',
+    partyStarter: 'partyStarter',
+    vibeKeeper: 'vibeKeeper',
+    everyone: 'everyone',
+  },
 }));
 
 describe('session-manager awards', () => {

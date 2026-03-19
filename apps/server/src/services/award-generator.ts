@@ -93,7 +93,7 @@ export function calculateWeight(template: AwardTemplate, context: AwardContext):
   return weight;
 }
 
-function weightedRandomSelect(
+export function weightedRandomSelect(
   items: { template: AwardTemplate; weight: number }[],
   randomFn: () => number,
 ): { template: AwardTemplate; weight: number } {

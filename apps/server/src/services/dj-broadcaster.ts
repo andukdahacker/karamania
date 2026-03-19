@@ -250,6 +250,24 @@ export function broadcastIcebreakerResult(sessionId: string, data: {
   io.to(sessionId).emit(EVENTS.ICEBREAKER_RESULT, data);
 }
 
+export function broadcastFinaleAwards(
+  sessionId: string,
+  awards: Array<{
+    userId: string;
+    displayName: string;
+    category: string;
+    title: string;
+    tone: string;
+    reason: string;
+  }>,
+): void {
+  if (!io) {
+    console.warn('[dj-broadcaster] Cannot broadcast — io not initialized');
+    return;
+  }
+  io.to(sessionId).emit(EVENTS.FINALE_AWARDS, awards);
+}
+
 export function broadcastCardDealt(
   sessionId: string,
   data: {

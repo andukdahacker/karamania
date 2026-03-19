@@ -33,12 +33,13 @@ import { detectSong } from '../services/song-detection.js';
 import { startRound, getRound, resolveByTimeout, clearRound } from '../services/quick-pick.js';
 import { computeSuggestions } from '../services/suggestion-engine.js';
 import { shouldEmitCaptureBubble, markBubbleEmitted, clearCaptureTriggerState, type CaptureTriggerType } from '../services/capture-trigger.js';
-import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged, broadcastInterludeVoteStarted, broadcastInterludeVoteResult, broadcastInterludeGameStarted, broadcastInterludeGameEnded, broadcastQuickVoteResult, broadcastIcebreakerStarted, broadcastIcebreakerResult } from '../services/dj-broadcaster.js';
+import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged, broadcastInterludeVoteStarted, broadcastInterludeVoteResult, broadcastInterludeGameStarted, broadcastInterludeGameEnded, broadcastQuickVoteResult, broadcastIcebreakerStarted, broadcastIcebreakerResult, broadcastFinaleAwards } from '../services/dj-broadcaster.js';
 import { dealCard as dealKingsCupCard, clearSession as clearKingsCupSession } from '../services/kings-cup-dealer.js';
 import { dealDare, selectTarget, clearSession as clearDarePullSession } from '../services/dare-pull-dealer.js';
 import { dealQuestion, startQuickVoteRound, resolveQuickVote, clearSession as clearQuickVoteSession } from '../services/quick-vote-dealer.js';
 import { dealPrompt as dealSingAlongPrompt, clearSession as clearSingAlongSession } from '../services/singalong-dealer.js';
 import { dealQuestion as dealIcebreakerQuestion, startIcebreakerRound, resolveIcebreaker, clearSession as clearIcebreakerSession } from '../services/icebreaker-dealer.js';
+import { analyzeSessionForAwards, generateFinaleAwards, type FinaleAward } from '../services/finale-award-generator.js';
 import type { QuickPickSong } from '../services/quick-pick.js';
 import {
   startRound as startSpinWheelRound,
@@ -230,6 +231,17 @@ const sessionAwards = new Map<string, string[]>();
 
 export function clearSessionAwards(sessionId: string): void {
   sessionAwards.delete(sessionId);
+}
+
+// In-memory cache for finale awards — persists until session cleanup for Story 8.2
+const finaleAwardsCache = new Map<string, FinaleAward[]>();
+
+export function getFinaleAwards(sessionId: string): FinaleAward[] | undefined {
+  return finaleAwardsCache.get(sessionId);
+}
+
+export function clearFinaleAwards(sessionId: string): void {
+  finaleAwardsCache.delete(sessionId);
 }
 
 const ANTICIPATION_DURATION_MS = 2000;
@@ -1719,6 +1731,56 @@ export async function handleParticipantJoin(params: {
   };
 }
 
+async function generateEndOfNightAwards(sessionId: string): Promise<FinaleAward[]> {
+  // 1. Read event stream (still in memory, not yet flushed)
+  const events = getEventStream(sessionId);
+
+  // 2. Get participants with scores
+  const participants = await sessionRepo.getParticipants(sessionId);
+  const participantEntries = participants.map(p => {
+    const userId = p.user_id ?? p.id;
+    const scoreCacheKey = `${sessionId}:${userId}`;
+    return {
+      userId,
+      displayName: p.guest_name ?? p.display_name ?? 'Unknown',
+      participationScore: scoreCache.get(scoreCacheKey) ?? 0,
+    };
+  });
+
+  // 3. Build per-song awards map from sessionAwards
+  const perSongAwardsMap = new Map<string, string[]>();
+  // sessionAwards is sessionId -> all titles; we need userId -> titles
+  // But sessionAwards doesn't track per-user — derive from ceremony:awardGenerated events
+  for (const e of events) {
+    if (e.type === 'ceremony:awardGenerated') {
+      const existing = perSongAwardsMap.get(e.userId) ?? [];
+      existing.push(e.data.award);
+      perSongAwardsMap.set(e.userId, existing);
+    }
+  }
+
+  // 4. Analyze and generate
+  const analyses = analyzeSessionForAwards(events, participantEntries, perSongAwardsMap);
+  const awards = generateFinaleAwards(analyses, participantEntries.length);
+
+  // 5. Store in cache for Story 8.2
+  finaleAwardsCache.set(sessionId, awards);
+
+  // 6. Broadcast to clients
+  broadcastFinaleAwards(sessionId, awards);
+
+  // 7. Update top_award in DB for each participant (fire-and-forget)
+  for (const award of awards) {
+    // Only update the first award per user (primary award)
+    const userAwards = awards.filter(a => a.userId === award.userId);
+    if (userAwards[0] === award) {
+      sessionRepo.updateTopAward(sessionId, award.userId, award.title).catch(() => {});
+    }
+  }
+
+  return awards;
+}
+
 export async function endSession(
   sessionId: string,
   hostUserId: string,
@@ -1766,7 +1828,27 @@ export async function endSession(
     });
   }
 
-  // Step B: Flush and write event stream to DB (BEFORE cleanup)
+  // Step B: Generate end-of-night awards (reads in-memory event stream)
+  try {
+    const finaleAwardsList = await generateEndOfNightAwards(sessionId);
+    if (finaleAwardsList.length > 0) {
+      appendEvent(sessionId, {
+        type: 'finale:awardsGenerated',
+        ts: Date.now(),
+        data: {
+          awards: finaleAwardsList.map(a => ({
+            userId: a.userId,
+            title: a.title,
+            category: a.category,
+          })),
+        },
+      });
+    }
+  } catch (err) {
+    console.error('[session-manager] Failed to generate finale awards:', err);
+  }
+
+  // Step C: Flush and write event stream to DB (BEFORE cleanup)
   const events = flushEventStream(sessionId);
   if (events.length > 0) {
     sessionRepo.writeEventStream(sessionId, events).catch((err) => {
@@ -1774,7 +1856,7 @@ export async function endSession(
     });
   }
 
-  // Step C: Update DB status + ended_at
+  // Step D: Update DB status + ended_at
   await sessionRepo.updateStatus(sessionId, 'ended');
 
   // Clean up TV connection
@@ -1789,6 +1871,7 @@ export async function endSession(
   removeActivitySession(sessionId);
   clearScoreCache(sessionId);
   clearSessionAwards(sessionId);
+  clearFinaleAwards(sessionId);
   clearCardStats(sessionId);
   clearDealtCards(sessionId);
   clearPool(sessionId);

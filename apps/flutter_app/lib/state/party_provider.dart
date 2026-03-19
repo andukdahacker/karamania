@@ -4,6 +4,7 @@ import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
 import 'package:karamania/constants/party_cards.dart';
+import 'package:karamania/models/finale_award.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -311,6 +312,9 @@ class PartyProvider extends ChangeNotifier {
   String? _icebreakerWinnerOptionId;
   int _icebreakerVoteDurationMs = 6000;
 
+  // Finale awards — populated by finale:awards event (Story 8.1)
+  List<FinaleAward>? _finaleAwards;
+
   // TV pairing state
   TvConnectionStatus _tvStatus = TvConnectionStatus.disconnected;
   String? _tvStatusMessage;
@@ -439,6 +443,7 @@ class PartyProvider extends ChangeNotifier {
   Map<String, int>? get icebreakerResult => _icebreakerResult;
   String? get icebreakerWinnerOptionId => _icebreakerWinnerOptionId;
   int get icebreakerVoteDurationMs => _icebreakerVoteDurationMs;
+  List<FinaleAward>? get finaleAwards => _finaleAwards;
   TvConnectionStatus get tvStatus => _tvStatus;
   String? get tvStatusMessage => _tvStatusMessage;
   String? get tvNowPlayingVideoId => _tvNowPlayingVideoId;
@@ -715,6 +720,17 @@ class PartyProvider extends ChangeNotifier {
   void onIcebreakerResult(Map<String, int> optionCounts, int totalVotes, String winnerOptionId) {
     _icebreakerResult = optionCounts;
     _icebreakerWinnerOptionId = winnerOptionId;
+    notifyListeners();
+  }
+
+  // Finale award methods (Story 8.1)
+  void setFinaleAwards(List<FinaleAward> awards) {
+    _finaleAwards = awards;
+    notifyListeners();
+  }
+
+  void clearFinaleAwards() {
+    _finaleAwards = null;
     notifyListeners();
   }
 
@@ -1219,6 +1235,7 @@ class PartyProvider extends ChangeNotifier {
     _timerStartedAt = null;
     _timerDurationMs = null;
     _ceremonyType = null;
+    _finaleAwards = null;
     _clearCeremonyState();
     _clearInterludeState();
     _detectedSongTitle = null;

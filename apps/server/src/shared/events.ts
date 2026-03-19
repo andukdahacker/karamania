@@ -100,6 +100,9 @@ export const EVENTS = {
   ICEBREAKER_VOTE: 'icebreaker:vote',
   ICEBREAKER_RESULT: 'icebreaker:result',
 
+  // Finale events
+  FINALE_AWARDS: 'finale:awards',
+
   // Auth events
   AUTH_REFRESH_REQUIRED: 'auth:refreshRequired',
   AUTH_INVALID: 'auth:invalid',

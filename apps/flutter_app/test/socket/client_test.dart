@@ -4,6 +4,7 @@ import 'package:karamania/audio/sound_cue.dart';
 import 'package:karamania/audio/state_transition_audio.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/constants/party_cards.dart';
+import 'package:karamania/models/finale_award.dart';
 import 'package:karamania/socket/client.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
@@ -578,6 +579,86 @@ void main() {
 
       expect(provider.ceremonyAward, 'Star of the Show');
       expect(provider.ceremonyPerformerName, isNull);
+    });
+  });
+
+  group('SocketClient finale:awards parsing (Story 8.1)', () {
+    late PartyProvider provider;
+
+    setUp(() {
+      provider = PartyProvider(wakelockToggle: (_) {});
+    });
+
+    test('finale:awards payload parses List<dynamic> to List<FinaleAward>', () {
+      // Simulate the exact parsing path from _setupPartyListeners finale:awards handler
+      final dynamic rawData = <dynamic>[
+        <String, dynamic>{
+          'userId': 'u1',
+          'displayName': 'Alice',
+          'category': 'hypeLeader',
+          'title': 'Reaction Machine',
+          'tone': 'hype',
+          'reason': 'Sent 47 reactions tonight',
+        },
+        <String, dynamic>{
+          'userId': 'u2',
+          'displayName': 'Bob',
+          'category': 'everyone',
+          'title': 'The Anchor',
+          'tone': 'wholesome',
+          'reason': 'Part of the crew from the start',
+        },
+      ];
+
+      final rawAwards = rawData as List<dynamic>;
+      final awards = rawAwards
+          .map((a) => FinaleAward.fromJson(a as Map<String, dynamic>))
+          .toList();
+      provider.setFinaleAwards(awards);
+
+      expect(provider.finaleAwards, isNotNull);
+      expect(provider.finaleAwards!.length, 2);
+      expect(provider.finaleAwards![0].userId, 'u1');
+      expect(provider.finaleAwards![0].title, 'Reaction Machine');
+      expect(provider.finaleAwards![0].reason, 'Sent 47 reactions tonight');
+      expect(provider.finaleAwards![1].displayName, 'Bob');
+      expect(provider.finaleAwards![1].category, 'everyone');
+    });
+
+    test('finale:awards handles missing fields via null-safe fromJson', () {
+      final dynamic rawData = <dynamic>[
+        <String, dynamic>{
+          'userId': null,
+          'displayName': null,
+          'category': null,
+          'title': null,
+          'tone': null,
+          'reason': null,
+        },
+      ];
+
+      final rawAwards = rawData as List<dynamic>;
+      final awards = rawAwards
+          .map((a) => FinaleAward.fromJson(a as Map<String, dynamic>))
+          .toList();
+      provider.setFinaleAwards(awards);
+
+      expect(provider.finaleAwards, isNotNull);
+      expect(provider.finaleAwards!.length, 1);
+      expect(provider.finaleAwards![0].userId, '');
+      expect(provider.finaleAwards![0].category, 'everyone');
+    });
+
+    test('finale:awards empty array sets empty list', () {
+      final dynamic rawData = <dynamic>[];
+      final rawAwards = rawData as List<dynamic>;
+      final awards = rawAwards
+          .map((a) => FinaleAward.fromJson(a as Map<String, dynamic>))
+          .toList();
+      provider.setFinaleAwards(awards);
+
+      expect(provider.finaleAwards, isNotNull);
+      expect(provider.finaleAwards!.isEmpty, isTrue);
     });
   });
 
