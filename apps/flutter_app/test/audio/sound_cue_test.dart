@@ -43,8 +43,16 @@ void main() {
       expect(SoundCue.resumeChime.defaultVolume, 0.7);
     });
 
-    test('all cue values are present (16 total)', () {
-      expect(SoundCue.values.length, 16);
+    test('all cue values are present (17 total)', () {
+      expect(SoundCue.values.length, 17);
+    });
+
+    test('finaleAwardReveal reuses ceremony_start asset', () {
+      expect(
+        SoundCue.finaleAwardReveal.assetPath,
+        'assets/sounds/ceremony_start.opus',
+      );
+      expect(SoundCue.finaleAwardReveal.defaultVolume, 0.8);
     });
 
     test('soundboard cues generate correct asset paths', () {

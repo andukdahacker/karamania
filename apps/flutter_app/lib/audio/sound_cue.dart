@@ -18,10 +18,16 @@ enum SoundCue {
   sbDrumRoll,
   sbRecordScratch,
   sbRimshot,
-  sbWolfWhistle;
+  sbWolfWhistle,
+  // Finale effects (Story 8.2) — maps to ceremony_start.opus as placeholder
+  finaleAwardReveal;
 
   /// Asset path for this sound cue (snake_case conversion).
   String get assetPath {
+    // finaleAwardReveal reuses ceremony_start.opus as placeholder until dedicated asset exists
+    if (this == SoundCue.finaleAwardReveal) {
+      return 'assets/sounds/ceremony_start.opus';
+    }
     final snakeName = name.replaceAllMapped(
       RegExp(r'[A-Z]'),
       (m) => '_${m.group(0)!.toLowerCase()}',
@@ -47,5 +53,6 @@ enum SoundCue {
         SoundCue.sbRecordScratch => 1.0,
         SoundCue.sbRimshot => 1.0,
         SoundCue.sbWolfWhistle => 1.0,
+        SoundCue.finaleAwardReveal => 0.8,
       };
 }

@@ -102,6 +102,10 @@ export const EVENTS = {
 
   // Finale events
   FINALE_AWARDS: 'finale:awards',
+  FINALE_STATS: 'finale:stats',
+  FINALE_SETLIST: 'finale:setlist',
+  FINALE_FEEDBACK: 'finale:feedback',
+  HOST_DISMISS_FINALE: 'host:dismissFinale',
 
   // Auth events
   AUTH_REFRESH_REQUIRED: 'auth:refreshRequired',

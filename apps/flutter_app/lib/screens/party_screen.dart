@@ -42,6 +42,7 @@ import 'package:karamania/widgets/capture_bubble.dart';
 import 'package:karamania/widgets/capture_overlay.dart';
 import 'package:karamania/widgets/capture_toolbar_icon.dart';
 import 'package:karamania/widgets/selected_song_display.dart';
+import 'package:karamania/widgets/finale_overlay.dart';
 import 'package:go_router/go_router.dart';
 
 class PartyScreen extends StatefulWidget {
@@ -498,6 +499,17 @@ class _PartyScreenState extends State<PartyScreen>
                 left: 0,
                 right: 0,
                 child: Center(child: const SongOverButton()),
+              ),
+            // Finale overlay — full-screen, above all other overlays (Story 8.2)
+            if (partyProvider.djState == DJState.finale)
+              Positioned.fill(
+                child: FinaleOverlay(
+                  vibe: displayVibe,
+                  awards: partyProvider.finaleAwards,
+                  stats: partyProvider.finaleStats,
+                  setlist: partyProvider.finaleSetlist,
+                  onStepChanged: (step) => partyProvider.setFinaleStep(step),
+                ),
               ),
             if (isActiveHost)
               HostControlsOverlay(

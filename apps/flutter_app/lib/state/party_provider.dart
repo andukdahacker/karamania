@@ -5,6 +5,8 @@ import 'dart:ui' show Color;
 import 'package:flutter/foundation.dart';
 import 'package:karamania/constants/party_cards.dart';
 import 'package:karamania/models/finale_award.dart';
+import 'package:karamania/models/session_stats.dart';
+import 'package:karamania/models/setlist_entry.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -315,6 +317,12 @@ class PartyProvider extends ChangeNotifier {
   // Finale awards — populated by finale:awards event (Story 8.1)
   List<FinaleAward>? _finaleAwards;
 
+  // Finale state — populated by finale:stats and finale:setlist events (Story 8.2)
+  SessionStats? _finaleStats;
+  List<SetlistEntry>? _finaleSetlist;
+  int? _finaleCurrentStep; // 0=awards, 1=stats, 2=setlist, 3=feedback
+  bool _feedbackSubmitted = false;
+
   // TV pairing state
   TvConnectionStatus _tvStatus = TvConnectionStatus.disconnected;
   String? _tvStatusMessage;
@@ -444,6 +452,10 @@ class PartyProvider extends ChangeNotifier {
   String? get icebreakerWinnerOptionId => _icebreakerWinnerOptionId;
   int get icebreakerVoteDurationMs => _icebreakerVoteDurationMs;
   List<FinaleAward>? get finaleAwards => _finaleAwards;
+  SessionStats? get finaleStats => _finaleStats;
+  List<SetlistEntry>? get finaleSetlist => _finaleSetlist;
+  int? get finaleCurrentStep => _finaleCurrentStep;
+  bool get feedbackSubmitted => _feedbackSubmitted;
   TvConnectionStatus get tvStatus => _tvStatus;
   String? get tvStatusMessage => _tvStatusMessage;
   String? get tvNowPlayingVideoId => _tvNowPlayingVideoId;
@@ -732,6 +744,34 @@ class PartyProvider extends ChangeNotifier {
   void clearFinaleAwards() {
     _finaleAwards = null;
     notifyListeners();
+  }
+
+  // Finale state methods (Story 8.2)
+  void setFinaleStats(SessionStats stats) {
+    _finaleStats = stats;
+    notifyListeners();
+  }
+
+  void setFinaleSetlist(List<SetlistEntry> setlist) {
+    _finaleSetlist = setlist;
+    notifyListeners();
+  }
+
+  void setFinaleStep(int step) {
+    _finaleCurrentStep = step;
+    notifyListeners();
+  }
+
+  void setFeedbackSubmitted() {
+    _feedbackSubmitted = true;
+    notifyListeners();
+  }
+
+  void _clearFinaleState() {
+    _finaleStats = null;
+    _finaleSetlist = null;
+    _finaleCurrentStep = null;
+    _feedbackSubmitted = false;
   }
 
   void _clearIcebreakerState() {
@@ -1238,6 +1278,7 @@ class PartyProvider extends ChangeNotifier {
     _finaleAwards = null;
     _clearCeremonyState();
     _clearInterludeState();
+    _clearFinaleState();
     _detectedSongTitle = null;
     _detectedArtist = null;
     _detectedThumbnail = null;

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createTestDJContext } from '../factories/dj-state.js';
-import { DJState } from '../../src/dj-engine/types.js';
+
 import type { QuickPickSong } from '../../src/services/quick-pick.js';
 
 vi.mock('../../src/config.js', () => ({
@@ -88,6 +88,12 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastCeremonyQuick: vi.fn(),
   broadcastCardDealt: vi.fn(),
   broadcastQuickPickStarted: (...args: unknown[]) => mockBroadcastQuickPickStarted(...args),
+  broadcastSpinWheelStarted: vi.fn(),
+  broadcastSpinWheelResult: vi.fn(),
+  broadcastModeChanged: vi.fn(),
+  broadcastFinaleStats: vi.fn(),
+  broadcastFinaleSetlist: vi.fn(),
+  broadcastFinaleAwards: vi.fn(),
   getIO: (...args: unknown[]) => mockGetIO(...args),
 }));
 
@@ -165,6 +171,92 @@ vi.mock('../../src/services/capture-trigger.js', () => ({
   shouldEmitCaptureBubble: vi.fn().mockReturnValue(false),
   markBubbleEmitted: vi.fn(),
   clearCaptureTriggerState: vi.fn(),
+}));
+
+vi.mock('../../src/socket-handlers/connection-handler.js', () => ({
+  clearSessionTimers: vi.fn(),
+}));
+
+vi.mock('../../src/services/spin-wheel.js', () => ({
+  startRound: vi.fn(),
+  initiateSpin: vi.fn(),
+  onSpinComplete: vi.fn(),
+  startVetoWindow: vi.fn(),
+  handleVeto: vi.fn(),
+  resolveRound: vi.fn(),
+  autoSpin: vi.fn(),
+  getRound: vi.fn(),
+  clearRound: vi.fn(),
+}));
+
+vi.mock('../../src/services/song-detection.js', () => ({
+  detectSong: vi.fn(),
+}));
+
+vi.mock('../../src/integrations/lounge-api.js', () => ({
+  createLoungeApiClient: vi.fn(),
+}));
+
+vi.mock('../../src/services/peak-detector.js', () => ({
+  clearSession: vi.fn(),
+}));
+
+vi.mock('../../src/services/icebreaker-dealer.js', () => ({
+  dealQuestion: vi.fn(),
+  startIcebreakerRound: vi.fn(),
+  resolveIcebreaker: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/kings-cup-dealer.js', () => ({
+  dealCard: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/dare-pull-dealer.js', () => ({
+  dealDare: vi.fn(),
+  selectTarget: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/quick-vote-dealer.js', () => ({
+  dealQuestion: vi.fn(),
+  startQuickVoteRound: vi.fn(),
+  resolveQuickVote: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/singalong-dealer.js', () => ({
+  dealPrompt: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/activity-voter.js', () => ({
+  selectActivityOptions: vi.fn().mockReturnValue([]),
+  startVoteRound: vi.fn(),
+  resolveByTimeout: vi.fn(),
+  getVoteCounts: vi.fn().mockReturnValue({}),
+  clearSession: vi.fn(),
+  resetAllRounds: vi.fn(),
+}));
+
+vi.mock('../../src/services/finale-award-generator.js', () => ({
+  analyzeSessionForAwards: vi.fn().mockReturnValue([]),
+  generateFinaleAwards: vi.fn().mockReturnValue([]),
+  FinaleAwardCategory: {
+    performer: 'performer',
+    hypeLeader: 'hypeLeader',
+    socialButterfly: 'socialButterfly',
+    crowdFavorite: 'crowdFavorite',
+    partyStarter: 'partyStarter',
+    vibeKeeper: 'vibeKeeper',
+    everyone: 'everyone',
+  },
 }));
 
 const testSongs: QuickPickSong[] = [
@@ -381,8 +473,9 @@ describe('session-manager Quick Pick integration', () => {
         sideEffects: [],
       });
 
-      const { endSession } = await import('../../src/services/session-manager.js');
+      const { endSession, finalizeSession } = await import('../../src/services/session-manager.js');
       await endSession('session-1', 'host-1');
+      await finalizeSession('session-1');
 
       expect(mockClearRound).toHaveBeenCalledWith('session-1');
     });

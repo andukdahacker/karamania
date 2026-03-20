@@ -91,7 +91,13 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastModeChanged: vi.fn(),
   broadcastQuickVoteResult: vi.fn(),
   broadcastFinaleAwards: vi.fn(),
+  broadcastFinaleStats: vi.fn(),
+  broadcastFinaleSetlist: vi.fn(),
   getIO: vi.fn(),
+}));
+
+vi.mock('../../src/socket-handlers/connection-handler.js', () => ({
+  clearSessionTimers: vi.fn(),
 }));
 
 vi.mock('../../src/services/kings-cup-dealer.js', () => ({
@@ -454,8 +460,9 @@ describe('session-manager dare pull dispatch', () => {
       mockProcessTransition.mockReturnValue({ newContext: finaleContext, sideEffects: [] });
       mockGetEventStream.mockReturnValue([]);
 
-      const { endSession } = await import('../../src/services/session-manager.js');
+      const { endSession, finalizeSession } = await import('../../src/services/session-manager.js');
       await endSession('session-1', 'host-1');
+      await finalizeSession('session-1');
 
       expect(mockClearDarePullSession).toHaveBeenCalledWith('session-1');
     });

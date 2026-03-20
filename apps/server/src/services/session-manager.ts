@@ -12,6 +12,8 @@ import { broadcastDjState, broadcastDjPause, broadcastDjResume, broadcastCeremon
 import { EVENTS } from '../shared/events.js';
 import { dealCard, clearDealtCards } from '../services/card-dealer.js';
 import { getActiveConnections, removeSession } from '../services/connection-tracker.js';
+import { clearSessionTimers } from '../socket-handlers/connection-handler.js';
+import { clearFeedbackTracking } from '../socket-handlers/finale-handlers.js';
 import type { TrackedConnection } from '../services/connection-tracker.js';
 import { removeSession as removeActivitySession } from '../services/activity-tracker.js';
 import { DJState } from '../dj-engine/types.js';
@@ -33,7 +35,8 @@ import { detectSong } from '../services/song-detection.js';
 import { startRound, getRound, resolveByTimeout, clearRound } from '../services/quick-pick.js';
 import { computeSuggestions } from '../services/suggestion-engine.js';
 import { shouldEmitCaptureBubble, markBubbleEmitted, clearCaptureTriggerState, type CaptureTriggerType } from '../services/capture-trigger.js';
-import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged, broadcastInterludeVoteStarted, broadcastInterludeVoteResult, broadcastInterludeGameStarted, broadcastInterludeGameEnded, broadcastQuickVoteResult, broadcastIcebreakerStarted, broadcastIcebreakerResult, broadcastFinaleAwards } from '../services/dj-broadcaster.js';
+import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged, broadcastInterludeVoteStarted, broadcastInterludeVoteResult, broadcastInterludeGameStarted, broadcastInterludeGameEnded, broadcastQuickVoteResult, broadcastIcebreakerStarted, broadcastIcebreakerResult, broadcastFinaleAwards, broadcastFinaleStats, broadcastFinaleSetlist } from '../services/dj-broadcaster.js';
+import type { SessionStats, SetlistEntry } from '../shared/schemas/finale-schemas.js';
 import { dealCard as dealKingsCupCard, clearSession as clearKingsCupSession } from '../services/kings-cup-dealer.js';
 import { dealDare, selectTarget, clearSession as clearDarePullSession } from '../services/dare-pull-dealer.js';
 import { dealQuestion, startQuickVoteRound, resolveQuickVote, clearSession as clearQuickVoteSession } from '../services/quick-vote-dealer.js';
@@ -242,6 +245,18 @@ export function getFinaleAwards(sessionId: string): FinaleAward[] | undefined {
 
 export function clearFinaleAwards(sessionId: string): void {
   finaleAwardsCache.delete(sessionId);
+}
+
+// Finalization timer tracking — delays party:ended emission to allow finale experience
+const finalizationTimers = new Map<string, NodeJS.Timeout>();
+const FINALE_DURATION_MS = 5 * 60 * 1000; // 5 minutes — generous buffer for 60-90s sequence + browsing + feedback
+
+function clearFinalizationTimer(sessionId: string): void {
+  const timer = finalizationTimers.get(sessionId);
+  if (timer) {
+    clearTimeout(timer);
+    finalizationTimers.delete(sessionId);
+  }
 }
 
 const ANTICIPATION_DURATION_MS = 2000;
@@ -1781,7 +1796,151 @@ async function generateEndOfNightAwards(sessionId: string): Promise<FinaleAward[
   return awards;
 }
 
-export async function endSession(
+function calculateSessionStats(sessionId: string): SessionStats {
+  const events = getEventStream(sessionId);
+  const context = getSessionDjState(sessionId);
+
+  let totalReactions = 0;
+  let totalSoundboardPlays = 0;
+  let totalCardsDealt = 0;
+  let longestStreak = 0;
+  const reactorCounts = new Map<string, { count: number; displayName: string }>();
+
+  for (const e of events) {
+    if (e.type === 'reaction:sent') {
+      totalReactions++;
+      const streak = e.data.streak ?? 0;
+      if (streak > longestStreak) longestStreak = streak;
+      const existing = reactorCounts.get(e.userId);
+      if (existing) {
+        existing.count++;
+      } else {
+        // We need displayName — get from participants or use userId
+        reactorCounts.set(e.userId, { count: 1, displayName: e.userId });
+      }
+    } else if (e.type === 'sound:play') {
+      totalSoundboardPlays++;
+    } else if (e.type === 'card:dealt') {
+      totalCardsDealt++;
+    }
+  }
+
+  // Resolve display names for top reactor
+  let topReactor: SessionStats['topReactor'] = null;
+  if (reactorCounts.size > 0) {
+    let maxCount = 0;
+    let maxUserId = '';
+    for (const [userId, data] of reactorCounts) {
+      if (data.count > maxCount) {
+        maxCount = data.count;
+        maxUserId = userId;
+      }
+    }
+    // Get display name from connection tracker
+    const connections = getActiveConnections(sessionId);
+    const conn = connections.find(c => c.userId === maxUserId);
+    topReactor = {
+      displayName: conn?.displayName ?? maxUserId,
+      count: maxCount,
+    };
+  }
+
+  return {
+    songCount: context?.songCount ?? 0,
+    participantCount: context?.participantCount ?? 0,
+    sessionDurationMs: context?.sessionStartedAt ? Date.now() - context.sessionStartedAt : 0,
+    totalReactions,
+    totalSoundboardPlays,
+    totalCardsDealt,
+    topReactor,
+    longestStreak,
+  };
+}
+
+function buildFinaleSetlist(sessionId: string): SetlistEntry[] {
+  const events = getEventStream(sessionId);
+
+  // Build position→performer map from ceremony:awardGenerated events (most reliable)
+  const positionPerformers = new Map<number, string>();
+  const positionAwards = new Map<number, { title: string; tone: string }>();
+
+  for (const e of events) {
+    if (e.type === 'ceremony:awardGenerated') {
+      const pos = e.data.songPosition;
+      // Use ceremony:awardGenerated as performer source — has userId
+      if (!positionPerformers.has(pos)) {
+        // Resolve display name from connections
+        const connections = getActiveConnections(sessionId);
+        const conn = connections.find(c => c.userId === e.userId);
+        positionPerformers.set(pos, conn?.displayName ?? e.userId);
+      }
+      positionAwards.set(pos, { title: e.data.award, tone: e.data.tone });
+    }
+  }
+
+  // Count song transitions to get total song count (authoritative)
+  let songPosition = 0;
+  const songTransitions: number[] = []; // timestamps of each song transition
+  for (const e of events) {
+    if (e.type === 'dj:stateChanged' && e.data.to === 'song') {
+      songPosition++;
+      songTransitions.push(e.ts);
+    }
+  }
+
+  // Extract song:detected events in order
+  const detectedSongs: Array<{ title: string; artist: string; ts: number }> = [];
+  for (const e of events) {
+    if (e.type === 'song:detected') {
+      detectedSongs.push({ title: e.data.title, artist: e.data.artist, ts: e.ts });
+    }
+  }
+
+  // Build setlist by matching song positions
+  const setlist: SetlistEntry[] = [];
+  for (let pos = 1; pos <= songPosition; pos++) {
+    // Find the detected song closest to (and after) this song transition
+    const transitionTs = songTransitions[pos - 1];
+    let matchedSong: { title: string; artist: string } | undefined;
+    if (transitionTs !== undefined) {
+      // Find detected song with ts >= transitionTs and < next transition
+      const nextTransitionTs = songTransitions[pos] ?? Infinity;
+      matchedSong = detectedSongs.find(
+        s => s.ts >= transitionTs && s.ts < nextTransitionTs
+      );
+    }
+
+    const award = positionAwards.get(pos);
+
+    setlist.push({
+      position: pos,
+      title: matchedSong?.title ?? `Song ${pos}`,
+      artist: matchedSong?.artist ?? 'Unknown',
+      performerName: positionPerformers.get(pos) ?? null,
+      awardTitle: award?.title ?? null,
+      awardTone: award?.tone ?? null,
+    });
+  }
+
+  return setlist;
+}
+
+export async function saveFeedback(sessionId: string, userId: string, score: number): Promise<void> {
+  // Persist to DB (fire-and-forget — feedback_score column is authoritative)
+  sessionRepo.updateFeedbackScore(sessionId, userId, score).catch((err) => {
+    console.error('[session-manager] Failed to persist feedback score:', err);
+  });
+
+  // Append to in-memory event stream (may not be persisted — see Dev Notes)
+  appendEvent(sessionId, {
+    type: 'finale:feedbackReceived',
+    ts: Date.now(),
+    userId,
+    data: { score },
+  });
+}
+
+export async function initiateFinale(
   sessionId: string,
   hostUserId: string,
 ): Promise<DJContext> {
@@ -1802,8 +1961,6 @@ export async function endSession(
     : context;
 
   // Transition to finale — automatically broadcasts, persists, cancels timers
-  // Note: processDjTransition appends a dj:stateChanged event for END_PARTY internally,
-  // followed by the party:ended event below. This ordering is intentional.
   const { newContext } = await processDjTransition(sessionId, contextForTransition, { type: 'END_PARTY' });
 
   // Step A: Append party:ended event (DJ context still available)
@@ -1819,12 +1976,12 @@ export async function endSession(
   });
 
   // Include card stats in final event stream
-  const stats = getCardStats(sessionId);
-  if (stats.dealt > 0) {
+  const cardStats = getCardStats(sessionId);
+  if (cardStats.dealt > 0) {
     appendEvent(sessionId, {
       type: 'card:sessionStats',
       ts: Date.now(),
-      data: { dealt: stats.dealt, accepted: stats.accepted },
+      data: { dealt: cardStats.dealt, accepted: cardStats.accepted },
     });
   }
 
@@ -1848,7 +2005,23 @@ export async function endSession(
     console.error('[session-manager] Failed to generate finale awards:', err);
   }
 
-  // Step C: Flush and write event stream to DB (BEFORE cleanup)
+  // Step C: Calculate session stats and broadcast
+  try {
+    const sessionStats = calculateSessionStats(sessionId);
+    broadcastFinaleStats(sessionId, sessionStats);
+  } catch (err) {
+    console.error('[session-manager] Failed to calculate session stats:', err);
+  }
+
+  // Step D: Build setlist and broadcast
+  try {
+    const setlist = buildFinaleSetlist(sessionId);
+    broadcastFinaleSetlist(sessionId, setlist);
+  } catch (err) {
+    console.error('[session-manager] Failed to build finale setlist:', err);
+  }
+
+  // Step E: Flush and write event stream to DB (BEFORE cleanup, includes all finale events)
   const events = flushEventStream(sessionId);
   if (events.length > 0) {
     sessionRepo.writeEventStream(sessionId, events).catch((err) => {
@@ -1856,14 +2029,39 @@ export async function endSession(
     });
   }
 
-  // Step D: Update DB status + ended_at
+  // Step F: Update DB status + ended_at
   await sessionRepo.updateStatus(sessionId, 'ended');
+
+  // Step G: Start finalization timer — DO NOT cleanup in-memory state yet
+  const timer = setTimeout(() => {
+    finalizationTimers.delete(sessionId);
+    finalizeSession(sessionId).catch((err) => {
+      console.error('[session-manager] Finalization timer error:', err);
+    });
+  }, FINALE_DURATION_MS);
+  finalizationTimers.set(sessionId, timer);
+
+  return newContext;
+}
+
+export async function finalizeSession(sessionId: string, _hostUserId?: string): Promise<void> {
+  // Cancel finalization timer if called early (host dismiss)
+  clearFinalizationTimer(sessionId);
+
+  // Emit party:ended — clients navigate away
+  const io = getIO();
+  if (io) {
+    io.to(sessionId).emit(EVENTS.PARTY_ENDED, { reason: 'host_ended' });
+  }
 
   // Clean up TV connection
   tvConnections.get(sessionId)?.disconnect().catch(() => {});
   tvConnections.delete(sessionId);
 
-  // Clean up in-memory state
+  // Clean up connection-handler timers that may be pending
+  clearSessionTimers(sessionId);
+
+  // Clean up ALL in-memory state
   removeSessionDjState(sessionId);
   cancelSessionTimer(sessionId);
   clearCeremonyTimers(sessionId);
@@ -1888,8 +2086,16 @@ export async function endSession(
   clearRound(sessionId);
   clearSpinWheelRound(sessionId);
   sessionModes.delete(sessionId);
+  clearFeedbackTracking(sessionId);
+}
 
-  return newContext;
+/** @deprecated Use {@link initiateFinale} instead. This alias exists for backward compatibility only.
+ *  Note: behavior changed in Story 8.2 — now initiates the finale sequence instead of immediately ending the session. */
+export async function endSession(
+  sessionId: string,
+  hostUserId: string,
+): Promise<DJContext> {
+  return initiateFinale(sessionId, hostUserId);
 }
 
 export async function pauseSession(sessionId: string, userId?: string): Promise<DJContext> {

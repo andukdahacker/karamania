@@ -12,6 +12,7 @@ import { registerTvHandlers } from './tv-handlers.js';
 import { registerCaptureHandlers } from './capture-handlers.js';
 import { registerInterludeHandlers } from './interlude-handlers.js';
 import { registerIcebreakerHandlers } from './icebreaker-handlers.js';
+import { registerFinaleHandlers } from './finale-handlers.js';
 import { handleParticipantJoin, transferHost, isRecoveryFailed, clearRecoveryFailed } from '../services/session-manager.js';
 import { getSessionDjState } from '../services/dj-state-store.js';
 import {
@@ -61,6 +62,7 @@ export function setupSocketHandlers(io: SocketIOServer, logger: FastifyBaseLogge
     registerCaptureHandlers(s, io);
     registerInterludeHandlers(s, io);
     registerIcebreakerHandlers(s, io);
+    registerFinaleHandlers(s, io);
 
     try {
       const joinResult = await handleParticipantJoin({
@@ -205,6 +207,23 @@ export function setupSocketHandlers(io: SocketIOServer, logger: FastifyBaseLogge
       cleanupTimers.get(sessionId)!.set(userId, cleanupTimer);
     });
   });
+}
+
+export function clearSessionTimers(sessionId: string): void {
+  // Clear host transfer timer
+  const hostTimer = hostTransferTimers.get(sessionId);
+  if (hostTimer) {
+    clearTimeout(hostTimer);
+    hostTransferTimers.delete(sessionId);
+  }
+  // Clear all cleanup timers for this session
+  const sessionCleanups = cleanupTimers.get(sessionId);
+  if (sessionCleanups) {
+    for (const timer of sessionCleanups.values()) {
+      clearTimeout(timer);
+    }
+    cleanupTimers.delete(sessionId);
+  }
 }
 
 // Exported for testing

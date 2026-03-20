@@ -8,6 +8,8 @@ import 'package:karamania/audio/sound_cue.dart';
 import 'package:karamania/audio/state_transition_audio.dart';
 import 'package:karamania/constants/party_cards.dart';
 import 'package:karamania/models/finale_award.dart';
+import 'package:karamania/models/session_stats.dart';
+import 'package:karamania/models/setlist_entry.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/capture_provider.dart';
@@ -625,6 +627,22 @@ class SocketClient {
       _partyProvider?.setFinaleAwards(awards);
     });
 
+    // Finale stats event (Story 8.2)
+    on('finale:stats', (data) {
+      final payload = data as Map<String, dynamic>;
+      final stats = SessionStats.fromJson(payload);
+      _partyProvider?.setFinaleStats(stats);
+    });
+
+    // Finale setlist event (Story 8.2)
+    on('finale:setlist', (data) {
+      final rawSetlist = data as List<dynamic>;
+      final setlist = rawSetlist
+          .map((s) => SetlistEntry.fromJson(s as Map<String, dynamic>))
+          .toList();
+      _partyProvider?.setFinaleSetlist(setlist);
+    });
+
     // Host transfer event (AC #4)
     on('party:hostTransferred', (data) {
       final payload = data as Map<String, dynamic>;
@@ -768,6 +786,15 @@ class SocketClient {
       'triggerType': triggerType,
       if (durationMs != null) 'durationMs': durationMs,
     });
+  }
+
+  void submitFeedback(int score) {
+    _socket?.emit('finale:feedback', {'score': score});
+    _partyProvider?.setFeedbackSubmitted();
+  }
+
+  void emitHostDismissFinale() {
+    _socket?.emit('host:dismissFinale');
   }
 
   void emitMomentCardShared() {

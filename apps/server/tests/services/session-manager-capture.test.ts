@@ -76,6 +76,9 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastSpinWheelStarted: vi.fn(),
   broadcastSpinWheelResult: vi.fn(),
   broadcastModeChanged: vi.fn(),
+  broadcastFinaleStats: vi.fn(),
+  broadcastFinaleSetlist: vi.fn(),
+  broadcastFinaleAwards: vi.fn(),
   getIO: (...args: unknown[]) => mockGetIO(...args),
 }));
 
@@ -131,6 +134,9 @@ vi.mock('../../src/services/event-stream.js', () => ({
 }));
 
 vi.mock('../../src/services/activity-tracker.js', () => ({ removeSession: vi.fn() }));
+vi.mock('../../src/socket-handlers/connection-handler.js', () => ({
+  clearSessionTimers: vi.fn(),
+}));
 vi.mock('../../src/services/streak-tracker.js', () => ({
   clearSessionStreaks: vi.fn(),
   clearUserStreak: vi.fn(),
@@ -170,7 +176,7 @@ vi.mock('../../src/services/capture-trigger.js', () => ({
 }));
 
 import { processTransition } from '../../src/dj-engine/machine.js';
-import { processDjTransition, endSession } from '../../src/services/session-manager.js';
+import { processDjTransition, endSession, finalizeSession } from '../../src/services/session-manager.js';
 
 describe('session-manager capture bubble triggers', () => {
   const mockEmit = vi.fn();
@@ -352,6 +358,7 @@ describe('session-manager capture bubble triggers', () => {
     });
 
     await endSession('session-1', 'host-1');
+    await finalizeSession('session-1');
 
     expect(mockClearCaptureTriggerState).toHaveBeenCalledWith('session-1');
   });

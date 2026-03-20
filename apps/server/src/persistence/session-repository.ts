@@ -188,6 +188,19 @@ export async function updateTopAward(
     .execute();
 }
 
+export async function updateFeedbackScore(
+  sessionId: string,
+  userId: string,
+  score: number,
+): Promise<void> {
+  await db
+    .updateTable('session_participants')
+    .set({ feedback_score: score })
+    .where('session_id', '=', sessionId)
+    .where('user_id', '=', userId)
+    .execute();
+}
+
 export async function isSessionParticipant(sessionId: string, userId: string): Promise<boolean> {
   const participant = await db
     .selectFrom('session_participants')

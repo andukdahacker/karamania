@@ -5,6 +5,8 @@ import 'package:karamania/config/app_config.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/constants/party_cards.dart';
 import 'package:karamania/models/finale_award.dart';
+import 'package:karamania/models/session_stats.dart';
+import 'package:karamania/models/setlist_entry.dart';
 import 'package:karamania/state/party_provider.dart' show PartyProvider, ParticipantInfo, ConnectionStatus, ReactionEvent, QuickPickSong, VoteTally, SpinWheelSegment, TvConnectionStatus, InterludeGameCard, InterludeOption;
 import 'package:karamania/theme/dj_theme.dart';
 
@@ -1913,6 +1915,220 @@ void main() {
       provider.onSessionEnded();
 
       expect(provider.finaleAwards, isNull);
+    });
+
+    // Story 8.2 — Finale Ceremony Sequence state tests
+
+    test('setFinaleStats stores correctly and notifies listeners', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      const stats = SessionStats(
+        songCount: 10,
+        participantCount: 5,
+        sessionDurationMs: 3600000,
+        totalReactions: 100,
+        totalSoundboardPlays: 20,
+        totalCardsDealt: 6,
+        longestStreak: 3,
+      );
+
+      provider.setFinaleStats(stats);
+
+      expect(provider.finaleStats, isNotNull);
+      expect(provider.finaleStats!.songCount, 10);
+      expect(provider.finaleStats!.participantCount, 5);
+      expect(provider.finaleStats!.sessionDurationMs, 3600000);
+      expect(provider.finaleStats!.totalReactions, 100);
+      expect(provider.finaleStats!.totalSoundboardPlays, 20);
+      expect(provider.finaleStats!.totalCardsDealt, 6);
+      expect(provider.finaleStats!.longestStreak, 3);
+      expect(notifyCount, 1);
+    });
+
+    test('setFinaleSetlist stores correctly and notifies listeners', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      final setlist = [
+        const SetlistEntry(
+          position: 1,
+          title: 'Bohemian Rhapsody',
+          artist: 'Queen',
+          performerName: 'Alice',
+          awardTitle: 'Showstopper',
+          awardTone: 'hype',
+        ),
+        const SetlistEntry(
+          position: 2,
+          title: 'Yesterday',
+          artist: 'The Beatles',
+        ),
+      ];
+
+      provider.setFinaleSetlist(setlist);
+
+      expect(provider.finaleSetlist, isNotNull);
+      expect(provider.finaleSetlist!.length, 2);
+      expect(provider.finaleSetlist![0].title, 'Bohemian Rhapsody');
+      expect(provider.finaleSetlist![0].performerName, 'Alice');
+      expect(provider.finaleSetlist![1].title, 'Yesterday');
+      expect(provider.finaleSetlist![1].performerName, isNull);
+      expect(notifyCount, 1);
+    });
+
+    test('clearFinaleState via onSessionEnded resets all finale fields', () {
+      // Set up all finale state
+      provider.setFinaleStats(const SessionStats(
+        songCount: 10,
+        participantCount: 5,
+        sessionDurationMs: 3600000,
+        totalReactions: 100,
+        totalSoundboardPlays: 20,
+        totalCardsDealt: 6,
+        longestStreak: 3,
+      ));
+      provider.setFinaleSetlist([
+        const SetlistEntry(position: 1, title: 'Song', artist: 'Artist'),
+      ]);
+      provider.setFinaleStep(2);
+      provider.setFeedbackSubmitted();
+
+      // Verify state was set
+      expect(provider.finaleStats, isNotNull);
+      expect(provider.finaleSetlist, isNotNull);
+      expect(provider.finaleCurrentStep, 2);
+      expect(provider.feedbackSubmitted, isTrue);
+
+      // Clear via onSessionEnded
+      provider.onSessionEnded();
+
+      expect(provider.finaleStats, isNull);
+      expect(provider.finaleSetlist, isNull);
+      expect(provider.finaleCurrentStep, isNull);
+      expect(provider.feedbackSubmitted, isFalse);
+    });
+
+    test('setFeedbackSubmitted sets to true', () {
+      expect(provider.feedbackSubmitted, isFalse);
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.setFeedbackSubmitted();
+
+      expect(provider.feedbackSubmitted, isTrue);
+      expect(notifyCount, 1);
+    });
+
+    test('setFinaleStep stores step and notifies listeners', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.setFinaleStep(1);
+      expect(provider.finaleCurrentStep, 1);
+      expect(notifyCount, 1);
+
+      provider.setFinaleStep(3);
+      expect(provider.finaleCurrentStep, 3);
+      expect(notifyCount, 2);
+    });
+  });
+
+  group('Socket event parsing - finale events (Story 8.2)', () {
+    test('SessionStats.fromJson parses finale:stats payload correctly', () {
+      final json = {
+        'songCount': 8,
+        'participantCount': 4,
+        'sessionDurationMs': 2400000,
+        'totalReactions': 50,
+        'totalSoundboardPlays': 10,
+        'totalCardsDealt': 3,
+        'topReactor': {'displayName': 'Alice', 'count': 20},
+        'longestStreak': 5,
+      };
+      final stats = SessionStats.fromJson(json);
+      expect(stats.songCount, 8);
+      expect(stats.participantCount, 4);
+      expect(stats.sessionDurationMs, 2400000);
+      expect(stats.totalReactions, 50);
+      expect(stats.totalSoundboardPlays, 10);
+      expect(stats.totalCardsDealt, 3);
+      expect(stats.topReactor, isNotNull);
+      expect(stats.topReactor!.displayName, 'Alice');
+      expect(stats.topReactor!.count, 20);
+      expect(stats.longestStreak, 5);
+    });
+
+    test('SetlistEntry.fromJson parses finale:setlist item correctly', () {
+      final json = {
+        'position': 1,
+        'title': 'Bohemian Rhapsody',
+        'artist': 'Queen',
+        'performerName': 'Alice',
+        'awardTitle': 'Showstopper',
+        'awardTone': 'hype',
+      };
+      final entry = SetlistEntry.fromJson(json);
+      expect(entry.position, 1);
+      expect(entry.title, 'Bohemian Rhapsody');
+      expect(entry.artist, 'Queen');
+      expect(entry.performerName, 'Alice');
+      expect(entry.awardTitle, 'Showstopper');
+      expect(entry.awardTone, 'hype');
+    });
+
+    test('finale:setlist List parsing works for multiple entries', () {
+      final rawSetlist = [
+        {'position': 1, 'title': 'Song A', 'artist': 'Artist A'},
+        {'position': 2, 'title': 'Song B', 'artist': 'Artist B', 'performerName': 'Bob'},
+      ];
+      final setlist = rawSetlist
+          .map((s) => SetlistEntry.fromJson(s as Map<String, dynamic>))
+          .toList();
+      expect(setlist.length, 2);
+      expect(setlist[0].title, 'Song A');
+      expect(setlist[1].performerName, 'Bob');
+    });
+
+    test('PartyProvider correctly stores and clears finale socket data', () {
+      final provider = PartyProvider();
+
+      // Simulate finale:stats event handling
+      final statsJson = {
+        'songCount': 5,
+        'participantCount': 3,
+        'sessionDurationMs': 1800000,
+        'totalReactions': 30,
+        'totalSoundboardPlays': 5,
+        'totalCardsDealt': 2,
+        'longestStreak': 3,
+      };
+      final stats = SessionStats.fromJson(statsJson);
+      provider.setFinaleStats(stats);
+      expect(provider.finaleStats?.songCount, 5);
+
+      // Simulate finale:setlist event handling
+      final rawSetlist = [
+        {'position': 1, 'title': 'Test Song', 'artist': 'Test Artist'},
+      ];
+      final setlist = rawSetlist
+          .map((s) => SetlistEntry.fromJson(s as Map<String, dynamic>))
+          .toList();
+      provider.setFinaleSetlist(setlist);
+      expect(provider.finaleSetlist?.length, 1);
+
+      // Simulate feedback submission
+      provider.setFeedbackSubmitted();
+      expect(provider.feedbackSubmitted, isTrue);
+
+      // onSessionEnded clears everything
+      provider.onSessionEnded();
+      expect(provider.finaleStats, isNull);
+      expect(provider.finaleSetlist, isNull);
+      expect(provider.feedbackSubmitted, isFalse);
+
+      provider.dispose();
     });
   });
 }

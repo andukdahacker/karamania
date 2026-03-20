@@ -34,13 +34,15 @@ vi.mock('../../src/services/dj-state-store.js', () => ({
 }));
 
 const mockProcessDjTransition = vi.fn();
-const mockEndSession = vi.fn();
+const mockInitiateFinale = vi.fn();
+const mockFinalizeSession = vi.fn();
 const mockKickPlayer = vi.fn();
 const mockPauseSession = vi.fn();
 const mockResumeSession = vi.fn();
 vi.mock('../../src/services/session-manager.js', () => ({
   processDjTransition: (...args: unknown[]) => mockProcessDjTransition(...args),
-  endSession: (...args: unknown[]) => mockEndSession(...args),
+  initiateFinale: (...args: unknown[]) => mockInitiateFinale(...args),
+  finalizeSession: (...args: unknown[]) => mockFinalizeSession(...args),
   kickPlayer: (...args: unknown[]) => mockKickPlayer(...args),
   pauseSession: (...args: unknown[]) => mockPauseSession(...args),
   resumeSession: (...args: unknown[]) => mockResumeSession(...args),
@@ -277,12 +279,12 @@ describe('host-handlers', () => {
   });
 
   describe('host:endParty', () => {
-    it('validates host, calls endSession, and emits party:ended to room', async () => {
+    it('validates host, calls initiateFinale (party:ended deferred to finalizeSession)', async () => {
       const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
       const finaleContext = createTestDJContext({ sessionId: 'session-1', state: 'finale' as const });
 
       mockFindById.mockResolvedValue(session);
-      mockEndSession.mockResolvedValue(finaleContext);
+      mockInitiateFinale.mockResolvedValue(finaleContext);
 
       const { socket, handlers } = createMockSocket();
       const { io, emittedToRoom } = createMockIo();
@@ -292,12 +294,12 @@ describe('host-handlers', () => {
 
       await handlers.get('host:endParty')!();
 
-      expect(mockEndSession).toHaveBeenCalledWith('session-1', 'host-user-1');
-      expect(emittedToRoom).toContainEqual({
-        room: 'session-1',
-        event: 'party:ended',
-        data: { reason: 'host_ended' },
-      });
+      expect(mockInitiateFinale).toHaveBeenCalledWith('session-1', 'host-user-1');
+      // party:ended is NOT emitted here — deferred to finalizeSession
+      const partyEndedEvents = emittedToRoom.filter(
+        (e: { event: string }) => e.event === 'party:ended',
+      );
+      expect(partyEndedEvents).toHaveLength(0);
     });
   });
 

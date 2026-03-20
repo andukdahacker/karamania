@@ -1,6 +1,7 @@
 import type { Server as SocketIOServer } from 'socket.io';
 import type { DJContext } from '../dj-engine/types.js';
 import type { SpinWheelSegment } from '../services/spin-wheel.js';
+import type { SessionStats, SetlistEntry } from '../shared/schemas/finale-schemas.js';
 import { DJState } from '../dj-engine/types.js';
 import { EVENTS } from '../shared/events.js';
 
@@ -266,6 +267,16 @@ export function broadcastFinaleAwards(
     return;
   }
   io.to(sessionId).emit(EVENTS.FINALE_AWARDS, awards);
+}
+
+export function broadcastFinaleStats(sessionId: string, stats: SessionStats): void {
+  if (!io) return;
+  io.to(sessionId).emit(EVENTS.FINALE_STATS, stats);
+}
+
+export function broadcastFinaleSetlist(sessionId: string, setlist: SetlistEntry[]): void {
+  if (!io) return;
+  io.to(sessionId).emit(EVENTS.FINALE_SETLIST, setlist);
 }
 
 export function broadcastCardDealt(

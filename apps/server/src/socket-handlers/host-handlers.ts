@@ -3,7 +3,7 @@ import type { AuthenticatedSocket } from '../shared/socket-types.js';
 import { EVENTS } from '../shared/events.js';
 import * as sessionRepo from '../persistence/session-repository.js';
 import { getSessionDjState } from '../services/dj-state-store.js';
-import { processDjTransition, endSession, kickPlayer, pauseSession, resumeSession } from '../services/session-manager.js';
+import { processDjTransition, initiateFinale, finalizeSession, kickPlayer, pauseSession, resumeSession } from '../services/session-manager.js';
 import { recordActivity } from '../services/activity-tracker.js';
 import { appendEvent } from '../services/event-stream.js';
 import { getActiveConnections } from '../services/connection-tracker.js';
@@ -124,16 +124,28 @@ export function registerHostHandlers(socket: AuthenticatedSocket, io: SocketIOSe
     }
   });
 
-  // host:endParty — end the party
+  // host:endParty — initiate finale sequence (party:ended deferred to finalizeSession)
   socket.on(EVENTS.HOST_END_PARTY, async () => {
     try {
       await validateHost(socket);
       recordActivity(socket.data.sessionId);
-      await endSession(socket.data.sessionId, socket.data.userId);
-      io.to(socket.data.sessionId).emit(EVENTS.PARTY_ENDED, { reason: 'host_ended' });
+      await initiateFinale(socket.data.sessionId, socket.data.userId);
+      // NO party:ended emission here — deferred to finalizeSession via timer
     } catch (error) {
       if (!isValidationError(error)) {
         console.error('[host-handlers] host:endParty error:', error);
+      }
+    }
+  });
+
+  // host:dismissFinale — host triggers early finalization during finale
+  socket.on(EVENTS.HOST_DISMISS_FINALE, async () => {
+    try {
+      await validateHost(socket);
+      await finalizeSession(socket.data.sessionId, socket.data.userId);
+    } catch (error) {
+      if (!isValidationError(error)) {
+        console.error('[host-handlers] host:dismissFinale error:', error);
       }
     }
   });

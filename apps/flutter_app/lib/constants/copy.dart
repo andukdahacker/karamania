@@ -305,6 +305,25 @@ class Copy {
   static const String icebreakerWaiting = 'Waiting for everyone...';
   static const String icebreakerNote = 'Everyone answers. Results revealed together.';
 
+  // Finale (Story 8.2)
+  static const String finaleAwardsTitle = 'AWARDS';
+  static const String finaleStatsTitle = 'TONIGHT IN NUMBERS';
+  static const String finaleSetlistTitle = 'THE SETLIST';
+  static const String finaleFeedbackTitle = 'Would you use Karamania next time?';
+  static const String finaleFeedbackThanks = 'Thanks!';
+  static const String finaleLeaveParty = 'Leave Party';
+  static const String finaleSongsLabel = 'Songs';
+  static const String finaleReactionsLabel = 'Reactions';
+  static const String finaleParticipantsLabel = 'People';
+  static const String finaleDurationLabel = 'Duration';
+  static const String finaleSoundboardLabel = 'Sounds';
+  static const String finaleCardsLabel = 'Cards';
+  static const String finaleTopReactorLabel = 'Top Reactor';
+  static const String finaleLongestStreakLabel = 'Longest Streak';
+  static const String finaleShareButton = 'Share Setlist';
+  static String finaleShareText(String date, List<String> songs) =>
+      'Karamania Night — $date\n${songs.join('\n')}';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

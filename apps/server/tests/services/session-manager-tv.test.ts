@@ -82,6 +82,9 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastSpinWheelStarted: vi.fn(),
   broadcastSpinWheelResult: vi.fn(),
   broadcastModeChanged: vi.fn(),
+  broadcastFinaleStats: vi.fn(),
+  broadcastFinaleSetlist: vi.fn(),
+  broadcastFinaleAwards: vi.fn(),
   getIO: (...args: unknown[]) => mockGetIO(...args),
 }));
 
@@ -175,6 +178,72 @@ vi.mock('../../src/services/capture-trigger.js', () => ({
   clearCaptureTriggerState: vi.fn(),
 }));
 
+vi.mock('../../src/socket-handlers/connection-handler.js', () => ({
+  clearSessionTimers: vi.fn(),
+}));
+
+vi.mock('../../src/services/icebreaker-dealer.js', () => ({
+  dealQuestion: vi.fn(),
+  startIcebreakerRound: vi.fn(),
+  resolveIcebreaker: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/kings-cup-dealer.js', () => ({
+  dealCard: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/dare-pull-dealer.js', () => ({
+  dealDare: vi.fn(),
+  selectTarget: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/quick-vote-dealer.js', () => ({
+  dealQuestion: vi.fn(),
+  startQuickVoteRound: vi.fn(),
+  resolveQuickVote: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/singalong-dealer.js', () => ({
+  dealPrompt: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/activity-voter.js', () => ({
+  selectActivityOptions: vi.fn().mockReturnValue([]),
+  startVoteRound: vi.fn(),
+  resolveByTimeout: vi.fn(),
+  getVoteCounts: vi.fn().mockReturnValue({}),
+  clearSession: vi.fn(),
+  resetAllRounds: vi.fn(),
+}));
+
+vi.mock('../../src/services/peak-detector.js', () => ({
+  clearSession: vi.fn(),
+}));
+
+vi.mock('../../src/services/finale-award-generator.js', () => ({
+  analyzeSessionForAwards: vi.fn().mockReturnValue([]),
+  generateFinaleAwards: vi.fn().mockReturnValue([]),
+  FinaleAwardCategory: {
+    performer: 'performer',
+    hypeLeader: 'hypeLeader',
+    socialButterfly: 'socialButterfly',
+    crowdFavorite: 'crowdFavorite',
+    partyStarter: 'partyStarter',
+    vibeKeeper: 'vibeKeeper',
+    everyone: 'everyone',
+  },
+}));
+
 import {
   pairTv,
   unpairTv,
@@ -185,6 +254,7 @@ import {
   handleQuickPickSongSelected,
   handleSpinWheelSongSelected,
   endSession,
+  finalizeSession,
 } from '../../src/services/session-manager.js';
 
 function createMockTvIntegration(): TvIntegration & {
@@ -455,6 +525,7 @@ describe('session-manager TV integration', () => {
       mockUpdateStatus.mockResolvedValueOnce(undefined);
 
       await endSession('session-1', 'host-1');
+      await finalizeSession('session-1');
 
       expect(mockTv.disconnect).toHaveBeenCalled();
       expect(getTvConnection('session-1')).toBeUndefined();

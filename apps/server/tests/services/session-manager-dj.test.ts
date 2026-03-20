@@ -94,6 +94,15 @@ vi.mock('../../src/services/dj-broadcaster.js', () => ({
   broadcastCeremonyAnticipation: (...args: unknown[]) => mockBroadcastCeremonyAnticipation(...args),
   broadcastCeremonyReveal: (...args: unknown[]) => mockBroadcastCeremonyReveal(...args),
   broadcastCeremonyQuick: (...args: unknown[]) => mockBroadcastCeremonyQuick(...args),
+  broadcastFinaleStats: vi.fn(),
+  broadcastFinaleSetlist: vi.fn(),
+  broadcastFinaleAwards: vi.fn(),
+  broadcastCardDealt: vi.fn(),
+  broadcastQuickPickStarted: vi.fn(),
+  broadcastSpinWheelStarted: vi.fn(),
+  broadcastSpinWheelResult: vi.fn(),
+  broadcastModeChanged: vi.fn(),
+  getIO: vi.fn(),
 }));
 
 const mockRemoveSession = vi.fn();
@@ -114,10 +123,16 @@ const mockFlushEventStream = vi.fn();
 vi.mock('../../src/services/event-stream.js', () => ({
   appendEvent: (...args: unknown[]) => mockAppendEvent(...args),
   flushEventStream: (...args: unknown[]) => mockFlushEventStream(...args),
+  getEventStream: vi.fn().mockReturnValue([]),
+  removeEventStream: vi.fn(),
 }));
 
 vi.mock('../../src/services/activity-tracker.js', () => ({
   removeSession: vi.fn(),
+}));
+
+vi.mock('../../src/socket-handlers/connection-handler.js', () => ({
+  clearSessionTimers: vi.fn(),
 }));
 
 const mockClearSessionStreaks = vi.fn();
@@ -147,6 +162,108 @@ vi.mock('../../src/services/icebreaker-dealer.js', () => ({
   resolveIcebreaker: vi.fn().mockReturnValue({ optionCounts: { a: 3, b: 2, c: 1, d: 0 }, totalVotes: 6, winnerOptionId: 'a' }),
   clearSession: vi.fn(),
   resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/card-dealer.js', () => ({
+  dealCard: vi.fn(),
+  clearDealtCards: vi.fn(),
+}));
+
+vi.mock('../../src/services/song-pool.js', () => ({
+  clearPool: vi.fn(),
+  markSongSung: vi.fn(),
+}));
+
+vi.mock('../../src/services/quick-pick.js', () => ({
+  startRound: vi.fn(),
+  getRound: vi.fn(),
+  resolveByTimeout: vi.fn(),
+  clearRound: vi.fn(),
+}));
+
+vi.mock('../../src/services/spin-wheel.js', () => ({
+  startRound: vi.fn(),
+  initiateSpin: vi.fn(),
+  onSpinComplete: vi.fn(),
+  startVetoWindow: vi.fn(),
+  handleVeto: vi.fn(),
+  resolveRound: vi.fn(),
+  autoSpin: vi.fn(),
+  getRound: vi.fn(),
+  clearRound: vi.fn(),
+}));
+
+vi.mock('../../src/services/suggestion-engine.js', () => ({
+  computeSuggestions: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('../../src/services/song-detection.js', () => ({
+  detectSong: vi.fn(),
+}));
+
+vi.mock('../../src/integrations/lounge-api.js', () => ({
+  createLoungeApiClient: vi.fn(),
+}));
+
+vi.mock('../../src/services/kings-cup-dealer.js', () => ({
+  dealCard: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/dare-pull-dealer.js', () => ({
+  dealDare: vi.fn(),
+  selectTarget: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/quick-vote-dealer.js', () => ({
+  dealQuestion: vi.fn(),
+  startQuickVoteRound: vi.fn(),
+  resolveQuickVote: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/singalong-dealer.js', () => ({
+  dealPrompt: vi.fn(),
+  clearSession: vi.fn(),
+  resetAll: vi.fn(),
+}));
+
+vi.mock('../../src/services/activity-voter.js', () => ({
+  selectActivityOptions: vi.fn().mockReturnValue([]),
+  startVoteRound: vi.fn(),
+  resolveByTimeout: vi.fn(),
+  getVoteCounts: vi.fn().mockReturnValue({}),
+  clearSession: vi.fn(),
+  resetAllRounds: vi.fn(),
+}));
+
+vi.mock('../../src/services/participation-scoring.js', () => ({
+  calculateScoreIncrement: vi.fn(),
+  ACTION_TIER_MAP: {},
+}));
+
+vi.mock('../../src/services/award-generator.js', () => ({
+  generateAward: vi.fn(),
+  AWARD_TEMPLATES: [],
+  AwardTone: {},
+}));
+
+vi.mock('../../src/services/finale-award-generator.js', () => ({
+  analyzeSessionForAwards: vi.fn().mockReturnValue([]),
+  generateFinaleAwards: vi.fn().mockReturnValue([]),
+  FinaleAwardCategory: {
+    performer: 'performer',
+    hypeLeader: 'hypeLeader',
+    socialButterfly: 'socialButterfly',
+    crowdFavorite: 'crowdFavorite',
+    partyStarter: 'partyStarter',
+    vibeKeeper: 'vibeKeeper',
+    everyone: 'everyone',
+  },
 }));
 
 describe('session-manager DJ functions', () => {
@@ -490,7 +607,7 @@ describe('session-manager DJ functions', () => {
   });
 
   describe('endSession', () => {
-    it('transitions to finale, updates DB, and cleans up in-memory state', async () => {
+    it('transitions to finale, updates DB, and starts finalization timer (cleanup deferred)', async () => {
       const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
       const context = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
       const finaleContext = createTestDJContext({ sessionId: 'session-1', state: 'finale' as const });
@@ -514,6 +631,29 @@ describe('session-manager DJ functions', () => {
       expect(result).toEqual(finaleContext);
       expect(mockProcessTransition).toHaveBeenCalledWith(context, { type: 'END_PARTY' }, expect.any(Number));
       expect(mockUpdateStatus).toHaveBeenCalledWith('session-1', 'ended');
+      // Cleanup is deferred to finalizeSession — NOT called during initiateFinale
+      expect(mockRemoveSessionDjState).not.toHaveBeenCalled();
+      expect(mockRemoveSession).not.toHaveBeenCalled();
+    });
+
+    it('cleanup happens in finalizeSession', async () => {
+      const session = createTestSession({ id: 'session-1', host_user_id: 'host-user-1' });
+      const context = createTestDJContext({ sessionId: 'session-1', state: 'song' as const });
+      const finaleContext = createTestDJContext({ sessionId: 'session-1', state: 'finale' as const });
+
+      mockFindById.mockResolvedValue(session);
+      mockGetSessionDjState.mockReturnValue(context);
+      mockProcessTransition.mockReturnValue({
+        newContext: finaleContext,
+        sideEffects: [],
+      });
+      mockUpdateStatus.mockResolvedValue(undefined);
+      mockFlushEventStream.mockReturnValue([]);
+
+      const { endSession, finalizeSession } = await import('../../src/services/session-manager.js');
+      await endSession('session-1', 'host-user-1');
+      await finalizeSession('session-1');
+
       expect(mockRemoveSessionDjState).toHaveBeenCalledWith('session-1');
       expect(mockCancelSessionTimer).toHaveBeenCalledWith('session-1');
       expect(mockRemoveSession).toHaveBeenCalledWith('session-1');
