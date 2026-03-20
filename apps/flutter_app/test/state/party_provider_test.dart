@@ -2131,4 +2131,45 @@ void main() {
       provider.dispose();
     });
   });
+
+  group('venueName (Story 8.3)', () {
+    late PartyProvider provider;
+
+    setUp(() {
+      provider = PartyProvider(wakelockToggle: (_) {});
+    });
+
+    test('initially null', () {
+      expect(provider.venueName, isNull);
+    });
+
+    test('setVenueName stores correctly', () {
+      provider.setVenueName('The Karaoke Lounge');
+      expect(provider.venueName, 'The Karaoke Lounge');
+    });
+
+    test('setVenueName with null clears value', () {
+      provider.setVenueName('Some Venue');
+      provider.setVenueName(null);
+      expect(provider.venueName, isNull);
+    });
+
+    test('venueName cleared in onSessionEnded', () {
+      provider.setVenueName('My Venue');
+      expect(provider.venueName, 'My Venue');
+
+      provider.onSessionEnded();
+      expect(provider.venueName, isNull);
+    });
+
+    test('setVenueName notifies listeners', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.setVenueName('Test Venue');
+      expect(notifyCount, 1);
+
+      provider.dispose();
+    });
+  });
 }

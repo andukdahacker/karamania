@@ -55,7 +55,8 @@ export type SessionEvent =
   | { type: 'icebreaker:vote'; ts: number; userId: string; data: { optionId: string } }
   | { type: 'icebreaker:result'; ts: number; data: { optionCounts: Record<string, number>; totalVotes: number; winnerOptionId: string } }
   | { type: 'finale:awardsGenerated'; ts: number; data: { awards: Array<{ userId: string; title: string; category: string }> } }
-  | { type: 'finale:feedbackReceived'; ts: number; userId: string; data: { score: number } };
+  | { type: 'finale:feedbackReceived'; ts: number; userId: string; data: { score: number } }
+  | { type: 'card:shared'; ts: number; userId: string; data: { type: string } };
 
 const streams = new Map<string, SessionEvent[]>();
 

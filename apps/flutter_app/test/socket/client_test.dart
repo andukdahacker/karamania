@@ -702,4 +702,16 @@ void main() {
       expect(() => SocketClient.instance.emitCardRedraw(), returnsNormally);
     });
   });
+
+  group('SocketClient share emit methods (Story 8.3)', () {
+    test('emitSetlistPosterShared does not throw when not connected', () {
+      expect(
+          () => SocketClient.instance.emitSetlistPosterShared(), returnsNormally);
+    });
+
+    test('emitMomentCardShared does not throw when not connected', () {
+      expect(
+          () => SocketClient.instance.emitMomentCardShared(), returnsNormally);
+    });
+  });
 }

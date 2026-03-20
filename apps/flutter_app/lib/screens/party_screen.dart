@@ -508,6 +508,7 @@ class _PartyScreenState extends State<PartyScreen>
                   awards: partyProvider.finaleAwards,
                   stats: partyProvider.finaleStats,
                   setlist: partyProvider.finaleSetlist,
+                  venueName: partyProvider.venueName,
                   onStepChanged: (step) => partyProvider.setFinaleStep(step),
                 ),
               ),

@@ -206,4 +206,20 @@ export function registerCardHandlers(
       data: { previousCardId: currentCard.id, newCardId: newCard.id },
     });
   });
+
+  // card:shared — track share intent as viral signal
+  socket.on(EVENTS.CARD_SHARED, (payload: { type: string; timestamp: number }) => {
+    const { sessionId, userId } = socket.data;
+    if (!sessionId || !userId) return;
+
+    if (!payload || typeof payload.type !== 'string' || !payload.type) return;
+    if (typeof payload.timestamp !== 'number') return;
+
+    appendEvent(sessionId, {
+      type: 'card:shared',
+      ts: Date.now(),
+      userId,
+      data: { type: payload.type },
+    });
+  });
 }

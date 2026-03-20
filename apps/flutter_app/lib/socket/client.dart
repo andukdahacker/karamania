@@ -804,6 +804,13 @@ class SocketClient {
     });
   }
 
+  void emitSetlistPosterShared() {
+    _socket?.emit('card:shared', {
+      'type': 'setlist_poster',
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
   void startParty(PartyProvider partyProvider) {
     partyProvider.onStartPartyLoading(LoadingState.loading);
     _socket?.emit('party:start');
@@ -824,6 +831,7 @@ class SocketClient {
     required String serverUrl,
     String? displayName,
     String? vibe,
+    String? venueName,
     bool accessibilityEqualVolume = false,
     required CaptureProvider captureProvider,
   }) async {
@@ -833,6 +841,7 @@ class SocketClient {
       final result = await apiService.createSession(
         displayName: displayName,
         vibe: vibe,
+        venueName: venueName,
         firebaseToken: token,
       );
       final sessionId = result.sessionId;
@@ -849,6 +858,7 @@ class SocketClient {
       }
 
       partyProvider.onPartyCreated(sessionId, partyCode);
+      partyProvider.setVenueName(venueName);
 
       final connectToken = guestToken ?? token;
       if (connectToken == null) throw Exception('No auth token available');

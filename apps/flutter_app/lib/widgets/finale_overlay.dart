@@ -18,6 +18,7 @@ class FinaleOverlay extends StatefulWidget {
     this.awards,
     this.stats,
     this.setlist,
+    this.venueName,
     this.onStepChanged,
   });
 
@@ -25,6 +26,7 @@ class FinaleOverlay extends StatefulWidget {
   final List<FinaleAward>? awards;
   final SessionStats? stats;
   final List<SetlistEntry>? setlist;
+  final String? venueName;
   final ValueChanged<int>? onStepChanged;
 
   @override
@@ -115,6 +117,7 @@ class _FinaleOverlayState extends State<FinaleOverlay>
         return FinaleSetlistWidget(
           setlist: widget.setlist!,
           vibe: widget.vibe,
+          venueName: widget.venueName,
         );
       case 3:
         return FeedbackPromptWidget(vibe: widget.vibe);

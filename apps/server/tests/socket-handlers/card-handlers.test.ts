@@ -592,6 +592,88 @@ describe('card-handlers', () => {
     });
   });
 
+  describe('card:shared', () => {
+    it('appends card:shared event with type setlist_poster', async () => {
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:shared')!({ type: 'setlist_poster', timestamp: 1234567890 });
+
+      expect(mockAppendEvent).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({
+          type: 'card:shared',
+          userId: 'user-1',
+          data: { type: 'setlist_poster' },
+        }),
+      );
+    });
+
+    it('appends card:shared event with type moment (backward compat)', async () => {
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:shared')!({ type: 'moment', timestamp: 1234567890 });
+
+      expect(mockAppendEvent).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({
+          type: 'card:shared',
+          userId: 'user-1',
+          data: { type: 'moment' },
+        }),
+      );
+    });
+
+    it('rejects payload with missing type', async () => {
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:shared')!({ timestamp: 1234567890 });
+
+      expect(mockAppendEvent).not.toHaveBeenCalled();
+    });
+
+    it('rejects payload with empty type', async () => {
+      const { socket, handlers } = createMockSocket();
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:shared')!({ type: '', timestamp: 1234567890 });
+
+      expect(mockAppendEvent).not.toHaveBeenCalled();
+    });
+
+    it('rejects when sessionId is missing', async () => {
+      const handlers = new Map<string, (data?: unknown) => Promise<void>>();
+      const socket = {
+        data: { userId: 'user-1', role: 'authenticated' as const, displayName: 'Test User' },
+        on: (event: string, handler: (data?: unknown) => Promise<void>) => {
+          handlers.set(event, handler);
+        },
+      };
+      const { io } = createMockIo();
+
+      const { registerCardHandlers } = await import('../../src/socket-handlers/card-handlers.js');
+      registerCardHandlers(socket as never, io as never);
+
+      await handlers.get('card:shared')!({ type: 'setlist_poster', timestamp: 1234567890 });
+
+      expect(mockAppendEvent).not.toHaveBeenCalled();
+    });
+  });
+
   describe('card:redraw', () => {
     it('allows host to redraw (existing behavior)', async () => {
       mockValidateHost.mockResolvedValue(undefined);

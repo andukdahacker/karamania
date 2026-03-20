@@ -320,9 +320,14 @@ class Copy {
   static const String finaleCardsLabel = 'Cards';
   static const String finaleTopReactorLabel = 'Top Reactor';
   static const String finaleLongestStreakLabel = 'Longest Streak';
-  static const String finaleShareButton = 'Share Setlist';
+  static const String finaleShareButton = 'Share Poster';
   static String finaleShareText(String date, List<String> songs) =>
       'Karamania Night — $date\n${songs.join('\n')}';
+
+  // Setlist Poster (Story 8.3)
+  static const String setlistPosterNoSongs = 'No songs tonight';
+  static const String setlistPosterHoldForTextShare = 'Hold for text share';
+  static const String setlistPosterByArtist = 'by';
 
   // Dialogs
   static const String cancel = 'CANCEL';

@@ -314,6 +314,9 @@ class PartyProvider extends ChangeNotifier {
   String? _icebreakerWinnerOptionId;
   int _icebreakerVoteDurationMs = 6000;
 
+  // Venue name — populated during party creation (Story 8.3)
+  String? _venueName;
+
   // Finale awards — populated by finale:awards event (Story 8.1)
   List<FinaleAward>? _finaleAwards;
 
@@ -452,6 +455,7 @@ class PartyProvider extends ChangeNotifier {
   String? get icebreakerWinnerOptionId => _icebreakerWinnerOptionId;
   int get icebreakerVoteDurationMs => _icebreakerVoteDurationMs;
   List<FinaleAward>? get finaleAwards => _finaleAwards;
+  String? get venueName => _venueName;
   SessionStats? get finaleStats => _finaleStats;
   List<SetlistEntry>? get finaleSetlist => _finaleSetlist;
   int? get finaleCurrentStep => _finaleCurrentStep;
@@ -754,6 +758,11 @@ class PartyProvider extends ChangeNotifier {
 
   void setFinaleSetlist(List<SetlistEntry> setlist) {
     _finaleSetlist = setlist;
+    notifyListeners();
+  }
+
+  void setVenueName(String? name) {
+    _venueName = name;
     notifyListeners();
   }
 
@@ -1271,6 +1280,7 @@ class PartyProvider extends ChangeNotifier {
   void onSessionEnded() {
     _sessionStatus = 'ended';
     _djState = DJState.lobby;
+    _venueName = null;
     _currentPerformer = null;
     _timerStartedAt = null;
     _timerDurationMs = null;

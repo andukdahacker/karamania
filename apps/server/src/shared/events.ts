@@ -40,6 +40,7 @@ export const EVENTS = {
   CARD_DISMISSED: 'card:dismissed',
   CARD_REDRAW: 'card:redraw',
   CARD_GROUP_ACTIVATED: 'card:groupActivated',
+  CARD_SHARED: 'card:shared',
 
   // Lightstick & Hype events
   LIGHTSTICK_TOGGLED: 'lightstick:toggled',
