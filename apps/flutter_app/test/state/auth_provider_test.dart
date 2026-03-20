@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:karamania/state/auth_provider.dart';
+import 'package:karamania/state/loading_state.dart';
 
 class FakeUser extends Fake implements User {
   @override
@@ -59,6 +60,51 @@ void main() {
       expect(provider.guestId, isNull);
       expect(provider.displayName, isNull);
       expect(provider.isAuthenticated, isFalse);
+    });
+
+    test('profile fields are null initially', () {
+      expect(provider.userId, isNull);
+      expect(provider.avatarUrl, isNull);
+      expect(provider.createdAt, isNull);
+      expect(provider.profileLoading, LoadingState.idle);
+    });
+
+    test('onProfileLoaded sets userId, avatarUrl, createdAt, profileLoading', () {
+      final testDate = DateTime.parse('2026-01-15T10:30:00Z');
+      provider.onProfileLoaded(
+        userId: 'user-uuid-123',
+        displayName: 'Test User',
+        avatarUrl: 'https://example.com/avatar.png',
+        createdAt: testDate,
+      );
+
+      expect(provider.userId, 'user-uuid-123');
+      expect(provider.displayName, 'Test User');
+      expect(provider.avatarUrl, 'https://example.com/avatar.png');
+      expect(provider.createdAt, testDate);
+      expect(provider.profileLoading, LoadingState.success);
+    });
+
+    test('onProfileLoadFailed sets profileLoading to error', () {
+      provider.onProfileLoadFailed();
+
+      expect(provider.profileLoading, LoadingState.error);
+    });
+
+    test('onSignedOut clears all profile fields', () {
+      provider.onProfileLoaded(
+        userId: 'user-uuid-123',
+        displayName: 'Test User',
+        avatarUrl: 'https://example.com/avatar.png',
+        createdAt: DateTime.now(),
+      );
+
+      provider.onSignedOut();
+
+      expect(provider.userId, isNull);
+      expect(provider.avatarUrl, isNull);
+      expect(provider.createdAt, isNull);
+      expect(provider.profileLoading, LoadingState.idle);
     });
 
     test('notifyListeners fires on each state change', () {

@@ -19,6 +19,7 @@ import { catalogRoutes } from './routes/catalog.js';
 import { playlistRoutes } from './routes/playlists.js';
 import { suggestionRoutes } from './routes/suggestions.js';
 import { captureRoutes } from './routes/captures.js';
+import { userRoutes } from './routes/users.js';
 import { errorHandler } from './shared/errors.js';
 import { setupSocketHandlers } from './socket-handlers/connection-handler.js';
 import { recoverActiveSessions } from './services/session-manager.js';
@@ -36,6 +37,7 @@ await fastify.register(cors);
 // Import schema files so they register in z.globalRegistry before swagger init
 await import('./shared/schemas/common-schemas.js');
 await import('./shared/schemas/auth-schemas.js');
+await import('./shared/schemas/user-schemas.js');
 await import('./shared/schemas/session-schemas.js');
 await import('./shared/schemas/catalog-schemas.js');
 await import('./shared/schemas/playlist-schemas.js');
@@ -62,6 +64,7 @@ await fastify.register(webLandingRoutes);
 await fastify.register(catalogRoutes);
 await fastify.register(playlistRoutes);
 await fastify.register(suggestionRoutes);
+await fastify.register(userRoutes);
 await fastify.register(captureRoutes);
 
 const io = new SocketIOServer(fastify.server, {

@@ -38,6 +38,8 @@ class Copy {
   static const String guestSignInPrompt =
       'Create an account to save your session history';
   static const String signIn = 'Sign in';
+  static const String signOut = 'Sign Out';
+  static const String defaultUserName = 'User';
   static const String yourSessions = 'Your Sessions';
   static const String noSessionsYet = 'Your past parties will appear here';
 

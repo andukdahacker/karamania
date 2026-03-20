@@ -11,19 +11,53 @@ class AuthProvider extends ChangeNotifier {
   String? _guestToken;
   String? _guestId;
   String? _displayName;
+  String? _userId;         // Server-side user UUID (not Firebase UID)
+  String? _avatarUrl;      // From OAuth provider
+  DateTime? _createdAt;    // Account creation date
   AuthState _state = AuthState.unauthenticated;
   LoadingState _authLoading = LoadingState.idle;
+  LoadingState _profileLoading = LoadingState.idle;
 
   AuthState get state => _state;
   User? get firebaseUser => _firebaseUser;
   String? get guestToken => _guestToken;
   String? get guestId => _guestId;
   String? get displayName => _displayName;
+  String? get userId => _userId;
+  String? get avatarUrl => _avatarUrl;
+  DateTime? get createdAt => _createdAt;
   LoadingState get authLoading => _authLoading;
+  LoadingState get profileLoading => _profileLoading;
   bool get isAuthenticated => _state != AuthState.unauthenticated;
 
   set authLoading(LoadingState value) {
     _authLoading = value;
+    notifyListeners();
+  }
+
+  set profileLoading(LoadingState value) {
+    _profileLoading = value;
+    notifyListeners();
+  }
+
+  /// Fetches user profile from server. Called by bootstrap after Firebase auth.
+  /// NOT business logic — just state hydration from API response.
+  void onProfileLoaded({
+    required String userId,
+    required String displayName,
+    String? avatarUrl,
+    required DateTime createdAt,
+  }) {
+    _userId = userId;
+    _displayName = displayName;
+    _avatarUrl = avatarUrl;
+    _createdAt = createdAt;
+    _profileLoading = LoadingState.success;
+    notifyListeners();
+  }
+
+  void onProfileLoadFailed() {
+    _profileLoading = LoadingState.error;
     notifyListeners();
   }
 
@@ -63,16 +97,25 @@ class AuthProvider extends ChangeNotifier {
     _guestToken = null;
     _guestId = null;
     _displayName = null;
+    _userId = null;
+    _avatarUrl = null;
+    _createdAt = null;
     _state = AuthState.unauthenticated;
     _authLoading = LoadingState.idle;
+    _profileLoading = LoadingState.idle;
     notifyListeners();
   }
 
   /// Listen to Firebase Auth state changes. Call once from bootstrap.
-  void initAuthStateListener() {
-    FirebaseAuth.instance.authStateChanges().listen((user) {
+  /// [onAuthenticated] callback enables the bootstrap to trigger side effects
+  /// (like profile fetch) without putting business logic in the provider.
+  void initAuthStateListener({Future<void> Function(User user)? onAuthenticated}) {
+    FirebaseAuth.instance.authStateChanges().listen((user) async {
       if (user != null) {
         onFirebaseAuthenticated(user);
+        if (onAuthenticated != null) {
+          await onAuthenticated(user);
+        }
       } else if (_state == AuthState.authenticatedFirebase) {
         onSignedOut();
       }

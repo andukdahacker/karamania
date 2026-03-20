@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:dart_open_fetch_runtime/dart_open_fetch_runtime.dart' as runtime;
 import 'package:karamania/api/auth_middleware.dart';
 import 'package:karamania/api/generated/karamania_api.dart';
@@ -218,6 +219,35 @@ class ApiService {
         if (e is ApiException) rethrow;
         throw ApiException(code: 'UNKNOWN', message: 'Request failed (status ${response.statusCode})');
       }
+    } finally {
+      _authMiddleware.token = null;
+    }
+  }
+
+  /// Fetches the authenticated user's profile from the server.
+  /// Caller must provide the Firebase ID token.
+  /// Returns null on failure (network error, 401, etc.)
+  Future<Map<String, dynamic>?> fetchUserProfile(String token) async {
+    _authMiddleware.token = token;
+    try {
+      final basePath = _baseUrl.endsWith('/')
+          ? _baseUrl.substring(0, _baseUrl.length - 1)
+          : _baseUrl;
+      final url = Uri.parse('$basePath/api/users/me');
+      final request = runtime.HttpRequest(
+        method: 'GET',
+        url: url,
+        headers: {'Content-Type': 'application/json'},
+      );
+      final response = await _chain.send(request);
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        return body['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Profile fetch failed: $e');
+      return null;
     } finally {
       _authMiddleware.token = null;
     }

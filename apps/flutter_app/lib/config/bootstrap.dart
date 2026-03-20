@@ -6,6 +6,7 @@ import 'package:karamania/app.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/state/accessibility_provider.dart';
 import 'package:karamania/state/auth_provider.dart';
+import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/capture_provider.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/socket/client.dart';
@@ -55,6 +56,34 @@ Future<void> bootstrap() async {
   UploadQueue.instance.configure(
     apiService: apiService,
     tokenProvider: () => authProvider.currentToken,
+  );
+
+  // Listen to Firebase Auth state changes and fetch profile on authentication
+  authProvider.initAuthStateListener(
+    onAuthenticated: (user) async {
+      authProvider.profileLoading = LoadingState.loading;
+      final token = await user.getIdToken();
+      if (token == null) {
+        authProvider.onProfileLoadFailed();
+        return;
+      }
+      final profileData = await apiService.fetchUserProfile(token);
+      if (profileData != null) {
+        try {
+          authProvider.onProfileLoaded(
+            userId: profileData['id'] as String,
+            displayName: profileData['displayName'] as String,
+            avatarUrl: profileData['avatarUrl'] as String?,
+            createdAt: DateTime.parse(profileData['createdAt'] as String),
+          );
+        } catch (e) {
+          debugPrint('Profile parse failed: $e');
+          authProvider.onProfileLoadFailed();
+        }
+      } else {
+        authProvider.onProfileLoadFailed();
+      }
+    },
   );
 
   runApp(

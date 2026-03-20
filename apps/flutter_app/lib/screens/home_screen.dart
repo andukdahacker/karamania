@@ -5,6 +5,7 @@ import 'package:karamania/config/app_config.dart';
 import 'package:karamania/constants/copy.dart';
 import 'package:karamania/constants/tap_tiers.dart';
 import 'package:karamania/socket/client.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/capture_provider.dart';
@@ -93,9 +94,25 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                   ] else ...[
+                    if (authProvider.avatarUrl != null)
+                      CircleAvatar(
+                        key: const Key('user-avatar'),
+                        radius: DJTokens.spaceLg,
+                        backgroundImage: NetworkImage(authProvider.avatarUrl!),
+                        backgroundColor: DJTokens.surfaceElevated,
+                      ),
+                    if (authProvider.avatarUrl != null)
+                      const SizedBox(height: DJTokens.spaceSm),
+                    Text(
+                      authProvider.displayName ?? Copy.defaultUserName,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: DJTokens.spaceSm),
                     Text(
                       Copy.yourSessions,
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: DJTokens.textSecondary,
+                          ),
                     ),
                     const SizedBox(height: DJTokens.spaceSm),
                     Text(
@@ -103,6 +120,17 @@ class HomeScreen extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: DJTokens.textSecondary,
                           ),
+                    ),
+                    const SizedBox(height: DJTokens.spaceMd),
+                    TextButton(
+                      key: const Key('sign-out-btn'),
+                      onPressed: () => _onSignOut(context),
+                      child: Text(
+                        Copy.signOut,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DJTokens.textSecondary,
+                            ),
+                      ),
                     ),
                   ],
                 ],
@@ -112,6 +140,12 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _onSignOut(BuildContext context) async {
+    final authProvider = context.read<AuthProvider>();
+    await FirebaseAuth.instance.signOut();
+    authProvider.onSignedOut();
   }
 
   Future<void> _onCreateParty(BuildContext context) async {
