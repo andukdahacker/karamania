@@ -36,13 +36,16 @@ import { startRound, getRound, resolveByTimeout, clearRound } from '../services/
 import { computeSuggestions } from '../services/suggestion-engine.js';
 import { shouldEmitCaptureBubble, markBubbleEmitted, clearCaptureTriggerState, type CaptureTriggerType } from '../services/capture-trigger.js';
 import { broadcastQuickPickStarted, broadcastSpinWheelStarted, broadcastSpinWheelResult, broadcastModeChanged, broadcastInterludeVoteStarted, broadcastInterludeVoteResult, broadcastInterludeGameStarted, broadcastInterludeGameEnded, broadcastQuickVoteResult, broadcastIcebreakerStarted, broadcastIcebreakerResult, broadcastFinaleAwards, broadcastFinaleStats, broadcastFinaleSetlist } from '../services/dj-broadcaster.js';
-import type { SessionStats, SetlistEntry } from '../shared/schemas/finale-schemas.js';
+import { sessionSummarySchema, type SessionStats, type SetlistEntry } from '../shared/schemas/finale-schemas.js';
 import { dealCard as dealKingsCupCard, clearSession as clearKingsCupSession } from '../services/kings-cup-dealer.js';
 import { dealDare, selectTarget, clearSession as clearDarePullSession } from '../services/dare-pull-dealer.js';
 import { dealQuestion, startQuickVoteRound, resolveQuickVote, clearSession as clearQuickVoteSession } from '../services/quick-vote-dealer.js';
 import { dealPrompt as dealSingAlongPrompt, clearSession as clearSingAlongSession } from '../services/singalong-dealer.js';
 import { dealQuestion as dealIcebreakerQuestion, startIcebreakerRound, resolveIcebreaker, clearSession as clearIcebreakerSession } from '../services/icebreaker-dealer.js';
 import { analyzeSessionForAwards, generateFinaleAwards, type FinaleAward } from '../services/finale-award-generator.js';
+import { buildSessionSummary } from '../services/session-summary-builder.js';
+import { withRetry } from '../services/retry.js';
+import { writeSessionSummaryToDisk } from '../services/session-summary-fallback.js';
 import type { QuickPickSong } from '../services/quick-pick.js';
 import {
   startRound as startSpinWheelRound,
@@ -1796,6 +1799,47 @@ async function generateEndOfNightAwards(sessionId: string): Promise<FinaleAward[
   return awards;
 }
 
+async function writeSessionSummary(
+  sessionId: string,
+  stats: SessionStats | undefined,
+  setlist: SetlistEntry[] | undefined,
+  awards: FinaleAward[],
+  participants: Array<{ userId: string | null; displayName: string; participationScore: number; topAward: string | null }>,
+): Promise<void> {
+  const summary = buildSessionSummary({
+    sessionId,
+    stats: stats ?? {
+      songCount: 0, participantCount: participants.length, sessionDurationMs: 0,
+      totalReactions: 0, totalSoundboardPlays: 0, totalCardsDealt: 0, topReactor: null, longestStreak: 0,
+    },
+    setlist: setlist ?? [],
+    awards,
+    participants,
+  });
+
+  const parsed = sessionSummarySchema.safeParse(summary);
+  if (!parsed.success) {
+    console.error('[SessionSummary] Validation failed, writing to disk as fallback', parsed.error.message);
+    await writeSessionSummaryToDisk(sessionId, summary);
+    return;
+  }
+
+  try {
+    await withRetry(
+      () => sessionRepo.persistSessionSummary(sessionId, summary),
+      {
+        maxAttempts: 4,
+        baseDelayMs: 500,
+        maxDelayMs: 5000,
+        onRetry: (attempt, err) => console.warn(`[SessionSummary] Retry ${attempt}`, err),
+      },
+    );
+  } catch (error) {
+    console.error('[SessionSummary] All retries failed, writing to disk', error);
+    await writeSessionSummaryToDisk(sessionId, summary);
+  }
+}
+
 function calculateSessionStats(sessionId: string): SessionStats {
   const events = getEventStream(sessionId);
   const context = getSessionDjState(sessionId);
@@ -2006,20 +2050,38 @@ export async function initiateFinale(
   }
 
   // Step C: Calculate session stats and broadcast
+  let capturedStats: SessionStats | undefined;
   try {
-    const sessionStats = calculateSessionStats(sessionId);
-    broadcastFinaleStats(sessionId, sessionStats);
+    capturedStats = calculateSessionStats(sessionId);
+    broadcastFinaleStats(sessionId, capturedStats);
   } catch (err) {
     console.error('[session-manager] Failed to calculate session stats:', err);
   }
 
   // Step D: Build setlist and broadcast
+  let capturedSetlist: SetlistEntry[] | undefined;
   try {
-    const setlist = buildFinaleSetlist(sessionId);
-    broadcastFinaleSetlist(sessionId, setlist);
+    capturedSetlist = buildFinaleSetlist(sessionId);
+    broadcastFinaleSetlist(sessionId, capturedSetlist);
   } catch (err) {
     console.error('[session-manager] Failed to build finale setlist:', err);
   }
+
+  // ★ NEW: Persist session summary (fire-and-forget — entire block is async to avoid blocking finale)
+  const awards = finaleAwardsCache.get(sessionId) ?? [];
+  (async () => {
+    const summaryParticipants = (await sessionRepo.getParticipants(sessionId)).map(p => {
+      const resolvedId = p.user_id ?? p.id;
+      const scoreCacheKey = `${sessionId}:${resolvedId}`;
+      return {
+        userId: p.user_id,
+        displayName: p.guest_name ?? p.display_name ?? 'Unknown',
+        participationScore: scoreCache.get(scoreCacheKey) ?? 0,
+        topAward: awards.find(a => a.userId === resolvedId)?.title ?? null,
+      };
+    });
+    await writeSessionSummary(sessionId, capturedStats, capturedSetlist, awards, summaryParticipants);
+  })().catch((err: unknown) => console.error('[SessionSummary] Write failed:', err));
 
   // Step E: Flush and write event stream to DB (BEFORE cleanup, includes all finale events)
   const events = flushEventStream(sessionId);

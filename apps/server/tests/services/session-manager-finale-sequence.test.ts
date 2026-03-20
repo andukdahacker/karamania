@@ -47,6 +47,7 @@ vi.mock('../../src/persistence/session-repository.js', () => ({
   updateTopAward: (...args: unknown[]) => mockUpdateTopAward(...args),
   findActiveSessions: vi.fn(),
   updateFeedbackScore: (...args: unknown[]) => mockUpdateFeedbackScore(...args),
+  persistSessionSummary: vi.fn().mockResolvedValue(undefined),
 }));
 
 const mockProcessTransition = vi.fn();
@@ -262,6 +263,18 @@ const mockClearFeedbackTracking = vi.fn();
 vi.mock('../../src/socket-handlers/finale-handlers.js', () => ({
   clearFeedbackTracking: (...args: unknown[]) => mockClearFeedbackTracking(...args),
   registerFinaleHandlers: vi.fn(),
+}));
+
+vi.mock('../../src/services/session-summary-builder.js', () => ({
+  buildSessionSummary: vi.fn().mockReturnValue({ version: 1, generatedAt: 0, stats: {}, setlist: [], awards: [], participants: [] }),
+}));
+
+vi.mock('../../src/services/retry.js', () => ({
+  withRetry: vi.fn().mockImplementation((fn: () => Promise<unknown>) => fn()),
+}));
+
+vi.mock('../../src/services/session-summary-fallback.js', () => ({
+  writeSessionSummaryToDisk: vi.fn().mockResolvedValue(undefined),
 }));
 
 const sessionId = 'finale-sequence-test';

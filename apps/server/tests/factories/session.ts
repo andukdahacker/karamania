@@ -11,6 +11,7 @@ export function createTestSession(overrides?: Partial<SessionsTable>): SessionsT
     status: overrides?.status ?? 'lobby',
     dj_state: overrides?.dj_state ?? null,
     event_stream: overrides?.event_stream ?? null,
+    summary: overrides?.summary ?? null,
     vibe: overrides?.vibe ?? null,
     venue_name: overrides?.venue_name ?? null,
     created_at: overrides?.created_at ?? new Date('2026-01-01T00:00:00Z'),

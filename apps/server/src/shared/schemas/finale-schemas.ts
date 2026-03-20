@@ -55,6 +55,30 @@ export const setlistEntrySchema = z.object({
 
 export type SetlistEntry = z.infer<typeof setlistEntrySchema>;
 
+// Story 8.4: Session summary schema
+export const sessionSummarySchema = z.object({
+  version: z.literal(1),
+  generatedAt: z.number(),
+  stats: sessionStatsSchema,
+  setlist: z.array(setlistEntrySchema),
+  awards: z.array(z.object({
+    userId: z.string(),
+    displayName: z.string(),
+    category: finaleAwardCategorySchema,
+    title: z.string(),
+    tone: awardToneSchema,
+    reason: z.string(),
+  })),
+  participants: z.array(z.object({
+    userId: z.string().nullable(),
+    displayName: z.string(),
+    participationScore: z.number().int(),
+    topAward: z.string().nullable(),
+  })),
+});
+
+export type SessionSummary = z.infer<typeof sessionSummarySchema>;
+
 // Story 8.2: Feedback payload schema
 export const feedbackPayloadSchema = z.object({
   score: z.number().int().min(1).max(5),

@@ -512,6 +512,73 @@ describe('session-repository', () => {
     });
   });
 
+  describe('persistSessionSummary', () => {
+    const createMinimalSummary = (overrides?: Record<string, unknown>) => ({
+      version: 1 as const,
+      generatedAt: 1710936000000,
+      stats: {
+        songCount: 0, participantCount: 0, sessionDurationMs: 0,
+        totalReactions: 0, totalSoundboardPlays: 0, totalCardsDealt: 0,
+        topReactor: null, longestStreak: 0,
+      },
+      setlist: [],
+      awards: [],
+      participants: [],
+      ...overrides,
+    });
+
+    it('writes summary JSONB to sessions table', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const { persistSessionSummary } = await import('../../src/persistence/session-repository.js');
+      const summary = createMinimalSummary();
+      await persistSessionSummary('session-1', summary);
+
+      expect(mockSet).toHaveBeenCalledWith({ summary: JSON.stringify(summary) });
+      expect(mockWhere).toHaveBeenCalledWith('id', '=', 'session-1');
+    });
+
+    it('updates correct session by ID', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const { persistSessionSummary } = await import('../../src/persistence/session-repository.js');
+      await persistSessionSummary('session-abc', createMinimalSummary());
+
+      expect(mockWhere).toHaveBeenCalledWith('id', '=', 'session-abc');
+    });
+
+    it('handles large summary payloads (20+ songs, 12 participants)', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const largeSummary = createMinimalSummary({
+        stats: {
+          songCount: 25, participantCount: 12, sessionDurationMs: 7200000,
+          totalReactions: 100, totalSoundboardPlays: 20, totalCardsDealt: 30,
+          topReactor: { displayName: 'Alice', count: 25 }, longestStreak: 5,
+        },
+        setlist: Array.from({ length: 25 }, (_, i) => ({
+          position: i + 1, title: `Song ${i + 1}`, artist: `Artist ${i + 1}`,
+          performerName: `Performer ${i + 1}`, awardTitle: null, awardTone: null,
+        })),
+        awards: Array.from({ length: 12 }, (_, i) => ({
+          userId: `user-${i}`, displayName: `User ${i}`, category: 'performer' as const,
+          title: `Award ${i}`, tone: 'hype' as const, reason: `Reason ${i}`,
+        })),
+        participants: Array.from({ length: 12 }, (_, i) => ({
+          userId: `user-${i}`, displayName: `User ${i}`, participationScore: i * 10, topAward: null,
+        })),
+      });
+
+      const { persistSessionSummary } = await import('../../src/persistence/session-repository.js');
+      await persistSessionSummary('session-large', largeSummary);
+
+      const setArg = mockSet.mock.calls[mockSet.mock.calls.length - 1]![0] as { summary: string };
+      const parsed = JSON.parse(setArg.summary);
+      expect(parsed.setlist).toHaveLength(25);
+      expect(parsed.participants).toHaveLength(12);
+    });
+  });
+
   describe('getParticipantScore', () => {
     it('returns participation_score when participant exists', async () => {
       mockExecuteTakeFirst.mockResolvedValue({ participation_score: 42 });

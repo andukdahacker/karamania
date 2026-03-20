@@ -25,6 +25,7 @@ export interface SessionsTable {
   status: string;
   dj_state: unknown | null;
   event_stream: unknown | null;
+  summary: unknown | null;
   vibe: string | null;
   venue_name: string | null;
   created_at: Date;

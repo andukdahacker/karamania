@@ -29,7 +29,7 @@ vi.mock('../../src/persistence/session-repository.js', () => ({
   create: vi.fn(),
   addParticipant: vi.fn(),
   addParticipantIfNotExists: vi.fn(),
-  getParticipants: vi.fn(),
+  getParticipants: vi.fn().mockResolvedValue([]),
   findById: (...args: unknown[]) => mockFindById(...args),
   updateStatus: (...args: unknown[]) => mockUpdateStatus(...args),
   updateHost: vi.fn(),
@@ -40,6 +40,7 @@ vi.mock('../../src/persistence/session-repository.js', () => ({
   getParticipantScore: vi.fn(),
   updateTopAward: vi.fn().mockResolvedValue(undefined),
   findActiveSessions: vi.fn(),
+  persistSessionSummary: vi.fn().mockResolvedValue(undefined),
 }));
 
 const mockProcessTransition = vi.fn();
@@ -242,6 +243,18 @@ vi.mock('../../src/services/finale-award-generator.js', () => ({
     vibeKeeper: 'vibeKeeper',
     everyone: 'everyone',
   },
+}));
+
+vi.mock('../../src/services/session-summary-builder.js', () => ({
+  buildSessionSummary: vi.fn().mockReturnValue({ version: 1, generatedAt: 0, stats: {}, setlist: [], awards: [], participants: [] }),
+}));
+
+vi.mock('../../src/services/retry.js', () => ({
+  withRetry: vi.fn().mockImplementation((fn: () => Promise<unknown>) => fn()),
+}));
+
+vi.mock('../../src/services/session-summary-fallback.js', () => ({
+  writeSessionSummaryToDisk: vi.fn().mockResolvedValue(undefined),
 }));
 
 import {

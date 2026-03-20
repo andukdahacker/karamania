@@ -1,5 +1,6 @@
 import { db } from '../db/connection.js';
 import type { SessionsTable, SessionParticipantsTable } from '../db/types.js';
+import type { SessionSummary } from '../shared/schemas/finale-schemas.js';
 
 export async function findByPartyCode(partyCode: string): Promise<SessionsTable | undefined> {
   return db
@@ -135,6 +136,14 @@ export async function writeEventStream(sessionId: string, events: unknown[]): Pr
   await db
     .updateTable('sessions')
     .set({ event_stream: JSON.stringify(events) })
+    .where('id', '=', sessionId)
+    .execute();
+}
+
+export async function persistSessionSummary(sessionId: string, summary: SessionSummary): Promise<void> {
+  await db
+    .updateTable('sessions')
+    .set({ summary: JSON.stringify(summary) })
     .where('id', '=', sessionId)
     .execute();
 }

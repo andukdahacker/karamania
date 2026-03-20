@@ -29,7 +29,7 @@ vi.mock('../../src/services/party-code.js', () => ({
 
 const mockFindById = vi.fn();
 const mockUpdateDjState = vi.fn();
-const mockGetParticipants = vi.fn();
+const mockGetParticipants = vi.fn().mockResolvedValue([]);
 const mockUpdateStatus = vi.fn();
 const mockRemoveParticipant = vi.fn();
 const mockWriteEventStream = vi.fn();
@@ -46,6 +46,9 @@ vi.mock('../../src/persistence/session-repository.js', () => ({
   writeEventStream: (...args: unknown[]) => mockWriteEventStream(...args),
   incrementParticipationScore: vi.fn().mockResolvedValue(undefined),
   getParticipantScore: vi.fn(),
+  updateTopAward: vi.fn().mockResolvedValue(undefined),
+  findActiveSessions: vi.fn(),
+  persistSessionSummary: vi.fn().mockResolvedValue(undefined),
 }));
 
 const mockCreateDJContext = vi.fn();
@@ -264,6 +267,18 @@ vi.mock('../../src/services/finale-award-generator.js', () => ({
     vibeKeeper: 'vibeKeeper',
     everyone: 'everyone',
   },
+}));
+
+vi.mock('../../src/services/session-summary-builder.js', () => ({
+  buildSessionSummary: vi.fn().mockReturnValue({ version: 1, generatedAt: 0, stats: {}, setlist: [], awards: [], participants: [] }),
+}));
+
+vi.mock('../../src/services/retry.js', () => ({
+  withRetry: vi.fn().mockImplementation((fn: () => Promise<unknown>) => fn()),
+}));
+
+vi.mock('../../src/services/session-summary-fallback.js', () => ({
+  writeSessionSummaryToDisk: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe('session-manager DJ functions', () => {
