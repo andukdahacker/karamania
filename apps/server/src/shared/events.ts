@@ -111,4 +111,5 @@ export const EVENTS = {
   // Auth events
   AUTH_REFRESH_REQUIRED: 'auth:refreshRequired',
   AUTH_INVALID: 'auth:invalid',
+  AUTH_UPGRADED: 'auth:upgraded',
 } as const;

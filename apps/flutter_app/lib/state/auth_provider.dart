@@ -91,6 +91,42 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- Guest-to-account upgrade state (Story 9.2) ---
+  LoadingState _upgradeLoading = LoadingState.idle;
+  LoadingState get upgradeLoading => _upgradeLoading;
+
+  /// Called after successful guest-to-account upgrade.
+  /// Transitions from authenticatedGuest to authenticatedFirebase state.
+  void onUpgradeCompleted({
+    required User firebaseUser,
+    required String userId,
+    required String displayName,
+    String? avatarUrl,
+    required DateTime createdAt,
+  }) {
+    _firebaseUser = firebaseUser;
+    _guestToken = null;
+    _guestId = null;
+    _userId = userId;
+    _displayName = displayName;
+    _avatarUrl = avatarUrl;
+    _createdAt = createdAt;
+    _state = AuthState.authenticatedFirebase;
+    _profileLoading = LoadingState.success;
+    _upgradeLoading = LoadingState.success;
+    notifyListeners();
+  }
+
+  void onUpgradeFailed() {
+    _upgradeLoading = LoadingState.error;
+    notifyListeners();
+  }
+
+  set upgradeLoading(LoadingState value) {
+    _upgradeLoading = value;
+    notifyListeners();
+  }
+
   /// Called on sign-out.
   void onSignedOut() {
     _firebaseUser = null;
@@ -103,6 +139,7 @@ class AuthProvider extends ChangeNotifier {
     _state = AuthState.unauthenticated;
     _authLoading = LoadingState.idle;
     _profileLoading = LoadingState.idle;
+    _upgradeLoading = LoadingState.idle;
     notifyListeners();
   }
 

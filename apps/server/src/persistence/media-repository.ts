@@ -43,6 +43,20 @@ export async function findById(id: string): Promise<MediaCapturesTable | undefin
     .executeTakeFirst();
 }
 
+export async function relinkCaptures(
+  captureIds: string[],
+  userId: string,
+): Promise<number> {
+  if (captureIds.length === 0) return 0;
+  const result = await db
+    .updateTable('media_captures')
+    .set({ user_id: userId })
+    .where('id', 'in', captureIds)
+    .where('user_id', 'is', null)
+    .executeTakeFirst();
+  return Number(result.numUpdatedRows);
+}
+
 export async function findByUserId(userId: string, sessionId: string): Promise<MediaCapturesTable[]> {
   return db
     .selectFrom('media_captures')

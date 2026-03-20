@@ -24,6 +24,9 @@ const mockValues = vi.fn();
 const mockOnConflict = vi.fn();
 const mockReturningAll = vi.fn();
 
+const mockSet = vi.fn();
+const mockExecute = vi.fn();
+
 vi.mock('../../src/db/connection.js', () => ({
   db: {
     selectFrom: vi.fn().mockReturnValue({
@@ -49,6 +52,29 @@ vi.mock('../../src/db/connection.js', () => ({
           returningAll: () => ({
             executeTakeFirstOrThrow: mockExecuteTakeFirstOrThrow,
           }),
+        };
+      },
+    }),
+    updateTable: vi.fn().mockReturnValue({
+      set: (...args: unknown[]) => {
+        mockSet(...args);
+        return {
+          where: (...whereArgs: unknown[]) => {
+            mockWhere(...whereArgs);
+            return {
+              where: (...innerArgs: unknown[]) => {
+                mockWhere(...innerArgs);
+                return {
+                  returningAll: () => ({
+                    executeTakeFirstOrThrow: mockExecuteTakeFirstOrThrow,
+                  }),
+                };
+              },
+              returningAll: () => ({
+                executeTakeFirstOrThrow: mockExecuteTakeFirstOrThrow,
+              }),
+            };
+          },
         };
       },
     }),
@@ -127,6 +153,57 @@ describe('user-repository', () => {
       );
       expect(result).toEqual(guestUser);
       expect(result.firebase_uid).toBeNull();
+    });
+  });
+
+  describe('upgradeGuestToAuthenticated', () => {
+    it('upgrades guest user with firebase_uid IS NULL', async () => {
+      const upgradedUser = createTestUser({ firebase_uid: 'fb-new', display_name: 'Upgraded User', avatar_url: 'https://example.com/avatar.jpg' });
+      mockExecuteTakeFirstOrThrow.mockResolvedValue(upgradedUser);
+
+      const { upgradeGuestToAuthenticated } = await import('../../src/persistence/user-repository.js');
+      const result = await upgradeGuestToAuthenticated('guest-id-123', 'fb-new', 'Upgraded User', 'https://example.com/avatar.jpg');
+
+      expect(mockSet).toHaveBeenCalledWith({
+        firebase_uid: 'fb-new',
+        display_name: 'Upgraded User',
+        avatar_url: 'https://example.com/avatar.jpg',
+      });
+      expect(mockWhere).toHaveBeenCalledWith('id', '=', 'guest-id-123');
+      expect(mockWhere).toHaveBeenCalledWith('firebase_uid', 'is', null);
+      expect(result).toEqual(upgradedUser);
+    });
+
+    it('returns updated user with firebase_uid set', async () => {
+      const upgradedUser = createTestUser({ firebase_uid: 'fb-456' });
+      mockExecuteTakeFirstOrThrow.mockResolvedValue(upgradedUser);
+
+      const { upgradeGuestToAuthenticated } = await import('../../src/persistence/user-repository.js');
+      const result = await upgradeGuestToAuthenticated('guest-id', 'fb-456', 'User');
+
+      expect(result.firebase_uid).toBe('fb-456');
+    });
+
+    it('throws if user not found or already has firebase_uid', async () => {
+      mockExecuteTakeFirstOrThrow.mockRejectedValue(new Error('no result'));
+
+      const { upgradeGuestToAuthenticated } = await import('../../src/persistence/user-repository.js');
+
+      await expect(
+        upgradeGuestToAuthenticated('nonexistent', 'fb-999', 'User')
+      ).rejects.toThrow('no result');
+    });
+
+    it('sets avatar_url to null when not provided', async () => {
+      const upgradedUser = createTestUser({ firebase_uid: 'fb-new', avatar_url: null });
+      mockExecuteTakeFirstOrThrow.mockResolvedValue(upgradedUser);
+
+      const { upgradeGuestToAuthenticated } = await import('../../src/persistence/user-repository.js');
+      await upgradeGuestToAuthenticated('guest-id', 'fb-new', 'User');
+
+      expect(mockSet).toHaveBeenCalledWith(
+        expect.objectContaining({ avatar_url: null })
+      );
     });
   });
 

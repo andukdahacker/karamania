@@ -542,6 +542,13 @@ class SocketClient {
       _captureProvider?.onCaptureBubbleTriggered(triggerType: triggerType);
     });
 
+    // Capture persisted — track capture ID for guest-to-account upgrade (Story 9.2)
+    on('capture:persisted', (data) {
+      final payload = data as Map<String, dynamic>;
+      final captureId = payload['captureId'] as String;
+      _captureProvider?.onCaptureCreated(captureId);
+    });
+
     // Interlude voting events (Story 7.1)
     on('interlude:voteStarted', (data) {
       final payload = data as Map<String, dynamic>;
@@ -690,6 +697,13 @@ class SocketClient {
 
   void emitReaction(String emoji) {
     _socket?.emit('reaction:sent', {'emoji': emoji});
+  }
+
+  /// Re-authenticates the live socket after guest-to-account upgrade.
+  /// Fire-and-forget — the REST upgrade already persisted everything.
+  /// This just updates socket.data for future event scoring.
+  void emitAuthUpgraded(String firebaseToken) {
+    _socket?.emit('auth:upgraded', {'firebaseToken': firebaseToken});
   }
 
   void emitSoundboard(String soundId) {

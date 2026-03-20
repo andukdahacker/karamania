@@ -47,6 +47,25 @@ export async function createGuestUser(displayName: string): Promise<UsersTable> 
     .executeTakeFirstOrThrow();
 }
 
+export async function upgradeGuestToAuthenticated(
+  guestUserId: string,
+  firebaseUid: string,
+  displayName: string,
+  avatarUrl?: string,
+): Promise<UsersTable> {
+  return db
+    .updateTable('users')
+    .set({
+      firebase_uid: firebaseUid,
+      display_name: displayName,
+      avatar_url: avatarUrl ?? null,
+    })
+    .where('id', '=', guestUserId)
+    .where('firebase_uid', 'is', null)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+}
+
 export async function findById(id: string): Promise<UsersTable | undefined> {
   return db
     .selectFrom('users')

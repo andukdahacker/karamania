@@ -331,6 +331,12 @@ class Copy {
   static const String setlistPosterHoldForTextShare = 'Hold for text share';
   static const String setlistPosterByArtist = 'by';
 
+  // Guest-to-account upgrade (Story 9.2)
+  static const String upgradePrompt = 'Sign in to save your stats';
+  static const String upgradeButton = 'Sign In';
+  static const String upgradeSuccess = 'Account created! Your session data is saved.';
+  static const String upgradeFailed = 'Sign in failed. Try again later.';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

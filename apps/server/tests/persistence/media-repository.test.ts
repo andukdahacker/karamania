@@ -23,6 +23,8 @@ const mockWhere = vi.fn();
 const mockValues = vi.fn();
 const mockOrderBy = vi.fn();
 
+const mockSet = vi.fn();
+
 vi.mock('../../src/db/connection.js', () => {
   const createChain = (): Record<string, unknown> => ({
     executeTakeFirst: mockExecuteTakeFirst,
@@ -41,6 +43,12 @@ vi.mock('../../src/db/connection.js', () => {
       insertInto: vi.fn().mockReturnValue({
         values: (...args: unknown[]) => {
           mockValues(...args);
+          return createChain();
+        },
+      }),
+      updateTable: vi.fn().mockReturnValue({
+        set: (...args: unknown[]) => {
+          mockSet(...args);
           return createChain();
         },
       }),
@@ -136,6 +144,37 @@ describe('media-repository', () => {
       const result = await findById('nonexistent');
 
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe('relinkCaptures', () => {
+    it('re-links captures by ID where user_id IS NULL', async () => {
+      mockExecuteTakeFirst.mockResolvedValue({ numUpdatedRows: BigInt(2) });
+
+      const { relinkCaptures } = await import('../../src/persistence/media-repository.js');
+      const result = await relinkCaptures(['cap-1', 'cap-2'], 'user-1');
+
+      expect(mockSet).toHaveBeenCalledWith({ user_id: 'user-1' });
+      expect(mockWhere).toHaveBeenCalledWith('id', 'in', ['cap-1', 'cap-2']);
+      expect(mockWhere).toHaveBeenCalledWith('user_id', 'is', null);
+      expect(result).toBe(2);
+    });
+
+    it('returns 0 for empty array', async () => {
+      const { relinkCaptures } = await import('../../src/persistence/media-repository.js');
+      const result = await relinkCaptures([], 'user-1');
+
+      expect(result).toBe(0);
+    });
+
+    it('returns correct count of updated rows', async () => {
+      mockExecuteTakeFirst.mockResolvedValue({ numUpdatedRows: BigInt(1) });
+
+      const { relinkCaptures } = await import('../../src/persistence/media-repository.js');
+      const result = await relinkCaptures(['cap-1', 'cap-2', 'cap-3'], 'user-1');
+
+      // Only 1 of 3 had user_id IS NULL
+      expect(result).toBe(1);
     });
   });
 

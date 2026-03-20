@@ -107,6 +107,62 @@ void main() {
       expect(provider.profileLoading, LoadingState.idle);
     });
 
+    // --- Guest-to-account upgrade tests (Story 9.2) ---
+
+    test('upgradeLoading is idle initially', () {
+      expect(provider.upgradeLoading, LoadingState.idle);
+    });
+
+    test('onUpgradeCompleted transitions from guest to firebase state', () {
+      // Start as guest
+      provider.onGuestAuthenticated('token', 'guest-id', 'Guest');
+      expect(provider.state, AuthState.authenticatedGuest);
+
+      final fakeUser = FakeUser();
+      final testDate = DateTime.parse('2026-03-20T14:00:00Z');
+
+      provider.onUpgradeCompleted(
+        firebaseUser: fakeUser,
+        userId: 'user-uuid-456',
+        displayName: 'Upgraded User',
+        avatarUrl: 'https://example.com/avatar.jpg',
+        createdAt: testDate,
+      );
+
+      expect(provider.state, AuthState.authenticatedFirebase);
+      expect(provider.firebaseUser, fakeUser);
+      expect(provider.guestToken, isNull);
+      expect(provider.guestId, isNull);
+      expect(provider.userId, 'user-uuid-456');
+      expect(provider.displayName, 'Upgraded User');
+      expect(provider.avatarUrl, 'https://example.com/avatar.jpg');
+      expect(provider.createdAt, testDate);
+      expect(provider.profileLoading, LoadingState.success);
+      expect(provider.upgradeLoading, LoadingState.success);
+    });
+
+    test('onUpgradeFailed sets upgradeLoading to error', () {
+      provider.onUpgradeFailed();
+      expect(provider.upgradeLoading, LoadingState.error);
+    });
+
+    test('onSignedOut clears upgradeLoading', () {
+      provider.onUpgradeFailed();
+      expect(provider.upgradeLoading, LoadingState.error);
+
+      provider.onSignedOut();
+      expect(provider.upgradeLoading, LoadingState.idle);
+    });
+
+    test('upgradeLoading setter notifies listeners', () {
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.upgradeLoading = LoadingState.loading;
+      expect(notifyCount, 1);
+      expect(provider.upgradeLoading, LoadingState.loading);
+    });
+
     test('notifyListeners fires on each state change', () {
       int notifyCount = 0;
       provider.addListener(() => notifyCount++);

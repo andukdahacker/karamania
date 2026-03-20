@@ -40,6 +40,21 @@ class CaptureProvider extends ChangeNotifier {
   // Recording countdown tick timer
   Timer? _countdownTimer;
 
+  // --- Capture ID tracking for guest-to-account upgrade (Story 9.2) ---
+  final List<String> _myCaptureIds = [];
+  List<String> get myCaptureIds => List.unmodifiable(_myCaptureIds);
+
+  /// Called when server persists a capture for this client.
+  /// Tracks capture ID for guest-to-account upgrade re-linking.
+  void onCaptureCreated(String captureId) {
+    _myCaptureIds.add(captureId);
+  }
+
+  /// Clears tracked capture IDs (called on sign-out or session end).
+  void clearMyCaptureIds() {
+    _myCaptureIds.clear();
+  }
+
   // Getters
   bool get isBubbleVisible => _isBubbleVisible;
   String? get currentTriggerType => _currentTriggerType;
@@ -149,6 +164,7 @@ class CaptureProvider extends ChangeNotifier {
     _activeCaptureType = null;
     _recordingSecondsRemaining = 0;
     _captureTriggerType = 'manual';
+    _myCaptureIds.clear();
     notifyListeners();
   }
 

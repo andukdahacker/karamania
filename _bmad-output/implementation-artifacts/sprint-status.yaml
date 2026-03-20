@@ -126,7 +126,7 @@ development_status:
   # Epic 9: Session Timeline & Memories (6 stories)
   epic-9: in-progress
   9-1-user-profile-and-account-management: done
-  9-2-guest-to-account-upgrade: backlog
+  9-2-guest-to-account-upgrade: done
   9-3-session-timeline-screen: backlog
   9-4-session-detail-screen: backlog
   9-5-session-sharing-and-re-engagement: backlog

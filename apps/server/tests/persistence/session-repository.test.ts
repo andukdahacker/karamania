@@ -68,20 +68,22 @@ vi.mock('../../src/db/connection.js', () => {
     },
   });
 
+  const createUpdateWhereChain = (): Record<string, unknown> => ({
+    execute: mockExecute,
+    executeTakeFirst: mockExecuteTakeFirst,
+    where: (...args: unknown[]) => {
+      mockWhere(...args);
+      return createUpdateWhereChain();
+    },
+  });
+
   const createUpdateChain = () => ({
     set: (...args: unknown[]) => {
       mockSet(...args);
       return {
         where: (...whereArgs: unknown[]) => {
           mockWhere(...whereArgs);
-          return {
-            execute: mockExecute,
-            executeTakeFirst: mockExecuteTakeFirst,
-            where: (...innerArgs: unknown[]) => {
-              mockWhere(...innerArgs);
-              return { execute: mockExecute, executeTakeFirst: mockExecuteTakeFirst };
-            },
-          };
+          return createUpdateWhereChain();
         },
       };
     },
@@ -576,6 +578,41 @@ describe('session-repository', () => {
       const parsed = JSON.parse(setArg.summary);
       expect(parsed.setlist).toHaveLength(25);
       expect(parsed.participants).toHaveLength(12);
+    });
+  });
+
+  describe('linkGuestParticipant', () => {
+    it('links guest participant by session_id + guest_name', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const { linkGuestParticipant } = await import('../../src/persistence/session-repository.js');
+      await linkGuestParticipant('session-1', 'Alice', 'user-1');
+
+      expect(mockSet).toHaveBeenCalledWith({ user_id: 'user-1', guest_name: null });
+      expect(mockWhere).toHaveBeenCalledWith('session_id', '=', 'session-1');
+      expect(mockWhere).toHaveBeenCalledWith('guest_name', '=', 'Alice');
+      expect(mockWhere).toHaveBeenCalledWith('user_id', 'is', null);
+    });
+
+    it('clears guest_name after linking', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const { linkGuestParticipant } = await import('../../src/persistence/session-repository.js');
+      await linkGuestParticipant('session-1', 'Bob', 'user-2');
+
+      expect(mockSet).toHaveBeenCalledWith(
+        expect.objectContaining({ guest_name: null })
+      );
+    });
+
+    it('no-op if participant already has user_id (WHERE user_id IS NULL guard)', async () => {
+      mockExecute.mockResolvedValue(undefined);
+
+      const { linkGuestParticipant } = await import('../../src/persistence/session-repository.js');
+      await linkGuestParticipant('session-1', 'Carol', 'user-3');
+
+      // The WHERE clause includes user_id IS NULL which prevents double-linking
+      expect(mockWhere).toHaveBeenCalledWith('user_id', 'is', null);
     });
   });
 

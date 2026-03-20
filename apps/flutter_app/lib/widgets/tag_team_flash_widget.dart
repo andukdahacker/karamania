@@ -76,7 +76,7 @@ class _TagTeamFlashWidgetState extends State<TagTeamFlashWidget>
         animation: _pulseController,
         builder: (context, child) {
           return Container(
-            color: DJTokens.actionPrimary.withValues(alpha: 0.1 + _pulseController.value * 0.15),
+            color: provider.vibe.accent.withValues(alpha: 0.1 + _pulseController.value * 0.15),
             child: Center(
               child: Text(
                 Copy.tagTeamYourTurn,

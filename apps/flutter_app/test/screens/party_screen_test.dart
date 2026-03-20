@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:karamania/api/api_service.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/constants/copy.dart';
 import 'package:karamania/screens/party_screen.dart';
 import 'package:karamania/socket/client.dart';
 import 'package:karamania/state/accessibility_provider.dart';
+import 'package:karamania/state/auth_provider.dart';
+import 'package:karamania/state/capture_provider.dart';
+import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/party_provider.dart';
+import 'package:karamania/state/upload_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 
 PartyProvider _createTestProvider() {
@@ -14,7 +19,12 @@ PartyProvider _createTestProvider() {
     ..onPartyCreated('test-session', 'ABCD');
 }
 
-Widget _wrapWithProviders(Widget child, {PartyProvider? partyProvider}) {
+Widget _wrapWithProviders(
+  Widget child, {
+  PartyProvider? partyProvider,
+  AuthProvider? authProvider,
+  CaptureProvider? captureProvider,
+}) {
   final provider = partyProvider ?? _createTestProvider();
 
   return MultiProvider(
@@ -22,6 +32,16 @@ Widget _wrapWithProviders(Widget child, {PartyProvider? partyProvider}) {
       ChangeNotifierProvider<PartyProvider>.value(value: provider),
       ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
       Provider<SocketClient>(create: (_) => SocketClient.instance),
+      ChangeNotifierProvider<AuthProvider>.value(
+        value: authProvider ?? AuthProvider(),
+      ),
+      ChangeNotifierProvider<CaptureProvider>.value(
+        value: captureProvider ?? CaptureProvider(),
+      ),
+      Provider<ApiService>(
+        create: (_) => ApiService(baseUrl: 'http://localhost:3000'),
+      ),
+      ChangeNotifierProvider(create: (_) => UploadProvider()),
     ],
     child: MediaQuery(
       data: const MediaQueryData(),
@@ -619,6 +639,80 @@ void main() {
 
       expect(find.byKey(const Key('bridge-generic')), findsNothing);
       expect(find.byKey(const Key('bridge-performer-hype')), findsNothing);
+    });
+
+    // Story 9.2 tests — Guest-to-account upgrade banner
+
+    testWidgets('shows upgrade banner for guest users', (tester) async {
+      final authProvider = AuthProvider();
+      authProvider.onGuestAuthenticated('token', 'guest-id', 'Guest');
+
+      await tester.pumpWidget(_wrapWithProviders(
+        const PartyScreen(),
+        authProvider: authProvider,
+      ));
+      await tester.pump();
+
+      expect(find.byKey(const Key('upgrade-banner')), findsOneWidget);
+      expect(find.text(Copy.upgradePrompt), findsOneWidget);
+      expect(find.text(Copy.upgradeButton), findsOneWidget);
+    });
+
+    testWidgets('hides upgrade banner for authenticated Firebase users', (tester) async {
+      final authProvider = AuthProvider();
+      // Not a guest — no banner should show
+
+      await tester.pumpWidget(_wrapWithProviders(
+        const PartyScreen(),
+        authProvider: authProvider,
+      ));
+      await tester.pump();
+
+      expect(find.byKey(const Key('upgrade-banner')), findsNothing);
+    });
+
+    testWidgets('hides upgrade banner after successful upgrade', (tester) async {
+      final authProvider = AuthProvider();
+      authProvider.onGuestAuthenticated('token', 'guest-id', 'Guest');
+      authProvider.upgradeLoading = LoadingState.success;
+
+      await tester.pumpWidget(_wrapWithProviders(
+        const PartyScreen(),
+        authProvider: authProvider,
+      ));
+      await tester.pump();
+
+      expect(find.byKey(const Key('upgrade-banner')), findsNothing);
+    });
+
+    testWidgets('upgrade button is disabled during loading', (tester) async {
+      final authProvider = AuthProvider();
+      authProvider.onGuestAuthenticated('token', 'guest-id', 'Guest');
+      authProvider.upgradeLoading = LoadingState.loading;
+
+      await tester.pumpWidget(_wrapWithProviders(
+        const PartyScreen(),
+        authProvider: authProvider,
+      ));
+      await tester.pump();
+
+      expect(find.byKey(const Key('upgrade-banner')), findsOneWidget);
+      final button = tester.widget<TextButton>(find.byKey(const Key('upgrade-btn')));
+      expect(button.onPressed, isNull);
+    });
+
+    testWidgets('upgrade button is enabled when idle', (tester) async {
+      final authProvider = AuthProvider();
+      authProvider.onGuestAuthenticated('token', 'guest-id', 'Guest');
+
+      await tester.pumpWidget(_wrapWithProviders(
+        const PartyScreen(),
+        authProvider: authProvider,
+      ));
+      await tester.pump();
+
+      final button = tester.widget<TextButton>(find.byKey(const Key('upgrade-btn')));
+      expect(button.onPressed, isNotNull);
     });
   });
 }

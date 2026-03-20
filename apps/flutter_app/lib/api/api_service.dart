@@ -253,6 +253,46 @@ class ApiService {
     }
   }
 
+  /// Upgrades a guest session to a full Firebase account.
+  /// Returns the upgraded user profile data on success, null on failure.
+  Future<Map<String, dynamic>?> upgradeGuestToAccount({
+    required String firebaseToken,
+    required String guestId,
+    required String sessionId,
+    required String guestDisplayName,
+    List<String> captureIds = const [],
+  }) async {
+    _authMiddleware.token = null;
+    try {
+      final basePath = _baseUrl.endsWith('/')
+          ? _baseUrl.substring(0, _baseUrl.length - 1)
+          : _baseUrl;
+      final url = Uri.parse('$basePath/api/users/upgrade');
+      final request = runtime.HttpRequest(
+        method: 'POST',
+        url: url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'firebaseToken': firebaseToken,
+          'guestId': guestId,
+          'sessionId': sessionId,
+          'guestDisplayName': guestDisplayName,
+          'captureIds': captureIds,
+        }),
+      );
+      final response = await _chain.send(request);
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        return body['data'] as Map<String, dynamic>?;
+      }
+      debugPrint('Upgrade failed: ${response.statusCode} ${response.body}');
+      return null;
+    } catch (e) {
+      debugPrint('Upgrade error: $e');
+      return null;
+    }
+  }
+
   ApiException _mapException(runtime.ApiException e) {
     final parsed = e.parsedBody;
     if (parsed is ErrorResponse) {

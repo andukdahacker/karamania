@@ -43,7 +43,12 @@ import 'package:karamania/widgets/capture_overlay.dart';
 import 'package:karamania/widgets/capture_toolbar_icon.dart';
 import 'package:karamania/widgets/selected_song_display.dart';
 import 'package:karamania/widgets/finale_overlay.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:go_router/go_router.dart';
+import 'package:karamania/api/api_service.dart';
+import 'package:karamania/state/auth_provider.dart';
+import 'package:karamania/state/capture_provider.dart';
+import 'package:karamania/state/loading_state.dart';
 
 class PartyScreen extends StatefulWidget {
   const PartyScreen({super.key});
@@ -184,6 +189,79 @@ class _PartyScreenState extends State<PartyScreen>
     super.dispose();
   }
 
+  Future<void> _onUpgrade(BuildContext context) async {
+    final authProvider = context.read<AuthProvider>();
+    final apiService = context.read<ApiService>();
+    final captureProvider = context.read<CaptureProvider>();
+    final partyProvider = context.read<PartyProvider>();
+
+    authProvider.upgradeLoading = LoadingState.loading;
+
+    try {
+      // 1. Firebase OAuth
+      final googleProvider = GoogleAuthProvider();
+      final credential =
+          await FirebaseAuth.instance.signInWithProvider(googleProvider);
+      final firebaseUser = credential.user;
+      if (firebaseUser == null) {
+        authProvider.onUpgradeFailed();
+        return;
+      }
+
+      final token = await firebaseUser.getIdToken();
+      if (token == null) {
+        authProvider.onUpgradeFailed();
+        return;
+      }
+
+      // 2. Call server upgrade endpoint
+      final upgradeData = await apiService.upgradeGuestToAccount(
+        firebaseToken: token,
+        guestId: authProvider.guestId!,
+        sessionId: partyProvider.sessionId!,
+        guestDisplayName: authProvider.displayName!,
+        captureIds: captureProvider.myCaptureIds,
+      );
+
+      if (upgradeData == null) {
+        authProvider.onUpgradeFailed();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(Copy.upgradeFailed)),
+          );
+        }
+        return;
+      }
+
+      // 3. Re-authenticate socket (fire-and-forget)
+      final socketClient = SocketClient.instance;
+      socketClient.emitAuthUpgraded(token);
+
+      // 4. Update auth state
+      authProvider.onUpgradeCompleted(
+        firebaseUser: firebaseUser,
+        userId: upgradeData['userId'] as String,
+        displayName: upgradeData['displayName'] as String,
+        avatarUrl: upgradeData['avatarUrl'] as String?,
+        createdAt: DateTime.parse(upgradeData['createdAt'] as String),
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(Copy.upgradeSuccess)),
+        );
+      }
+    } catch (e) {
+      debugPrint('Upgrade error: $e');
+      authProvider.onUpgradeFailed();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(Copy.upgradeFailed)),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final partyProvider = context.watch<PartyProvider>();
@@ -227,6 +305,45 @@ class _PartyScreenState extends State<PartyScreen>
               _buildPauseOverlay(context, partyProvider),
             if (partyProvider.connectionStatus == ConnectionStatus.reconnecting)
               const ReconnectingBanner(),
+            // Guest-to-account upgrade banner (Story 9.2)
+            Builder(builder: (context) {
+              final authProvider = context.watch<AuthProvider>();
+              if (authProvider.state == AuthState.authenticatedGuest &&
+                  authProvider.upgradeLoading != LoadingState.success)
+                return Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    key: const Key('upgrade-banner'),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: DJTokens.spaceMd,
+                      vertical: DJTokens.spaceSm,
+                    ),
+                    color: DJTokens.surfaceElevated,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            Copy.upgradePrompt,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DJTokens.textSecondary,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          key: const Key('upgrade-btn'),
+                          onPressed: authProvider.upgradeLoading == LoadingState.loading
+                              ? null
+                              : () => _onUpgrade(context),
+                          child: Text(Copy.upgradeButton),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              return const SizedBox.shrink();
+            }),
             if (partyProvider.hostTransferPending)
               _buildHostTransferBanner(context, displayVibe),
             // Moment card overlay — only during Full ceremony celebration window

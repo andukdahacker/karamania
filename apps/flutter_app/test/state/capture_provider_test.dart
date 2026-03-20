@@ -271,6 +271,36 @@ void main() {
       expect(provider.captureTriggerType, 'manual');
     });
 
+    // Story 9.2 — Capture ID tracking for guest-to-account upgrade
+
+    test('myCaptureIds starts empty', () {
+      expect(provider.myCaptureIds, isEmpty);
+    });
+
+    test('onCaptureCreated adds capture ID to myCaptureIds', () {
+      provider.onCaptureCreated('cap-1');
+      provider.onCaptureCreated('cap-2');
+      expect(provider.myCaptureIds, ['cap-1', 'cap-2']);
+    });
+
+    test('clearMyCaptureIds empties the list', () {
+      provider.onCaptureCreated('cap-1');
+      provider.onCaptureCreated('cap-2');
+      provider.clearMyCaptureIds();
+      expect(provider.myCaptureIds, isEmpty);
+    });
+
+    test('clearState also clears myCaptureIds', () {
+      provider.onCaptureCreated('cap-1');
+      provider.clearState();
+      expect(provider.myCaptureIds, isEmpty);
+    });
+
+    test('myCaptureIds returns unmodifiable list', () {
+      provider.onCaptureCreated('cap-1');
+      expect(() => provider.myCaptureIds.add('cap-2'), throwsUnsupportedError);
+    });
+
     test('dismissBubble also dismisses selector if open', () {
       provider.onManualCaptureTriggered();
       expect(provider.isSelectorVisible, isTrue);

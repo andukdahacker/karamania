@@ -230,6 +230,20 @@ export async function isSessionParticipant(sessionId: string, userId: string): P
   return !!host;
 }
 
+export async function linkGuestParticipant(
+  sessionId: string,
+  guestName: string,
+  userId: string,
+): Promise<void> {
+  await db
+    .updateTable('session_participants')
+    .set({ user_id: userId, guest_name: null })
+    .where('session_id', '=', sessionId)
+    .where('guest_name', '=', guestName)
+    .where('user_id', 'is', null)
+    .execute();
+}
+
 export async function updateStatus(sessionId: string, status: string) {
   const values: Record<string, unknown> = { status };
   if (status === 'ended') {
