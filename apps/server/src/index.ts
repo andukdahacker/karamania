@@ -44,6 +44,7 @@ await import('./shared/schemas/playlist-schemas.js');
 await import('./shared/schemas/suggestion-schemas.js');
 await import('./shared/schemas/capture-schemas.js');
 await import('./shared/schemas/upgrade-schemas.js');
+await import('./shared/schemas/timeline-schemas.js');
 
 await fastify.register(swagger, {
   openapi: {

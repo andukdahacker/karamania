@@ -31,9 +31,11 @@ vi.mock('../../src/integrations/firebase-admin.js', () => ({
 
 const mockUpsertFromFirebase = vi.fn();
 const mockCreateGuestUser = vi.fn();
+const mockFindByFirebaseUid = vi.fn();
 vi.mock('../../src/persistence/user-repository.js', () => ({
   upsertFromFirebase: mockUpsertFromFirebase,
   createGuestUser: mockCreateGuestUser,
+  findByFirebaseUid: mockFindByFirebaseUid,
 }));
 
 const mockCreateSession = vi.fn();
@@ -44,6 +46,22 @@ vi.mock('../../src/services/session-manager.js', () => ({
 const mockGenerateGuestToken = vi.fn();
 vi.mock('../../src/services/guest-token.js', () => ({
   generateGuestToken: mockGenerateGuestToken,
+}));
+
+const mockFindUserSessions = vi.fn();
+const mockCountUserSessions = vi.fn();
+vi.mock('../../src/persistence/session-repository.js', () => ({
+  findUserSessions: mockFindUserSessions,
+  countUserSessions: mockCountUserSessions,
+}));
+
+const mockGenerateDownloadUrl = vi.fn();
+vi.mock('../../src/services/media-storage.js', () => ({
+  generateDownloadUrl: mockGenerateDownloadUrl,
+  StorageUnavailableError: class StorageUnavailableError extends Error {
+    readonly code = 'STORAGE_UNAVAILABLE';
+    constructor() { super('Firebase Storage not configured'); this.name = 'StorageUnavailableError'; }
+  },
 }));
 
 describe('POST /api/sessions', () => {
@@ -169,5 +187,170 @@ describe('POST /api/sessions', () => {
     });
 
     expect(response.statusCode).toBe(400);
+  });
+});
+
+describe('GET /api/sessions', () => {
+  let app: ReturnType<typeof Fastify>;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    app = Fastify();
+    app.setValidatorCompiler(validatorCompiler);
+    app.setSerializerCompiler(serializerCompiler);
+    app.setErrorHandler(errorHandler);
+    const { sessionRoutes } = await import('../../src/routes/sessions.js');
+    await app.register(sessionRoutes);
+    await app.ready();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  function setupAuthUser(userId = 'user-1') {
+    const testUser = createTestUser({ id: userId, display_name: 'Test User' });
+    mockVerifyFirebaseToken.mockResolvedValue({ uid: 'fb-uid-1', name: 'Test User' });
+    mockFindByFirebaseUid.mockResolvedValue(testUser);
+    return testUser;
+  }
+
+  it('returns 401 without auth', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/sessions',
+    });
+
+    expect(response.statusCode).toBe(401);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    expect(body).toHaveProperty('error');
+  });
+
+  it('returns paginated session list', async () => {
+    const user = setupAuthUser();
+    mockFindUserSessions.mockResolvedValue([
+      {
+        id: 'session-1',
+        venue_name: 'Studio A',
+        ended_at: new Date('2026-03-10T20:00:00Z'),
+        participant_count: 5,
+        top_award: 'Star of the Show',
+        thumbnail_storage_path: 'session-1/capture.jpg',
+      },
+    ]);
+    mockCountUserSessions.mockResolvedValue(1);
+    mockGenerateDownloadUrl.mockResolvedValue({ url: 'https://signed-url.com/thumb.jpg', expiresAt: new Date() });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/sessions',
+      headers: { authorization: 'Bearer valid-token' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    const data = body['data'] as Record<string, unknown>;
+    const sessions = data['sessions'] as Array<Record<string, unknown>>;
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]!['id']).toBe('session-1');
+    expect(sessions[0]!['venueName']).toBe('Studio A');
+    expect(sessions[0]!['participantCount']).toBe(5);
+    expect(sessions[0]!['topAward']).toBe('Star of the Show');
+    expect(sessions[0]!['thumbnailUrl']).toBe('https://signed-url.com/thumb.jpg');
+    expect(data['total']).toBe(1);
+    expect(data['offset']).toBe(0);
+    expect(data['limit']).toBe(20);
+    expect(mockFindUserSessions).toHaveBeenCalledWith(user.id, 20, 0);
+  });
+
+  it('returns empty array for new user', async () => {
+    setupAuthUser();
+    mockFindUserSessions.mockResolvedValue([]);
+    mockCountUserSessions.mockResolvedValue(0);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/sessions',
+      headers: { authorization: 'Bearer valid-token' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    const data = body['data'] as Record<string, unknown>;
+    const sessions = data['sessions'] as Array<unknown>;
+    expect(sessions).toHaveLength(0);
+    expect(data['total']).toBe(0);
+  });
+
+  it('respects limit/offset query params', async () => {
+    setupAuthUser();
+    mockFindUserSessions.mockResolvedValue([]);
+    mockCountUserSessions.mockResolvedValue(25);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/sessions?limit=10&offset=5',
+      headers: { authorization: 'Bearer valid-token' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    const data = body['data'] as Record<string, unknown>;
+    expect(data['limit']).toBe(10);
+    expect(data['offset']).toBe(5);
+    expect(mockFindUserSessions).toHaveBeenCalledWith(expect.any(String), 10, 5);
+  });
+
+  it('validates query params (limit too high)', async () => {
+    setupAuthUser();
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/sessions?limit=100',
+      headers: { authorization: 'Bearer valid-token' },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('validates query params (negative offset)', async () => {
+    setupAuthUser();
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/sessions?offset=-1',
+      headers: { authorization: 'Bearer valid-token' },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('handles null thumbnail gracefully', async () => {
+    setupAuthUser();
+    mockFindUserSessions.mockResolvedValue([
+      {
+        id: 'session-2',
+        venue_name: null,
+        ended_at: new Date('2026-03-10T20:00:00Z'),
+        participant_count: 3,
+        top_award: null,
+        thumbnail_storage_path: null,
+      },
+    ]);
+    mockCountUserSessions.mockResolvedValue(1);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/sessions',
+      headers: { authorization: 'Bearer valid-token' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    const data = body['data'] as Record<string, unknown>;
+    const sessions = data['sessions'] as Array<Record<string, unknown>>;
+    expect(sessions[0]!['thumbnailUrl']).toBeNull();
+    expect(sessions[0]!['venueName']).toBeNull();
+    expect(mockGenerateDownloadUrl).not.toHaveBeenCalled();
   });
 });

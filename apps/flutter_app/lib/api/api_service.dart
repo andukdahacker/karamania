@@ -3,8 +3,13 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:dart_open_fetch_runtime/dart_open_fetch_runtime.dart' as runtime;
 import 'package:karamania/api/auth_middleware.dart';
-import 'package:karamania/api/generated/karamania_api.dart';
+// Hide generated timeline types: dart_open_fetch emits nullable fields as
+// `dynamic` and participantCount as `double`. We use the manually typed
+// SessionTimelineItem from timeline_provider.dart instead.
+import 'package:karamania/api/generated/karamania_api.dart'
+    hide SessionTimelineItem, SessionTimelineItemInput;
 import 'package:karamania/api/http_client_adapter.dart';
+import 'package:karamania/state/timeline_provider.dart';
 
 class ApiException implements Exception {
   const ApiException({required this.code, required this.message});
@@ -290,6 +295,56 @@ class ApiService {
     } catch (e) {
       debugPrint('Upgrade error: $e');
       return null;
+    }
+  }
+
+  /// Fetches paginated session timeline for authenticated user.
+  Future<({List<SessionTimelineItem> sessions, int total})> fetchSessions({
+    required String token,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    _authMiddleware.token = token;
+    try {
+      final basePath = _baseUrl.endsWith('/')
+          ? _baseUrl.substring(0, _baseUrl.length - 1)
+          : _baseUrl;
+      final url = Uri.parse('$basePath/api/sessions?limit=$limit&offset=$offset');
+      final request = runtime.HttpRequest(
+        method: 'GET',
+        url: url,
+        headers: {'Content-Type': 'application/json'},
+      );
+      final response = await _chain.send(request);
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = body['data'] as Map<String, dynamic>;
+        final sessionsJson = data['sessions'] as List;
+        final total = data['total'] as int;
+        final sessions = sessionsJson.map((json) {
+          final s = json as Map<String, dynamic>;
+          return SessionTimelineItem(
+            id: s['id'] as String,
+            venueName: s['venueName'] as String?,
+            endedAt: s['endedAt'] as String?,
+            participantCount: s['participantCount'] as int,
+            topAward: s['topAward'] as String?,
+            thumbnailUrl: s['thumbnailUrl'] as String?,
+          );
+        }).toList();
+        return (sessions: sessions, total: total);
+      }
+
+      try {
+        final errorJson = jsonDecode(response.body) as Map<String, dynamic>;
+        final parsed = ErrorResponse.fromJson(errorJson);
+        throw ApiException(code: parsed.error.code, message: parsed.error.message);
+      } catch (e) {
+        if (e is ApiException) rethrow;
+        throw ApiException(code: 'UNKNOWN', message: 'Request failed (status ${response.statusCode})');
+      }
+    } finally {
+      _authMiddleware.token = null;
     }
   }
 

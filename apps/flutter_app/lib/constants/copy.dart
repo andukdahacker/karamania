@@ -42,6 +42,11 @@ class Copy {
   static const String defaultUserName = 'User';
   static const String yourSessions = 'Your Sessions';
   static const String noSessionsYet = 'Your past parties will appear here';
+  static const String startFirstParty = 'Start your first party!';
+  static const String karaokeNight = 'Karaoke Night';
+  static const String participantCount = 'participants';
+  static const String loadingMore = 'Loading more sessions...';
+  static const String loadSessionsError = 'Could not load sessions. Tap to retry.';
 
   // Lobby screen
   static const String partyLobby = 'PARTY LOBBY';

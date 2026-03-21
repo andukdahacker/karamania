@@ -30,96 +30,54 @@ const mockSelect = vi.fn();
 const mockOrderBy = vi.fn();
 
 vi.mock('../../src/db/connection.js', () => {
-  const createWhereChain = () => ({
-    where: (...args: unknown[]) => {
-      mockWhere(...args);
-      return {
-        executeTakeFirst: mockExecuteTakeFirst,
-        execute: mockExecute,
-        where: (...innerArgs: unknown[]) => {
-          mockWhere(...innerArgs);
-          return { executeTakeFirst: mockExecuteTakeFirst };
-        },
-      };
-    },
-    executeTakeFirst: mockExecuteTakeFirst,
-  });
-
-  const createSelectChain = () => ({
-    where: (...args: unknown[]) => {
-      mockWhere(...args);
-      return {
-        orderBy: (...orderArgs: unknown[]) => {
-          mockOrderBy(...orderArgs);
-          return { execute: mockExecute };
-        },
-      };
-    },
-  });
-
-  const createInsertChain = () => ({
-    values: (...args: unknown[]) => {
-      mockValues(...args);
-      return {
-        returningAll: () => ({
-          executeTakeFirstOrThrow: mockExecuteTakeFirstOrThrow,
-        }),
-      };
-    },
-  });
-
-  const createUpdateWhereChain = (): Record<string, unknown> => ({
-    execute: mockExecute,
-    executeTakeFirst: mockExecuteTakeFirst,
-    where: (...args: unknown[]) => {
-      mockWhere(...args);
-      return createUpdateWhereChain();
-    },
-  });
-
-  const createUpdateChain = () => ({
-    set: (...args: unknown[]) => {
-      mockSet(...args);
-      return {
-        where: (...whereArgs: unknown[]) => {
-          mockWhere(...whereArgs);
-          return createUpdateWhereChain();
-        },
-      };
-    },
-  });
+  // Flexible chain proxy: every method call returns a new proxy, terminal methods use mocks
+  const createFlexibleChain = (): Record<string, unknown> => {
+    const chain: Record<string, unknown> = {
+      execute: mockExecute,
+      executeTakeFirst: mockExecuteTakeFirst,
+      executeTakeFirstOrThrow: mockExecuteTakeFirstOrThrow,
+      selectAll: () => createFlexibleChain(),
+      select: (...args: unknown[]) => {
+        mockSelect(...args);
+        return createFlexibleChain();
+      },
+      where: (...args: unknown[]) => {
+        mockWhere(...args);
+        return createFlexibleChain();
+      },
+      whereRef: () => createFlexibleChain(),
+      leftJoin: (...args: unknown[]) => {
+        mockLeftJoin(...args);
+        return createFlexibleChain();
+      },
+      orderBy: (...args: unknown[]) => {
+        mockOrderBy(...args);
+        return createFlexibleChain();
+      },
+      limit: () => createFlexibleChain(),
+      offset: () => createFlexibleChain(),
+      unionAll: () => createFlexibleChain(),
+      as: () => 'subquery-alias',
+      values: (...args: unknown[]) => {
+        mockValues(...args);
+        return createFlexibleChain();
+      },
+      set: (...args: unknown[]) => {
+        mockSet(...args);
+        return createFlexibleChain();
+      },
+      returningAll: () => createFlexibleChain(),
+      selectFrom: () => createFlexibleChain(),
+    };
+    return chain;
+  };
 
   return {
     db: {
-      selectFrom: vi.fn().mockReturnValue({
-        selectAll: () => createWhereChain(),
-        select: (...selectArgs: unknown[]) => {
-          mockSelect(...selectArgs);
-          return {
-            where: (...args: unknown[]) => {
-              mockWhere(...args);
-              return {
-                executeTakeFirst: mockExecuteTakeFirst,
-                where: (...innerArgs: unknown[]) => {
-                  mockWhere(...innerArgs);
-                  return { executeTakeFirst: mockExecuteTakeFirst };
-                },
-              };
-            },
-          };
-        },
-        leftJoin: (...args: unknown[]) => {
-          mockLeftJoin(...args);
-          return {
-            select: (...selectArgs: unknown[]) => {
-              mockSelect(...selectArgs);
-              return createSelectChain();
-            },
-          };
-        },
-      }),
-      insertInto: vi.fn().mockReturnValue(createInsertChain()),
-      updateTable: vi.fn().mockReturnValue(createUpdateChain()),
+      selectFrom: vi.fn().mockImplementation(() => createFlexibleChain()),
+      insertInto: vi.fn().mockImplementation(() => createFlexibleChain()),
+      updateTable: vi.fn().mockImplementation(() => createFlexibleChain()),
+      deleteFrom: vi.fn().mockImplementation(() => createFlexibleChain()),
     },
   };
 });
@@ -636,6 +594,50 @@ describe('session-repository', () => {
       const result = await getParticipantScore('session-1', 'nonexistent');
 
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe('findUserSessions', () => {
+    it('returns sessions where user is host or participant', async () => {
+      const rows = [
+        {
+          id: 'session-1',
+          venue_name: 'Studio A',
+          ended_at: new Date('2026-03-10'),
+          participant_count: 5,
+          top_award: 'Star of the Show',
+          thumbnail_storage_path: 'session-1/capture.jpg',
+        },
+      ];
+      mockExecute.mockResolvedValue(rows);
+
+      const { findUserSessions } = await import('../../src/persistence/session-repository.js');
+      const result = await findUserSessions('user-1', 20, 0);
+
+      expect(result).toEqual(rows);
+      expect(mockWhere).toHaveBeenCalledWith('sessions.status', '=', 'ended');
+      expect(mockWhere).toHaveBeenCalledWith('sessions.summary', 'is not', null);
+      expect(mockOrderBy).toHaveBeenCalledWith('sessions.ended_at', 'desc');
+    });
+
+    it('returns empty array when no sessions', async () => {
+      mockExecute.mockResolvedValue([]);
+
+      const { findUserSessions } = await import('../../src/persistence/session-repository.js');
+      const result = await findUserSessions('user-no-sessions', 20, 0);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('countUserSessions', () => {
+    it('returns correct total', async () => {
+      mockExecuteTakeFirstOrThrow.mockResolvedValue({ count: 7 });
+
+      const { countUserSessions } = await import('../../src/persistence/session-repository.js');
+      const result = await countUserSessions('user-1');
+
+      expect(result).toBe(7);
     });
   });
 });

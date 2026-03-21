@@ -50,6 +50,14 @@ final GoRouter _router = GoRouter(
       builder: (context, state) => const LobbyScreen(),
     ),
     GoRoute(
+      path: '/session/:id',
+      builder: (context, state) => Scaffold(
+        body: Center(
+          child: Text('Session Detail: ${state.pathParameters['id']}'),
+        ),
+      ),
+    ),
+    GoRoute(
       path: '/party',
       builder: (context, state) => const PartyScreen(),
       // Back button during party shows confirm exit dialog (Task 1.8)

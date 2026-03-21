@@ -4,10 +4,74 @@ import { upsertFromFirebase } from '../persistence/user-repository.js';
 import { createGuestUser } from '../persistence/user-repository.js';
 import { createSession } from '../services/session-manager.js';
 import { generateGuestToken } from '../services/guest-token.js';
+import { findUserSessions, countUserSessions } from '../persistence/session-repository.js';
+import { generateDownloadUrl, StorageUnavailableError } from '../services/media-storage.js';
 import { createSessionRequestSchema, createSessionResponseSchema } from '../shared/schemas/session-schemas.js';
+import {
+  sessionTimelineQuerySchema,
+  sessionTimelineResponseSchema,
+} from '../shared/schemas/timeline-schemas.js';
 import { errorResponseSchema } from '../shared/schemas/common-schemas.js';
+import { requireAuth } from './middleware/rest-auth.js';
 
 export async function sessionRoutes(fastify: FastifyInstance): Promise<void> {
+  // Decorate request so Fastify knows about the requestContext property
+  fastify.decorateRequest('requestContext', undefined);
+
+  fastify.get('/api/sessions', {
+    preHandler: requireAuth,
+    schema: {
+      querystring: sessionTimelineQuerySchema,
+      response: {
+        200: sessionTimelineResponseSchema,
+        401: errorResponseSchema,
+      },
+    },
+  }, async (request, reply) => {
+    const userId = request.requestContext!.userId;
+    const { limit, offset } = request.query as { limit: number; offset: number };
+
+    const [sessions, total] = await Promise.all([
+      findUserSessions(userId, limit, offset),
+      countUserSessions(userId),
+    ]);
+
+    const sessionsWithUrls = await Promise.all(
+      sessions.map(async (session) => {
+        let thumbnailUrl: string | null = null;
+        if (session.thumbnail_storage_path) {
+          try {
+            const result = await generateDownloadUrl(session.thumbnail_storage_path);
+            thumbnailUrl = result.url;
+          } catch (error: unknown) {
+            if (error instanceof StorageUnavailableError) {
+              thumbnailUrl = null;
+            } else {
+              throw error;
+            }
+          }
+        }
+        return {
+          id: session.id,
+          venueName: session.venue_name,
+          endedAt: session.ended_at?.toISOString() ?? null,
+          participantCount: session.participant_count,
+          topAward: session.top_award,
+          thumbnailUrl,
+        };
+      }),
+    );
+
+    return reply.send({
+      data: {
+        sessions: sessionsWithUrls,
+        total,
+        offset,
+        limit,
+      },
+    });
+  });
+
   fastify.post('/api/sessions', {
     schema: {
       body: createSessionRequestSchema,

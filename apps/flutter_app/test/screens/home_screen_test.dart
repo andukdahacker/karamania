@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:karamania/api/api_service.dart';
 import 'package:karamania/config/app_config.dart';
@@ -10,7 +11,10 @@ import 'package:karamania/screens/home_screen.dart';
 import 'package:karamania/socket/client.dart';
 import 'package:karamania/state/accessibility_provider.dart';
 import 'package:karamania/state/auth_provider.dart';
+import 'package:karamania/state/capture_provider.dart';
+import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/party_provider.dart';
+import 'package:karamania/state/timeline_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 
 /// Mock HTTP client that returns a transparent 1x1 PNG for any image request.
@@ -84,20 +88,23 @@ class FakeUser extends Fake implements User {
   String? get email => 'test@test.com';
 }
 
-Widget _wrapWithProviders(Widget child, {AuthProvider? authProvider}) {
+Widget _wrapWithProviders(
+  Widget child, {
+  AuthProvider? authProvider,
+  TimelineProvider? timelineProvider,
+}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (_) => PartyProvider()),
       ChangeNotifierProvider<AuthProvider>.value(value: authProvider ?? AuthProvider()),
+      ChangeNotifierProvider<TimelineProvider>.value(value: timelineProvider ?? TimelineProvider()),
       ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
+      ChangeNotifierProvider(create: (_) => CaptureProvider()),
       Provider<SocketClient>(create: (_) => SocketClient.instance),
       Provider<ApiService>(create: (_) => ApiService(baseUrl: 'http://localhost')),
     ],
-    child: MediaQuery(
-      data: const MediaQueryData(),
-      child: MaterialApp(
-        home: child,
-      ),
+    child: MaterialApp(
+      home: child,
     ),
   );
 }
@@ -221,6 +228,132 @@ void main() {
       await tester.pump();
 
       expect(find.text('Test User'), findsOneWidget);
+    });
+
+    testWidgets('authenticated user with sessions sees session cards', (tester) async {
+      final previousOverrides = HttpOverrides.current;
+      HttpOverrides.global = _TestHttpOverrides();
+      addTearDown(() => HttpOverrides.global = previousOverrides);
+
+      final authProvider = AuthProvider();
+      authProvider.onFirebaseAuthenticated(FakeUser());
+      authProvider.onProfileLoaded(
+        userId: 'user-1',
+        displayName: 'Test User',
+        createdAt: DateTime.now(),
+      );
+
+      final timelineProvider = TimelineProvider();
+      timelineProvider.onSessionsLoaded([
+        SessionTimelineItem(
+          id: 'session-1',
+          venueName: 'Studio A',
+          endedAt: '2026-03-10T20:00:00Z',
+          participantCount: 5,
+          topAward: 'Star of the Show',
+          thumbnailUrl: null,
+        ),
+      ], 1);
+
+      await tester.pumpWidget(_wrapWithProviders(
+        const HomeScreen(),
+        authProvider: authProvider,
+        timelineProvider: timelineProvider,
+      ));
+      await tester.pump();
+
+      expect(find.text('Studio A'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
+      expect(find.text('Star of the Show'), findsOneWidget);
+    });
+
+    testWidgets('authenticated user with no sessions sees empty state CTA', (tester) async {
+      final authProvider = AuthProvider();
+      authProvider.onFirebaseAuthenticated(FakeUser());
+      authProvider.onProfileLoaded(
+        userId: 'user-1',
+        displayName: 'Test User',
+        createdAt: DateTime.now(),
+      );
+
+      final timelineProvider = TimelineProvider();
+      timelineProvider.onSessionsLoaded([], 0);
+
+      await tester.pumpWidget(_wrapWithProviders(
+        const HomeScreen(),
+        authProvider: authProvider,
+        timelineProvider: timelineProvider,
+      ));
+      await tester.pump();
+
+      expect(find.text('Start your first party!'), findsOneWidget);
+    });
+
+    testWidgets('guest user sees sign-in prompt, no timeline', (tester) async {
+      await tester.pumpWidget(_wrapWithProviders(const HomeScreen()));
+      await tester.pump();
+
+      expect(find.text('Create an account to save your session history'), findsOneWidget);
+      expect(find.text('Sign in'), findsOneWidget);
+      // No "Your Sessions" heading for guests
+      expect(find.text('Your Sessions'), findsNothing);
+    });
+
+    testWidgets('session card tap triggers navigation to session detail', (tester) async {
+      final authProvider = AuthProvider();
+      authProvider.onFirebaseAuthenticated(FakeUser());
+      authProvider.onProfileLoaded(
+        userId: 'user-1',
+        displayName: 'Test User',
+        createdAt: DateTime.now(),
+      );
+
+      final timelineProvider = TimelineProvider();
+      timelineProvider.onSessionsLoaded([
+        SessionTimelineItem(
+          id: 'session-abc',
+          venueName: 'Studio A',
+          endedAt: '2026-03-10T20:00:00Z',
+          participantCount: 5,
+          topAward: null,
+          thumbnailUrl: null,
+        ),
+      ], 1);
+
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: '/session/:id',
+            builder: (context, state) => Scaffold(
+              body: Text('Session Detail: ${state.pathParameters['id']}'),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => PartyProvider()),
+          ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
+          ChangeNotifierProvider<TimelineProvider>.value(value: timelineProvider),
+          ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
+          ChangeNotifierProvider(create: (_) => CaptureProvider()),
+          Provider<SocketClient>(create: (_) => SocketClient.instance),
+          Provider<ApiService>(create: (_) => ApiService(baseUrl: 'http://localhost')),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ));
+      await tester.pump();
+
+      await tester.tap(find.text('Studio A'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Session Detail: session-abc'), findsOneWidget);
     });
   });
 }

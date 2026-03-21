@@ -1,3 +1,4 @@
+import { sql } from 'kysely';
 import { db } from '../db/connection.js';
 import type { SessionsTable, SessionParticipantsTable } from '../db/types.js';
 import type { SessionSummary } from '../shared/schemas/finale-schemas.js';
@@ -254,4 +255,81 @@ export async function updateStatus(sessionId: string, status: string) {
     .set(values)
     .where('id', '=', sessionId)
     .executeTakeFirst();
+}
+
+export interface TimelineRow {
+  id: string;
+  venue_name: string | null;
+  ended_at: Date | null;
+  participant_count: number;
+  top_award: string | null;
+  thumbnail_storage_path: string | null;
+}
+
+export async function findUserSessions(
+  userId: string,
+  limit: number,
+  offset: number,
+): Promise<TimelineRow[]> {
+  const rows = await db
+    .selectFrom('sessions')
+    .select([
+      'sessions.id',
+      'sessions.venue_name',
+      'sessions.ended_at',
+      sql<number>`(sessions.summary->'stats'->>'participantCount')::int`.as('participant_count'),
+    ])
+    .select((eb) => [
+      eb
+        .selectFrom('session_participants as sp')
+        .select('sp.top_award')
+        .whereRef('sp.session_id', '=', 'sessions.id')
+        .where('sp.user_id', '=', userId)
+        .as('top_award'),
+      eb
+        .selectFrom('media_captures as mc')
+        .select('mc.storage_path')
+        .whereRef('mc.session_id', '=', 'sessions.id')
+        .orderBy('mc.created_at', 'asc')
+        .limit(1)
+        .as('thumbnail_storage_path'),
+    ])
+    .where('sessions.id', 'in',
+      db.selectFrom('sessions')
+        .select('sessions.id')
+        .where('sessions.host_user_id', '=', userId)
+        .unionAll(
+          db.selectFrom('session_participants')
+            .select('session_participants.session_id as id')
+            .where('session_participants.user_id', '=', userId)
+        )
+    )
+    .where('sessions.status', '=', 'ended')
+    .where('sessions.summary', 'is not', null)
+    .orderBy('sessions.ended_at', 'desc')
+    .limit(limit)
+    .offset(offset)
+    .execute();
+
+  return rows as TimelineRow[];
+}
+
+export async function countUserSessions(userId: string): Promise<number> {
+  const result = await db
+    .selectFrom('sessions')
+    .select(sql<number>`count(*)::int`.as('count'))
+    .where('sessions.id', 'in',
+      db.selectFrom('sessions')
+        .select('sessions.id')
+        .where('sessions.host_user_id', '=', userId)
+        .unionAll(
+          db.selectFrom('session_participants')
+            .select('session_participants.session_id as id')
+            .where('session_participants.user_id', '=', userId)
+        )
+    )
+    .where('sessions.status', '=', 'ended')
+    .where('sessions.summary', 'is not', null)
+    .executeTakeFirstOrThrow();
+  return result.count;
 }
