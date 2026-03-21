@@ -161,3 +161,161 @@ h1 {
 .hidden {
   display: none !important;
 }
+
+/* Share page styles */
+.share-header {
+  margin-bottom: var(--space-lg);
+}
+
+.share-venue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: var(--space-sm);
+}
+
+.share-meta {
+  color: var(--dj-text-secondary);
+  font-size: 0.875rem;
+}
+
+.share-stats {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.stat-card {
+  flex: 1;
+  background: var(--dj-surface);
+  border-radius: 12px;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--dj-action-primary);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--dj-text-secondary);
+  margin-top: 4px;
+}
+
+.share-section {
+  margin-bottom: var(--space-lg);
+  text-align: left;
+}
+
+.share-section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--dj-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-sm);
+}
+
+.share-participant {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--dj-surface);
+}
+
+.share-participant-name {
+  font-weight: 500;
+}
+
+.share-award-badge {
+  font-size: 0.75rem;
+  background: var(--dj-action-primary);
+  color: var(--dj-text-primary);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.share-setlist {
+  list-style: none;
+  counter-reset: setlist;
+  padding: 0;
+}
+
+.share-setlist-item {
+  counter-increment: setlist;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--dj-surface);
+}
+
+.share-setlist-item::before {
+  content: counter(setlist) '.';
+  color: var(--dj-text-secondary);
+  font-size: 0.875rem;
+  min-width: 24px;
+}
+
+.share-song-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.share-song-title {
+  display: block;
+  font-weight: 500;
+}
+
+.share-song-artist {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--dj-text-secondary);
+}
+
+.share-performer {
+  font-size: 0.75rem;
+  color: var(--dj-text-secondary);
+}
+
+.share-award-chip {
+  font-size: 0.75rem;
+  background: var(--dj-surface);
+  color: var(--dj-action-primary);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.share-media-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+}
+
+.share-media-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--dj-surface);
+}
+
+.share-cta {
+  margin: var(--space-xl) 0 var(--space-lg);
+}
+
+.share-store-buttons {
+  margin-top: var(--space-sm);
+}
+
+.share-footer {
+  color: var(--dj-text-secondary);
+  font-size: 0.75rem;
+  margin-top: var(--space-lg);
+}

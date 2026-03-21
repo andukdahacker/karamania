@@ -2,6 +2,13 @@
   'use strict';
 
   var params = new URLSearchParams(window.location.search);
+
+  var sessionId = params.get('session');
+  if (sessionId) {
+    window.location.href = '/share.html?session=' + encodeURIComponent(sessionId);
+    return;
+  }
+
   var code = params.get('code');
 
   var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);

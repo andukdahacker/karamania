@@ -5,11 +5,14 @@ import 'package:provider/provider.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/screens/home_screen.dart';
 import 'package:karamania/screens/join_screen.dart';
+import 'package:karamania/screens/session_detail_screen.dart';
 import 'package:karamania/state/accessibility_provider.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/state/session_detail_provider.dart';
+import 'package:karamania/state/capture_provider.dart';
 import 'package:karamania/state/timeline_provider.dart';
+import 'package:karamania/state/upload_provider.dart';
 import 'package:karamania/api/api_service.dart';
 import 'package:karamania/socket/client.dart';
 
@@ -20,6 +23,12 @@ GoRouter _createTestRouter({String initialLocation = '/'}) {
       if (state.matchedLocation == '/' && state.uri.queryParameters.containsKey('code')) {
         final code = state.uri.queryParameters['code'];
         return '/join?code=$code';
+      }
+      if (state.matchedLocation == '/' && state.uri.queryParameters.containsKey('session')) {
+        final sessionId = state.uri.queryParameters['session'];
+        if (sessionId != null && sessionId.isNotEmpty) {
+          return '/session/$sessionId';
+        }
       }
       return null;
     },
@@ -35,6 +44,13 @@ GoRouter _createTestRouter({String initialLocation = '/'}) {
           return JoinScreen(initialCode: code);
         },
       ),
+      GoRoute(
+        path: '/session/:id',
+        builder: (context, state) {
+          final sessionId = state.pathParameters['id']!;
+          return SessionDetailScreen(sessionId: sessionId);
+        },
+      ),
     ],
   );
 }
@@ -47,6 +63,8 @@ Widget _wrapWithRouter(GoRouter router) {
       ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
       ChangeNotifierProvider(create: (_) => TimelineProvider()),
       ChangeNotifierProvider(create: (_) => SessionDetailProvider()),
+      ChangeNotifierProvider(create: (_) => CaptureProvider()),
+      ChangeNotifierProvider(create: (_) => UploadProvider()),
       Provider<SocketClient>(create: (_) => SocketClient.instance),
       Provider<ApiService>(create: (_) => ApiService(baseUrl: 'http://localhost')),
     ],
@@ -102,6 +120,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(HomeScreen), findsOneWidget);
+    });
+
+    testWidgets('/?session=SESSION_ID redirects to /session/SESSION_ID', (tester) async {
+      final router = _createTestRouter(initialLocation: '/?session=test-uuid-123');
+      await tester.pumpWidget(_wrapWithRouter(router));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SessionDetailScreen), findsOneWidget);
     });
   });
 }

@@ -347,7 +347,7 @@ void main() {
       expect(find.byType(GridView), findsNothing);
     });
 
-    testWidgets('Story 9.5 placeholder buttons render as disabled', (tester) async {
+    testWidgets('Share Session button is active (wrapped in GestureDetector)', (tester) async {
       final provider = SessionDetailProvider();
       provider.onDetailLoaded(_createTestDetail());
 
@@ -357,10 +357,32 @@ void main() {
       ));
       await tester.pump();
 
-      expect(find.byKey(const Key('share-session-btn')), findsOneWidget);
-      expect(find.byKey(const Key('lets-go-again-btn')), findsOneWidget);
+      final shareBtnFinder = find.byKey(const Key('share-session-btn'));
+      expect(shareBtnFinder, findsOneWidget);
       expect(find.text('Share Session'), findsOneWidget);
+
+      // Verify wrapped in GestureDetector (active, not plain Container)
+      final shareBtn = tester.widget(shareBtnFinder);
+      expect(shareBtn, isA<GestureDetector>());
+    });
+
+    testWidgets('Let\'s Go Again button is active (wrapped in GestureDetector)', (tester) async {
+      final provider = SessionDetailProvider();
+      provider.onDetailLoaded(_createTestDetail());
+
+      await tester.pumpWidget(_wrapWithProviders(
+        const SessionDetailScreen(sessionId: 'session-1'),
+        detailProvider: provider,
+      ));
+      await tester.pump();
+
+      final goAgainBtnFinder = find.byKey(const Key('lets-go-again-btn'));
+      expect(goAgainBtnFinder, findsOneWidget);
       expect(find.text("Let's go again!"), findsOneWidget);
+
+      // Verify wrapped in GestureDetector (active, not plain Container)
+      final goAgainBtn = tester.widget(goAgainBtnFinder);
+      expect(goAgainBtn, isA<GestureDetector>());
     });
   });
 }

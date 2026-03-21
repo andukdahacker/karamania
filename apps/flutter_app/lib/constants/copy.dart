@@ -356,6 +356,21 @@ class Copy {
   static const String shareSession = 'Share Session';
   static const String letsGoAgain = "Let's go again!";
 
+  // Session Sharing (Story 9.5)
+  static String shareSessionMessage({String? venueName, required String url}) {
+    final venue = venueName ?? karaokeNight;
+    return 'Check out our $venue session on Karamania! $url';
+  }
+
+  static String letsGoAgainMessage({String? venueName, required String downloadUrl}) {
+    final venue = venueName ?? 'karaoke';
+    final now = DateTime.now();
+    final daysUntilSaturday = (DateTime.saturday - now.weekday) % 7;
+    final nextSaturday = now.add(Duration(days: daysUntilSaturday == 0 ? 7 : daysUntilSaturday));
+    final dateStr = '${nextSaturday.month}/${nextSaturday.day}';
+    return '$venue was amazing! Let\'s do it again on $dateStr. Get Karamania: $downloadUrl';
+  }
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

@@ -20,6 +20,7 @@ import { playlistRoutes } from './routes/playlists.js';
 import { suggestionRoutes } from './routes/suggestions.js';
 import { captureRoutes } from './routes/captures.js';
 import { userRoutes } from './routes/users.js';
+import { shareRoutes } from './routes/share.js';
 import { errorHandler } from './shared/errors.js';
 import { setupSocketHandlers } from './socket-handlers/connection-handler.js';
 import { recoverActiveSessions } from './services/session-manager.js';
@@ -45,6 +46,7 @@ await import('./shared/schemas/suggestion-schemas.js');
 await import('./shared/schemas/capture-schemas.js');
 await import('./shared/schemas/upgrade-schemas.js');
 await import('./shared/schemas/timeline-schemas.js');
+await import('./shared/schemas/share-schemas.js');
 
 await fastify.register(swagger, {
   openapi: {
@@ -68,6 +70,7 @@ await fastify.register(playlistRoutes);
 await fastify.register(suggestionRoutes);
 await fastify.register(userRoutes);
 await fastify.register(captureRoutes);
+await fastify.register(shareRoutes);
 
 const io = new SocketIOServer(fastify.server, {
   cors: {

@@ -8,6 +8,8 @@ import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/session_detail_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:karamania/config/app_config.dart';
 import 'package:karamania/widgets/setlist_poster_widget.dart';
 
 PartyVibe _parseVibe(String? vibe) {
@@ -134,7 +136,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             _SetlistPosterSection(detail: detail),
             const SizedBox(height: DJTokens.spaceLg),
           ],
-          _PlaceholderButtons(),
+          _SessionActions(detail: detail),
           const SizedBox(height: DJTokens.spaceLg),
         ],
       ),
@@ -545,46 +547,72 @@ class _SetlistPosterSection extends StatelessWidget {
 
 }
 
-class _PlaceholderButtons extends StatelessWidget {
+class _SessionActions extends StatelessWidget {
+  final SessionDetail detail;
+  const _SessionActions({required this.detail});
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
+        GestureDetector(
           key: const Key('share-session-btn'),
-          padding: const EdgeInsets.symmetric(vertical: DJTokens.spaceMd),
-          decoration: BoxDecoration(
-            color: DJTokens.surfaceElevated,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(
-              Copy.shareSession,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: DJTokens.textSecondary,
-                  ),
+          onTap: () => _shareSession(),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: DJTokens.spaceMd),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text(
+                Copy.shareSession,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: DJTokens.textPrimary,
+                    ),
+              ),
             ),
           ),
         ),
         const SizedBox(height: DJTokens.spaceSm),
-        Container(
+        GestureDetector(
           key: const Key('lets-go-again-btn'),
-          padding: const EdgeInsets.symmetric(vertical: DJTokens.spaceMd),
-          decoration: BoxDecoration(
-            color: DJTokens.surfaceElevated,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(
-              Copy.letsGoAgain,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: DJTokens.textSecondary,
-                  ),
+          onTap: () => _letsGoAgain(),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: DJTokens.spaceMd),
+            decoration: BoxDecoration(
+              color: DJTokens.surfaceElevated,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text(
+                Copy.letsGoAgain,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: DJTokens.textPrimary,
+                    ),
+              ),
             ),
           ),
         ),
       ],
     );
+  }
+
+  void _shareSession() {
+    final shareUrl = '${AppConfig.instance.webLandingUrl}?session=${detail.id}';
+    final shareText = Copy.shareSessionMessage(
+      venueName: detail.venueName,
+      url: shareUrl,
+    );
+    SharePlus.instance.share(ShareParams(text: shareText));
+  }
+
+  void _letsGoAgain() {
+    final message = Copy.letsGoAgainMessage(
+      venueName: detail.venueName,
+      downloadUrl: AppConfig.instance.webLandingUrl,
+    );
+    SharePlus.instance.share(ShareParams(text: message));
   }
 }

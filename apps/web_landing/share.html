@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0A0A0F">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Karamania Session">
+  <meta property="og:description" content="Check out this karaoke session on Karamania!">
+  <meta property="og:image" content="https://karamania.app/og-share.png">
+  <meta property="og:url" content="">
+  <meta name="twitter:card" content="summary_large_image">
+  <title>Karamania - Session</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <h1>KARAMANIA</h1>
+
+    <div id="share-loading">
+      <p class="label">Loading session...</p>
+    </div>
+
+    <div id="share-error" class="hidden">
+      <p class="label" id="share-error-message"></p>
+    </div>
+
+    <div id="share-content" class="hidden">
+      <section class="share-header">
+        <p class="share-venue" id="share-venue"></p>
+        <p class="share-meta">
+          <span id="share-date"></span> · <span id="share-duration"></span> · <span id="share-vibe"></span>
+        </p>
+      </section>
+
+      <section class="share-stats">
+        <div class="stat-card">
+          <span class="stat-value" id="share-song-count"></span>
+          <span class="stat-label">Songs</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="share-participant-count"></span>
+          <span class="stat-label">Singers</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="share-reaction-count"></span>
+          <span class="stat-label">Reactions</span>
+        </div>
+      </section>
+
+      <section class="share-section">
+        <p class="share-section-title">Performers</p>
+        <div id="share-participants-list"></div>
+      </section>
+
+      <section class="share-section">
+        <p class="share-section-title">Setlist</p>
+        <ol id="share-setlist" class="share-setlist"></ol>
+      </section>
+
+      <section id="share-media-section" class="share-section hidden">
+        <p class="share-section-title">Moments</p>
+        <div id="share-media-grid" class="share-media-grid"></div>
+      </section>
+
+      <section class="share-cta">
+        <button id="open-app-btn" class="btn btn-primary">Open in App</button>
+        <div id="store-buttons" class="share-store-buttons">
+          <a id="ios-store-btn" href="https://apps.apple.com/app/karamania/id000000000" class="btn btn-store">Download for iOS</a>
+          <a id="android-store-btn" href="https://play.google.com/store/apps/details?id=com.karamania.app" class="btn btn-store">Download for Android</a>
+        </div>
+      </section>
+
+      <p class="share-footer">Shared from Karamania</p>
+    </div>
+  </main>
+  <script src="/share.js"></script>
+</body>
+</html>

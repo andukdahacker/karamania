@@ -32,6 +32,13 @@ final GoRouter _router = GoRouter(
       final code = state.uri.queryParameters['code'];
       return '/join?code=$code';
     }
+    // Deep link: /?session=SESSION_ID → /session/SESSION_ID
+    if (state.matchedLocation == '/' && state.uri.queryParameters.containsKey('session')) {
+      final sessionId = state.uri.queryParameters['session'];
+      if (sessionId != null && sessionId.isNotEmpty) {
+        return '/session/$sessionId';
+      }
+    }
     return null;
   },
   routes: [

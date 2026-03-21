@@ -55,4 +55,42 @@ void main() {
       expect(vibeAwardFlavors[PartyVibe.general], 'Absolute showstopper');
     });
   });
+
+  group('Session sharing messages (Story 9.5)', () {
+    test('shareSessionMessage includes session URL with correct format', () {
+      final result = Copy.shareSessionMessage(
+        venueName: 'Test Bar',
+        url: 'https://karamania.app?session=abc',
+      );
+      expect(result, contains('https://karamania.app?session=abc'));
+      expect(result, contains('Test Bar'));
+    });
+
+    test('shareSessionMessage uses fallback when venueName is null', () {
+      final result = Copy.shareSessionMessage(
+        venueName: null,
+        url: 'https://karamania.app?session=abc',
+      );
+      expect(result, contains(Copy.karaokeNight));
+    });
+
+    test('letsGoAgainMessage includes venue name and date suggestion', () {
+      final result = Copy.letsGoAgainMessage(
+        venueName: 'Test Bar',
+        downloadUrl: 'https://karamania.app',
+      );
+      expect(result, contains('Test Bar'));
+      expect(result, contains('karamania.app'));
+      // Verify date is in M/D format
+      expect(result, matches(RegExp(r'\d{1,2}/\d{1,2}')));
+    });
+
+    test('letsGoAgainMessage uses fallback when venueName is null', () {
+      final result = Copy.letsGoAgainMessage(
+        venueName: null,
+        downloadUrl: 'https://karamania.app',
+      );
+      expect(result, contains('karaoke'));
+    });
+  });
 }
