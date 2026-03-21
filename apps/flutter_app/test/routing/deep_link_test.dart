@@ -8,6 +8,7 @@ import 'package:karamania/screens/join_screen.dart';
 import 'package:karamania/state/accessibility_provider.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/party_provider.dart';
+import 'package:karamania/state/session_detail_provider.dart';
 import 'package:karamania/state/timeline_provider.dart';
 import 'package:karamania/api/api_service.dart';
 import 'package:karamania/socket/client.dart';
@@ -45,6 +46,7 @@ Widget _wrapWithRouter(GoRouter router) {
       ChangeNotifierProvider(create: (_) => AuthProvider()),
       ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
       ChangeNotifierProvider(create: (_) => TimelineProvider()),
+      ChangeNotifierProvider(create: (_) => SessionDetailProvider()),
       Provider<SocketClient>(create: (_) => SocketClient.instance),
       Provider<ApiService>(create: (_) => ApiService(baseUrl: 'http://localhost')),
     ],

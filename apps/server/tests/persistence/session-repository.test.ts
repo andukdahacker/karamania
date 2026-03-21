@@ -640,4 +640,78 @@ describe('session-repository', () => {
       expect(result).toBe(7);
     });
   });
+
+  describe('findSessionDetail', () => {
+    it('returns session when user is host', async () => {
+      const testSession = createTestSession({
+        id: 'session-1',
+        host_user_id: 'host-user',
+        status: 'ended',
+        summary: '{"version":1}',
+      });
+      // Not a participant
+      mockExecuteTakeFirst
+        .mockResolvedValueOnce(undefined) // participant check
+        .mockResolvedValueOnce({ id: 'session-1' }) // host check
+        .mockResolvedValueOnce(testSession); // session query
+
+      const { findSessionDetail } = await import('../../src/persistence/session-repository.js');
+      const result = await findSessionDetail('session-1', 'host-user');
+
+      expect(result).toEqual(testSession);
+    });
+
+    it('returns session when user is participant (not host)', async () => {
+      const testSession = createTestSession({
+        id: 'session-2',
+        status: 'ended',
+        summary: '{"version":1}',
+      });
+      // Is a participant
+      mockExecuteTakeFirst
+        .mockResolvedValueOnce({ id: 'p1' }) // participant check
+        .mockResolvedValueOnce(testSession); // session query
+
+      const { findSessionDetail } = await import('../../src/persistence/session-repository.js');
+      const result = await findSessionDetail('session-2', 'participant-user');
+
+      expect(result).toEqual(testSession);
+    });
+
+    it('returns null when user is neither host nor participant', async () => {
+      mockExecuteTakeFirst
+        .mockResolvedValueOnce(undefined) // participant check
+        .mockResolvedValueOnce(undefined); // host check
+
+      const { findSessionDetail } = await import('../../src/persistence/session-repository.js');
+      const result = await findSessionDetail('session-1', 'stranger');
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null for non-ended session', async () => {
+      // User is participant
+      mockExecuteTakeFirst
+        .mockResolvedValueOnce({ id: 'p1' }) // participant check
+        .mockResolvedValueOnce(undefined); // session query returns nothing (not ended)
+
+      const { findSessionDetail } = await import('../../src/persistence/session-repository.js');
+      const result = await findSessionDetail('session-active', 'user-1');
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null for session without summary', async () => {
+      // User is host
+      mockExecuteTakeFirst
+        .mockResolvedValueOnce(undefined) // participant check
+        .mockResolvedValueOnce({ id: 'session-no-summary' }) // host check
+        .mockResolvedValueOnce(undefined); // session query returns nothing (no summary)
+
+      const { findSessionDetail } = await import('../../src/persistence/session-repository.js');
+      const result = await findSessionDetail('session-no-summary', 'host-user');
+
+      expect(result).toBeNull();
+    });
+  });
 });

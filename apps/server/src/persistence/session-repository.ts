@@ -314,6 +314,41 @@ export async function findUserSessions(
   return rows as TimelineRow[];
 }
 
+export async function findSessionDetail(
+  sessionId: string,
+  userId: string,
+): Promise<SessionsTable | null> {
+  // Authorization: check user is host OR participant
+  const isParticipant = await db
+    .selectFrom('session_participants')
+    .select('id')
+    .where('session_id', '=', sessionId)
+    .where('user_id', '=', userId)
+    .executeTakeFirst();
+
+  const isHost = isParticipant
+    ? true
+    : !!(await db
+        .selectFrom('sessions')
+        .select('id')
+        .where('id', '=', sessionId)
+        .where('host_user_id', '=', userId)
+        .executeTakeFirst());
+
+  if (!isParticipant && !isHost) return null;
+
+  // Fetch ended session with summary
+  const session = await db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('id', '=', sessionId)
+    .where('status', '=', 'ended')
+    .where('summary', 'is not', null)
+    .executeTakeFirst();
+
+  return session ?? null;
+}
+
 export async function countUserSessions(userId: string): Promise<number> {
   const result = await db
     .selectFrom('sessions')

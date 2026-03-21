@@ -342,6 +342,20 @@ class Copy {
   static const String upgradeSuccess = 'Account created! Your session data is saved.';
   static const String upgradeFailed = 'Sign in failed. Try again later.';
 
+  // Session Detail Screen (Story 9.4)
+  static const String sessionDetail = 'Session Detail';
+  static const String setlist = 'Setlist';
+  static const String awards = 'Awards';
+  static const String mediaGallery = 'Gallery';
+  static const String setlistPoster = 'Setlist Poster';
+  static const String sessionDuration = 'Duration';
+  static const String songs = 'songs';
+  static const String reactions = 'reactions';
+  static const String loadDetailError = 'Could not load session details. Tap to retry.';
+  static const String sessionNotFound = 'Session not found';
+  static const String shareSession = 'Share Session';
+  static const String letsGoAgain = "Let's go again!";
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

@@ -7,6 +7,7 @@ import 'package:karamania/screens/home_screen.dart';
 import 'package:karamania/screens/join_screen.dart';
 import 'package:karamania/screens/lobby_screen.dart';
 import 'package:karamania/screens/party_screen.dart';
+import 'package:karamania/screens/session_detail_screen.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
@@ -51,11 +52,10 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/session/:id',
-      builder: (context, state) => Scaffold(
-        body: Center(
-          child: Text('Session Detail: ${state.pathParameters['id']}'),
-        ),
-      ),
+      builder: (context, state) {
+        final sessionId = state.pathParameters['id']!;
+        return SessionDetailScreen(sessionId: sessionId);
+      },
     ),
     GoRoute(
       path: '/party',

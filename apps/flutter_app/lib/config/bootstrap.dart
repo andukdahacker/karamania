@@ -10,6 +10,7 @@ import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/capture_provider.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/socket/client.dart';
+import 'package:karamania/state/session_detail_provider.dart';
 import 'package:karamania/state/timeline_provider.dart';
 import 'package:karamania/api/api_service.dart';
 import 'package:karamania/audio/audio_engine.dart';
@@ -93,6 +94,7 @@ Future<void> bootstrap() async {
         ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => CaptureProvider()),
         ChangeNotifierProvider(create: (_) => TimelineProvider()),
+        ChangeNotifierProvider(create: (_) => SessionDetailProvider()),
         ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
         ChangeNotifierProvider(create: (_) => UploadProvider()),
         Provider<SocketClient>(create: (_) => SocketClient.instance),

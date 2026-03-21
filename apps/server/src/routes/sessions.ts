@@ -1,18 +1,22 @@
+import { z } from 'zod/v4';
 import type { FastifyInstance } from 'fastify';
 import { verifyFirebaseToken } from '../integrations/firebase-admin.js';
 import { upsertFromFirebase } from '../persistence/user-repository.js';
 import { createGuestUser } from '../persistence/user-repository.js';
 import { createSession } from '../services/session-manager.js';
 import { generateGuestToken } from '../services/guest-token.js';
-import { findUserSessions, countUserSessions } from '../persistence/session-repository.js';
+import { findUserSessions, countUserSessions, findSessionDetail } from '../persistence/session-repository.js';
+import { findBySessionId as findMediaBySessionId } from '../persistence/media-repository.js';
 import { generateDownloadUrl, StorageUnavailableError } from '../services/media-storage.js';
 import { createSessionRequestSchema, createSessionResponseSchema } from '../shared/schemas/session-schemas.js';
 import {
   sessionTimelineQuerySchema,
   sessionTimelineResponseSchema,
+  sessionDetailResponseSchema,
 } from '../shared/schemas/timeline-schemas.js';
 import { errorResponseSchema } from '../shared/schemas/common-schemas.js';
 import { requireAuth } from './middleware/rest-auth.js';
+import type { SessionSummary } from '../shared/schemas/finale-schemas.js';
 
 export async function sessionRoutes(fastify: FastifyInstance): Promise<void> {
   // Decorate request so Fastify knows about the requestContext property
@@ -68,6 +72,82 @@ export async function sessionRoutes(fastify: FastifyInstance): Promise<void> {
         total,
         offset,
         limit,
+      },
+    });
+  });
+
+  fastify.get<{ Params: { id: string } }>('/api/sessions/:id', {
+    preHandler: requireAuth,
+    schema: {
+      params: z.object({ id: z.string() }),
+      response: {
+        200: sessionDetailResponseSchema,
+        401: errorResponseSchema,
+        403: errorResponseSchema,
+      },
+    },
+  }, async (request, reply) => {
+    const userId = request.requestContext!.userId;
+    const sessionId = request.params.id;
+
+    const session = await findSessionDetail(sessionId, userId);
+    if (!session) {
+      return reply.status(403).send({
+        error: { code: 'SESSION_ACCESS_DENIED', message: 'Session not found or access denied' },
+      });
+    }
+
+    const summary = JSON.parse(session.summary as string) as SessionSummary;
+
+    // Fetch media captures and generate signed URLs
+    const captures = await findMediaBySessionId(sessionId);
+    const media = await Promise.all(
+      captures.map(async (capture) => {
+        let url: string | null = null;
+        if (capture.storage_path) {
+          try {
+            const result = await generateDownloadUrl(capture.storage_path);
+            url = result.url;
+          } catch (error: unknown) {
+            if (error instanceof StorageUnavailableError) {
+              url = null;
+            } else {
+              throw error;
+            }
+          }
+        }
+        return {
+          id: capture.id,
+          url,
+          triggerType: capture.trigger_type,
+          createdAt: capture.created_at.toISOString(),
+        };
+      }),
+    );
+
+    const sessionDurationMs = session.ended_at && session.created_at
+      ? new Date(session.ended_at).getTime() - new Date(session.created_at).getTime()
+      : summary.stats.sessionDurationMs;
+
+    return reply.send({
+      data: {
+        id: session.id,
+        venueName: session.venue_name,
+        vibe: session.vibe,
+        createdAt: session.created_at.toISOString(),
+        endedAt: session.ended_at?.toISOString() ?? null,
+        stats: {
+          songCount: summary.stats.songCount,
+          participantCount: summary.stats.participantCount,
+          sessionDurationMs,
+          totalReactions: summary.stats.totalReactions,
+          totalSoundboardPlays: summary.stats.totalSoundboardPlays,
+          totalCardsDealt: summary.stats.totalCardsDealt,
+        },
+        participants: summary.participants,
+        setlist: summary.setlist,
+        awards: summary.awards,
+        media,
       },
     });
   });

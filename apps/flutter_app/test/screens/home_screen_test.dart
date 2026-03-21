@@ -14,6 +14,7 @@ import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/capture_provider.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/party_provider.dart';
+import 'package:karamania/state/session_detail_provider.dart';
 import 'package:karamania/state/timeline_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 
@@ -98,6 +99,7 @@ Widget _wrapWithProviders(
       ChangeNotifierProvider(create: (_) => PartyProvider()),
       ChangeNotifierProvider<AuthProvider>.value(value: authProvider ?? AuthProvider()),
       ChangeNotifierProvider<TimelineProvider>.value(value: timelineProvider ?? TimelineProvider()),
+      ChangeNotifierProvider(create: (_) => SessionDetailProvider()),
       ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
       ChangeNotifierProvider(create: (_) => CaptureProvider()),
       Provider<SocketClient>(create: (_) => SocketClient.instance),
@@ -341,6 +343,7 @@ void main() {
           ChangeNotifierProvider(create: (_) => PartyProvider()),
           ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
           ChangeNotifierProvider<TimelineProvider>.value(value: timelineProvider),
+          ChangeNotifierProvider(create: (_) => SessionDetailProvider()),
           ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
           ChangeNotifierProvider(create: (_) => CaptureProvider()),
           Provider<SocketClient>(create: (_) => SocketClient.instance),

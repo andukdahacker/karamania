@@ -50,9 +50,16 @@ vi.mock('../../src/services/guest-token.js', () => ({
 
 const mockFindUserSessions = vi.fn();
 const mockCountUserSessions = vi.fn();
+const mockFindSessionDetail = vi.fn();
 vi.mock('../../src/persistence/session-repository.js', () => ({
   findUserSessions: mockFindUserSessions,
   countUserSessions: mockCountUserSessions,
+  findSessionDetail: mockFindSessionDetail,
+}));
+
+const mockFindMediaBySessionId = vi.fn();
+vi.mock('../../src/persistence/media-repository.js', () => ({
+  findBySessionId: mockFindMediaBySessionId,
 }));
 
 const mockGenerateDownloadUrl = vi.fn();
@@ -352,5 +359,187 @@ describe('GET /api/sessions', () => {
     expect(sessions[0]!['thumbnailUrl']).toBeNull();
     expect(sessions[0]!['venueName']).toBeNull();
     expect(mockGenerateDownloadUrl).not.toHaveBeenCalled();
+  });
+});
+
+describe('GET /api/sessions/:id', () => {
+  let app: ReturnType<typeof Fastify>;
+
+  const testSummary = {
+    version: 1,
+    generatedAt: 1710936000000,
+    stats: {
+      songCount: 3,
+      participantCount: 4,
+      sessionDurationMs: 3600000,
+      totalReactions: 50,
+      totalSoundboardPlays: 10,
+      totalCardsDealt: 5,
+      topReactor: { displayName: 'Alice', count: 20 },
+      longestStreak: 8,
+    },
+    setlist: [
+      { position: 1, title: 'Bohemian Rhapsody', artist: 'Queen', performerName: 'Alice', awardTitle: 'Star', awardTone: 'hype' },
+    ],
+    awards: [
+      { userId: 'user-1', displayName: 'Alice', category: 'performer', title: 'Star', tone: 'hype', reason: 'Nailed it' },
+    ],
+    participants: [
+      { userId: 'user-1', displayName: 'Alice', participationScore: 100, topAward: 'Star' },
+      { userId: null, displayName: 'Guest Bob', participationScore: 50, topAward: null },
+    ],
+  };
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    app = Fastify();
+    app.setValidatorCompiler(validatorCompiler);
+    app.setSerializerCompiler(serializerCompiler);
+    app.setErrorHandler(errorHandler);
+    const { sessionRoutes } = await import('../../src/routes/sessions.js');
+    await app.register(sessionRoutes);
+    await app.ready();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  function setupAuthUser(userId = 'user-1') {
+    const testUser = createTestUser({ id: userId, display_name: 'Test User' });
+    mockVerifyFirebaseToken.mockResolvedValue({ uid: 'fb-uid-1', name: 'Test User' });
+    mockFindByFirebaseUid.mockResolvedValue(testUser);
+    return testUser;
+  }
+
+  it('returns 401 without auth', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/sessions/some-id',
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('returns 403 when user is not host or participant', async () => {
+    setupAuthUser();
+    mockFindSessionDetail.mockResolvedValue(null);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/sessions/session-id',
+      headers: { authorization: 'Bearer valid-token' },
+    });
+
+    expect(response.statusCode).toBe(403);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    const error = body['error'] as Record<string, unknown>;
+    expect(error['code']).toBe('SESSION_ACCESS_DENIED');
+  });
+
+  it('returns full session detail with all sections', async () => {
+    const user = setupAuthUser();
+    mockFindSessionDetail.mockResolvedValue({
+      id: 'session-1',
+      venue_name: 'Studio A',
+      vibe: 'rock',
+      created_at: new Date('2026-03-10T18:00:00Z'),
+      ended_at: new Date('2026-03-10T20:00:00Z'),
+      summary: JSON.stringify(testSummary),
+    });
+    mockFindMediaBySessionId.mockResolvedValue([
+      {
+        id: 'capture-1',
+        storage_path: 'session-1/photo.jpg',
+        trigger_type: 'manual',
+        created_at: new Date('2026-03-10T19:00:00Z'),
+      },
+    ]);
+    mockGenerateDownloadUrl.mockResolvedValue({ url: 'https://signed-url.com/photo.jpg', expiresAt: new Date() });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/sessions/session-1',
+      headers: { authorization: 'Bearer valid-token' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    const data = body['data'] as Record<string, unknown>;
+    expect(data['id']).toBe('session-1');
+    expect(data['venueName']).toBe('Studio A');
+    expect(data['vibe']).toBe('rock');
+
+    const stats = data['stats'] as Record<string, unknown>;
+    expect(stats['songCount']).toBe(3);
+    expect(stats['participantCount']).toBe(4);
+    expect(stats['totalReactions']).toBe(50);
+
+    const participants = data['participants'] as Array<Record<string, unknown>>;
+    expect(participants).toHaveLength(2);
+    expect(participants[0]!['displayName']).toBe('Alice');
+
+    const setlist = data['setlist'] as Array<Record<string, unknown>>;
+    expect(setlist).toHaveLength(1);
+    expect(setlist[0]!['title']).toBe('Bohemian Rhapsody');
+
+    const awards = data['awards'] as Array<Record<string, unknown>>;
+    expect(awards).toHaveLength(1);
+
+    const media = data['media'] as Array<Record<string, unknown>>;
+    expect(media).toHaveLength(1);
+    expect(media[0]!['url']).toBe('https://signed-url.com/photo.jpg');
+    expect(media[0]!['triggerType']).toBe('manual');
+
+    expect(mockFindSessionDetail).toHaveBeenCalledWith('session-1', user.id);
+  });
+
+  it('returns 403 for non-existent session (NOT 404)', async () => {
+    setupAuthUser();
+    mockFindSessionDetail.mockResolvedValue(null);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/sessions/nonexistent-id',
+      headers: { authorization: 'Bearer valid-token' },
+    });
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('handles media with unavailable storage gracefully (url = null)', async () => {
+    setupAuthUser();
+    mockFindSessionDetail.mockResolvedValue({
+      id: 'session-2',
+      venue_name: null,
+      vibe: null,
+      created_at: new Date('2026-03-10T18:00:00Z'),
+      ended_at: new Date('2026-03-10T20:00:00Z'),
+      summary: JSON.stringify(testSummary),
+    });
+    mockFindMediaBySessionId.mockResolvedValue([
+      {
+        id: 'capture-1',
+        storage_path: 'session-2/photo.jpg',
+        trigger_type: 'manual',
+        created_at: new Date('2026-03-10T19:00:00Z'),
+      },
+    ]);
+
+    // Import StorageUnavailableError to throw the correct type
+    const { StorageUnavailableError } = await import('../../src/services/media-storage.js');
+    mockGenerateDownloadUrl.mockRejectedValue(new StorageUnavailableError());
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/sessions/session-2',
+      headers: { authorization: 'Bearer valid-token' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body) as Record<string, unknown>;
+    const data = body['data'] as Record<string, unknown>;
+    const media = data['media'] as Array<Record<string, unknown>>;
+    expect(media[0]!['url']).toBeNull();
   });
 });
