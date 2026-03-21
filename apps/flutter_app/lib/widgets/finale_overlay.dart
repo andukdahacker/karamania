@@ -52,7 +52,9 @@ class _FinaleOverlayState extends State<FinaleOverlay>
       curve: Curves.easeOut,
     );
     _bgFadeController.forward();
-    widget.onStepChanged?.call(0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onStepChanged?.call(0);
+    });
   }
 
   @override

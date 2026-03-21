@@ -133,7 +133,7 @@ void main() {
 
       await tester.pumpWidget(
           _wrapWithProviders(const PartyScreen(), partyProvider: provider));
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.byKey(const Key('host-controls-fab')), findsNothing);
     });
@@ -425,7 +425,7 @@ void main() {
         provider.onDjStateUpdate(state: state);
         await tester.pumpWidget(
             _wrapWithProviders(const PartyScreen(), partyProvider: provider));
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
 
         expect(
           find.byKey(const Key('dj-state-label')),
@@ -443,9 +443,12 @@ void main() {
     testWidgets('shows performer name when available', (tester) async {
       final provider = _createTestProvider();
       provider.onSessionStatus('active');
+      provider.onParticipantsSync([
+        const ParticipantInfo(userId: 'user-alice', displayName: 'Alice'),
+      ]);
       provider.onDjStateUpdate(
         state: DJState.song,
-        currentPerformer: 'Alice',
+        currentPerformer: 'user-alice',
       );
 
       await tester.pumpWidget(
