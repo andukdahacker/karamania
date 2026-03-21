@@ -375,6 +375,11 @@ class Copy {
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';
   static const String createPartyError = 'Failed to create party';
+
+  // Media Gallery (Story 9.6)
+  static const String myMedia = 'My Media';
+  static const String loadMediaError = 'Could not load media. Tap to retry.';
+  static const String noMediaYet = 'No captured media yet. Start a party to create memories!';
 }
 
 /// Vibe emoji labels.

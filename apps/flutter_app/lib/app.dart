@@ -8,6 +8,7 @@ import 'package:karamania/screens/join_screen.dart';
 import 'package:karamania/screens/lobby_screen.dart';
 import 'package:karamania/screens/party_screen.dart';
 import 'package:karamania/screens/session_detail_screen.dart';
+import 'package:karamania/screens/media_gallery_screen.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
@@ -63,6 +64,10 @@ final GoRouter _router = GoRouter(
         final sessionId = state.pathParameters['id']!;
         return SessionDetailScreen(sessionId: sessionId);
       },
+    ),
+    GoRoute(
+      path: '/media',
+      builder: (context, state) => const MediaGalleryScreen(),
     ),
     GoRoute(
       path: '/party',

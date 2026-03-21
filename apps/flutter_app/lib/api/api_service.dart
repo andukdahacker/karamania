@@ -385,6 +385,48 @@ class ApiService {
     }
   }
 
+  /// Fetches paginated personal media gallery for authenticated user.
+  Future<({List<MediaGalleryItem> captures, int total})> fetchMyMedia({
+    required String token,
+    int limit = 40,
+    int offset = 0,
+  }) async {
+    _authMiddleware.token = token;
+    try {
+      final basePath = _baseUrl.endsWith('/')
+          ? _baseUrl.substring(0, _baseUrl.length - 1)
+          : _baseUrl;
+      final url = Uri.parse('$basePath/api/users/me/media?limit=$limit&offset=$offset');
+      final request = runtime.HttpRequest(
+        method: 'GET',
+        url: url,
+        headers: {'Content-Type': 'application/json'},
+      );
+      final response = await _chain.send(request);
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = body['data'] as Map<String, dynamic>;
+        final capturesJson = data['captures'] as List;
+        final total = data['total'] as int;
+        final captures = capturesJson
+            .map((json) => MediaGalleryItem.fromJson(json as Map<String, dynamic>))
+            .toList();
+        return (captures: captures, total: total);
+      }
+
+      try {
+        final errorJson = jsonDecode(response.body) as Map<String, dynamic>;
+        final parsed = ErrorResponse.fromJson(errorJson);
+        throw ApiException(code: parsed.error.code, message: parsed.error.message);
+      } catch (e) {
+        if (e is ApiException) rethrow;
+        throw ApiException(code: 'UNKNOWN', message: 'Request failed (status ${response.statusCode})');
+      }
+    } finally {
+      _authMiddleware.token = null;
+    }
+  }
+
   ApiException _mapException(runtime.ApiException e) {
     final parsed = e.parsedBody;
     if (parsed is ErrorResponse) {
@@ -396,6 +438,38 @@ class ApiService {
     return ApiException(
       code: 'UNKNOWN',
       message: 'Request failed (status ${e.statusCode})',
+    );
+  }
+}
+
+class MediaGalleryItem {
+  const MediaGalleryItem({
+    required this.id,
+    required this.sessionId,
+    this.venueName,
+    this.url,
+    required this.triggerType,
+    required this.createdAt,
+    required this.sessionDate,
+  });
+
+  final String id;
+  final String sessionId;
+  final String? venueName;
+  final String? url;
+  final String triggerType;
+  final String createdAt;
+  final String sessionDate;
+
+  factory MediaGalleryItem.fromJson(Map<String, dynamic> json) {
+    return MediaGalleryItem(
+      id: json['id'] as String,
+      sessionId: json['sessionId'] as String,
+      venueName: json['venueName'] as String?,
+      url: json['url'] as String?,
+      triggerType: json['triggerType'] as String,
+      createdAt: json['createdAt'] as String,
+      sessionDate: json['sessionDate'] as String,
     );
   }
 }

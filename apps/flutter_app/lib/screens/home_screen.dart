@@ -203,6 +203,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: DJTokens.spaceSm),
+                    GestureDetector(
+                      key: const Key('my-media-btn'),
+                      onTap: () => context.go('/media'),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.photo_library_outlined, color: DJTokens.textSecondary, size: 16),
+                          const SizedBox(width: DJTokens.spaceXs),
+                          Text(
+                            Copy.myMedia,
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: DJTokens.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: DJTokens.spaceSm),
                     Text(
                       Copy.yourSessions,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(

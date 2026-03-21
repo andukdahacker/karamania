@@ -25,6 +25,11 @@ const mockOrderBy = vi.fn();
 
 const mockSet = vi.fn();
 
+const mockLimit = vi.fn();
+const mockOffset = vi.fn();
+const mockSelect = vi.fn();
+const mockInnerJoin = vi.fn();
+
 vi.mock('../../src/db/connection.js', () => {
   const createChain = (): Record<string, unknown> => ({
     executeTakeFirst: mockExecuteTakeFirst,
@@ -32,6 +37,10 @@ vi.mock('../../src/db/connection.js', () => {
     execute: mockExecute,
     where: (...args: unknown[]) => { mockWhere(...args); return createChain(); },
     orderBy: (...args: unknown[]) => { mockOrderBy(...args); return createChain(); },
+    limit: (...args: unknown[]) => { mockLimit(...args); return createChain(); },
+    offset: (...args: unknown[]) => { mockOffset(...args); return createChain(); },
+    select: (...args: unknown[]) => { mockSelect(...args); return createChain(); },
+    innerJoin: (...args: unknown[]) => { mockInnerJoin(...args); return createChain(); },
     returningAll: () => createChain(),
   });
 
@@ -39,6 +48,8 @@ vi.mock('../../src/db/connection.js', () => {
     db: {
       selectFrom: vi.fn().mockReturnValue({
         selectAll: () => createChain(),
+        innerJoin: (...args: unknown[]) => { mockInnerJoin(...args); return createChain(); },
+        select: (...args: unknown[]) => { mockSelect(...args); return createChain(); },
       }),
       insertInto: vi.fn().mockReturnValue({
         values: (...args: unknown[]) => {
@@ -190,6 +201,57 @@ describe('media-repository', () => {
       expect(mockWhere).toHaveBeenCalledWith('session_id', '=', 'session-1');
       expect(mockOrderBy).toHaveBeenCalledWith('created_at', 'asc');
       expect(result).toEqual(captures);
+    });
+  });
+
+  describe('findAllByUserId', () => {
+    it('returns captures across sessions for a user', async () => {
+      const captures = [
+        { ...createTestMediaCapture({ user_id: 'user-1', session_id: 'sess-1' }), venue_name: 'Rock Bar', session_created_at: new Date('2026-01-01') },
+        { ...createTestMediaCapture({ user_id: 'user-1', session_id: 'sess-2' }), venue_name: null, session_created_at: new Date('2026-01-02') },
+      ];
+      mockExecute.mockResolvedValueOnce(captures);
+      mockExecuteTakeFirstOrThrow.mockResolvedValueOnce({ count: 2 });
+
+      const { findAllByUserId } = await import('../../src/persistence/media-repository.js');
+      const result = await findAllByUserId('user-1');
+
+      expect(mockInnerJoin).toHaveBeenCalledWith('sessions', 'sessions.id', 'media_captures.session_id');
+      expect(mockWhere).toHaveBeenCalledWith('media_captures.user_id', '=', 'user-1');
+      expect(result.captures).toEqual(captures);
+      expect(result.total).toBe(2);
+    });
+
+    it('returns empty array for user with no captures', async () => {
+      mockExecute.mockResolvedValueOnce([]);
+      mockExecuteTakeFirstOrThrow.mockResolvedValueOnce({ count: 0 });
+
+      const { findAllByUserId } = await import('../../src/persistence/media-repository.js');
+      const result = await findAllByUserId('user-no-captures');
+
+      expect(result.captures).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('respects limit and offset', async () => {
+      mockExecute.mockResolvedValueOnce([]);
+      mockExecuteTakeFirstOrThrow.mockResolvedValueOnce({ count: 0 });
+
+      const { findAllByUserId } = await import('../../src/persistence/media-repository.js');
+      await findAllByUserId('user-1', 10, 20);
+
+      expect(mockLimit).toHaveBeenCalledWith(10);
+      expect(mockOffset).toHaveBeenCalledWith(20);
+    });
+
+    it('orders by created_at desc', async () => {
+      mockExecute.mockResolvedValueOnce([]);
+      mockExecuteTakeFirstOrThrow.mockResolvedValueOnce({ count: 0 });
+
+      const { findAllByUserId } = await import('../../src/persistence/media-repository.js');
+      await findAllByUserId('user-1');
+
+      expect(mockOrderBy).toHaveBeenCalledWith('media_captures.created_at', 'desc');
     });
   });
 });

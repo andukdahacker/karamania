@@ -301,6 +301,27 @@ void main() {
       expect(find.text('Your Sessions'), findsNothing);
     });
 
+    testWidgets('authenticated user shows My Media button', (tester) async {
+      final authProvider = AuthProvider();
+      authProvider.onFirebaseAuthenticated(FakeUser());
+
+      await tester.pumpWidget(_wrapWithProviders(
+        const HomeScreen(),
+        authProvider: authProvider,
+      ));
+      await tester.pump();
+
+      expect(find.byKey(const Key('my-media-btn')), findsOneWidget);
+      expect(find.text('My Media'), findsOneWidget);
+    });
+
+    testWidgets('guest user does NOT show My Media button', (tester) async {
+      await tester.pumpWidget(_wrapWithProviders(const HomeScreen()));
+      await tester.pump();
+
+      expect(find.byKey(const Key('my-media-btn')), findsNothing);
+    });
+
     testWidgets('session card tap triggers navigation to session detail', (tester) async {
       final authProvider = AuthProvider();
       authProvider.onFirebaseAuthenticated(FakeUser());

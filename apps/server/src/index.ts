@@ -21,6 +21,7 @@ import { suggestionRoutes } from './routes/suggestions.js';
 import { captureRoutes } from './routes/captures.js';
 import { userRoutes } from './routes/users.js';
 import { shareRoutes } from './routes/share.js';
+import { mediaGalleryRoutes } from './routes/media-gallery.js';
 import { errorHandler } from './shared/errors.js';
 import { setupSocketHandlers } from './socket-handlers/connection-handler.js';
 import { recoverActiveSessions } from './services/session-manager.js';
@@ -47,6 +48,7 @@ await import('./shared/schemas/capture-schemas.js');
 await import('./shared/schemas/upgrade-schemas.js');
 await import('./shared/schemas/timeline-schemas.js');
 await import('./shared/schemas/share-schemas.js');
+await import('./shared/schemas/media-gallery-schemas.js');
 
 await fastify.register(swagger, {
   openapi: {
@@ -71,6 +73,7 @@ await fastify.register(suggestionRoutes);
 await fastify.register(userRoutes);
 await fastify.register(captureRoutes);
 await fastify.register(shareRoutes);
+await fastify.register(mediaGalleryRoutes);
 
 const io = new SocketIOServer(fastify.server, {
   cors: {
