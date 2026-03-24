@@ -10,3 +10,4 @@ workflow_status:
   create-ux-design: "_bmad-output/planning-artifacts/ux-design-specification.md"
   create-architecture: "_bmad-output/planning-artifacts/architecture.md"
   generate-project-context: "_bmad-output/project-context.md"
+  document-project: "docs/index.md"

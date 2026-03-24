@@ -1,0 +1,94 @@
+{
+  "repository_type": "monorepo",
+  "parts": [
+    {
+      "part_id": "flutter_app",
+      "display_name": "Flutter Mobile App",
+      "project_type_id": "mobile",
+      "root_path": "apps/flutter_app/",
+      "entry_point": "lib/main.dart",
+      "primary_language": "Dart",
+      "primary_framework": "Flutter 3.9",
+      "source_file_count": 85,
+      "test_file_count": 50
+    },
+    {
+      "part_id": "server",
+      "display_name": "Fastify Backend Server",
+      "project_type_id": "backend",
+      "root_path": "apps/server/",
+      "entry_point": "src/index.ts",
+      "primary_language": "TypeScript",
+      "primary_framework": "Fastify 5",
+      "source_file_count": 95,
+      "test_file_count": 89
+    },
+    {
+      "part_id": "web_landing",
+      "display_name": "Static Web Landing Page",
+      "project_type_id": "web",
+      "root_path": "apps/web_landing/",
+      "entry_point": "index.html",
+      "primary_language": "JavaScript",
+      "primary_framework": "Vanilla HTML/CSS/JS",
+      "source_file_count": 5,
+      "test_file_count": 0
+    }
+  ],
+  "integration_points": [
+    {
+      "from": "flutter_app",
+      "to": "server",
+      "type": "REST API",
+      "details": "21 HTTP endpoints for session management, auth, catalog, captures, users"
+    },
+    {
+      "from": "flutter_app",
+      "to": "server",
+      "type": "WebSocket (Socket.IO)",
+      "details": "50+ real-time events for party gameplay, DJ state, reactions, voting"
+    },
+    {
+      "from": "flutter_app",
+      "to": "Firebase",
+      "type": "SDK",
+      "details": "Firebase Auth (Google sign-in), Firebase Storage (media upload)"
+    },
+    {
+      "from": "server",
+      "to": "Firebase Admin",
+      "type": "SDK",
+      "details": "Token verification, signed URL generation for storage"
+    },
+    {
+      "from": "server",
+      "to": "PostgreSQL",
+      "type": "Kysely ORM",
+      "details": "5 tables with JSONB for state, events, summaries"
+    },
+    {
+      "from": "server",
+      "to": "YouTube Data API",
+      "type": "REST",
+      "details": "Playlist import, video metadata, song detection"
+    },
+    {
+      "from": "server",
+      "to": "Spotify Web API",
+      "type": "REST (OAuth2)",
+      "details": "Playlist import with client credentials"
+    },
+    {
+      "from": "server",
+      "to": "YouTube Lounge API",
+      "type": "HTTP long-poll",
+      "details": "TV pairing, queue management, now-playing events"
+    },
+    {
+      "from": "web_landing",
+      "to": "server",
+      "type": "Static serving + REST",
+      "details": "Served by server, fetches session data for share page"
+    }
+  ]
+}
