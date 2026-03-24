@@ -5,3 +5,10 @@ dist
 .turbo
 apps/server/data/
 
+# Firebase config files (contain API keys)
+apps/flutter_app/android/app/google-services.json
+apps/flutter_app/ios/Runner/GoogleService-Info.plist
+
+# Claude Code local settings
+.claude/settings.local.json
+

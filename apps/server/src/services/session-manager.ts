@@ -1651,7 +1651,7 @@ export async function startSession(params: {
   }
 
   const participants = await sessionRepo.getParticipants(params.sessionId);
-  if (participants.length < 1) { // TODO: restore to 3 before release
+  if (participants.length < 3) {
     throw createAppError('INSUFFICIENT_PLAYERS', 'Need at least 3 participants to start', 400);
   }
 

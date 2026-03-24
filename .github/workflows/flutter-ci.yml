@@ -1,0 +1,65 @@
+name: Flutter CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/flutter_app/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/flutter_app/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/flutter_app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.x'
+          channel: stable
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            apps/flutter_app/.dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('apps/flutter_app/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Create CI dart defines
+        run: |
+          cat > dart_defines_ci.json << 'CIEOF'
+          {
+            "SERVER_URL": "http://localhost:3000",
+            "WEB_LANDING_URL": "http://localhost:3000",
+            "FIREBASE_IOS_API_KEY": "ci-fake-key",
+            "FIREBASE_IOS_APP_ID": "1:000000000000:ios:0000000000000000",
+            "FIREBASE_ANDROID_API_KEY": "ci-fake-key",
+            "FIREBASE_ANDROID_APP_ID": "1:000000000000:android:0000000000000000",
+            "FIREBASE_MESSAGING_SENDER_ID": "000000000000",
+            "FIREBASE_PROJECT_ID": "ci-test-project",
+            "FIREBASE_STORAGE_BUCKET": "ci-test-project.firebasestorage.app",
+            "FIREBASE_AUTH_DOMAIN": "ci-test-project.firebaseapp.com",
+            "FIREBASE_IOS_BUNDLE_ID": "com.karamania.ci"
+          }
+          CIEOF
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test --dart-define-from-file=dart_defines_ci.json

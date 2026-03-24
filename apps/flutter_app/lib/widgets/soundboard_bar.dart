@@ -17,7 +17,7 @@ class SoundboardBar extends StatelessWidget {
       key: const Key('soundboard-bar'),
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: soundboardButtons.map((button) {
-        return DJTapButton(
+        return Flexible(child: DJTapButton(
           key: Key('soundboard-${button.soundId}'),
           tier: TapTier.social,
           onTap: () {
@@ -33,7 +33,7 @@ class SoundboardBar extends StatelessWidget {
             button.emoji,
             style: const TextStyle(fontSize: 24),
           ),
-        );
+        ));
       }).toList(),
     );
   }

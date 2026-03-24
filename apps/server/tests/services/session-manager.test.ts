@@ -340,7 +340,7 @@ describe('session-manager', () => {
 
       expect(mockAddParticipantIfNotExists).toHaveBeenCalledWith({
         sessionId: 'session-1',
-        userId: undefined,
+        userId: 'guest-uuid',
         guestName: 'Bob',
       });
     });
