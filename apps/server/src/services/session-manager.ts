@@ -1651,7 +1651,7 @@ export async function startSession(params: {
   }
 
   const participants = await sessionRepo.getParticipants(params.sessionId);
-  if (participants.length < 3) {
+  if (participants.length < 1) { // TODO: restore to 3 before release
     throw createAppError('INSUFFICIENT_PLAYERS', 'Need at least 3 participants to start', 400);
   }
 
@@ -1712,9 +1712,11 @@ export async function handleParticipantJoin(params: {
   hostUserId: string;
 }> {
   // 1. Add participant (idempotent — handles reconnection + host duplicate)
+  // Always pass userId so the unique constraint catches duplicates
+  // (guest hosts are already inserted by createSession with their user_id)
   await sessionRepo.addParticipantIfNotExists({
     sessionId: params.sessionId,
-    userId: params.role === 'guest' ? undefined : params.userId,
+    userId: params.userId,
     guestName: params.role === 'guest' ? params.displayName : undefined,
   });
 

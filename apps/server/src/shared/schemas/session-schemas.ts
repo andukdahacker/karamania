@@ -3,9 +3,9 @@ import { VALID_VIBES } from '../constants.js';
 import { dataResponseSchema } from './common-schemas.js';
 
 export const createSessionRequestSchema = z.object({
-  displayName: z.string().min(1).max(30).optional(),
-  vibe: z.enum(VALID_VIBES).optional(),
-  venueName: z.string().max(100).optional(),
+  displayName: z.string().min(1).max(30).nullable().optional(),
+  vibe: z.enum(VALID_VIBES).nullable().optional(),
+  venueName: z.string().max(100).nullable().optional(),
 });
 z.globalRegistry.add(createSessionRequestSchema, { id: 'CreateSessionRequest' });
 

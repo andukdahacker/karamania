@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:karamania/api/api_service.dart';
+import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/constants/copy.dart';
@@ -14,7 +15,7 @@ class MockApiService extends ApiService {
   ApiException? mockError;
 
   @override
-  Future<PlaylistImportResult> importPlaylist(String playlistUrl, {String? sessionId}) async {
+  Future<PlaylistImportResult> importPlaylist(String playlistUrl, {String? sessionId, String? token}) async {
     if (mockError != null) throw mockError!;
     return mockResult!;
   }
@@ -43,12 +44,14 @@ class MockApiService extends ApiService {
 Widget _wrapWithProviders({
   required PartyProvider partyProvider,
   required ApiService apiService,
+  AuthProvider? authProvider,
 }) {
   return MaterialApp(
     home: MultiProvider(
       providers: [
         ChangeNotifierProvider<PartyProvider>.value(value: partyProvider),
         Provider<ApiService>.value(value: apiService),
+        ChangeNotifierProvider<AuthProvider>.value(value: authProvider ?? AuthProvider()),
       ],
       child: const Scaffold(body: PlaylistImportCard()),
     ),

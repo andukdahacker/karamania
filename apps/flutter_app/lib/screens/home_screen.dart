@@ -39,8 +39,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = context.read<AuthProvider>();
     final timelineProvider = context.read<TimelineProvider>();
     if (authProvider.state == AuthState.authenticatedFirebase &&
-        !_initialLoadTriggered &&
-        timelineProvider.timelineState == LoadingState.idle) {
+        (timelineProvider.timelineState == LoadingState.idle ||
+         timelineProvider.timelineState == LoadingState.loading)) {
       _initialLoadTriggered = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _loadSessions();

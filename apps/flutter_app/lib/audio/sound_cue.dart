@@ -1,6 +1,6 @@
 /// Sound cue identifiers with asset paths and default volume levels.
 ///
-/// Each value maps to an `.opus` file in `assets/sounds/`.
+/// Each value maps to an `.wav` file in `assets/sounds/`.
 enum SoundCue {
   songStart,
   ceremonyStart,
@@ -19,20 +19,20 @@ enum SoundCue {
   sbRecordScratch,
   sbRimshot,
   sbWolfWhistle,
-  // Finale effects (Story 8.2) — maps to ceremony_start.opus as placeholder
+  // Finale effects (Story 8.2) — maps to ceremony_start.wav as placeholder
   finaleAwardReveal;
 
   /// Asset path for this sound cue (snake_case conversion).
   String get assetPath {
-    // finaleAwardReveal reuses ceremony_start.opus as placeholder until dedicated asset exists
+    // finaleAwardReveal reuses ceremony_start.wav as placeholder until dedicated asset exists
     if (this == SoundCue.finaleAwardReveal) {
-      return 'assets/sounds/ceremony_start.opus';
+      return 'assets/sounds/ceremony_start.wav';
     }
     final snakeName = name.replaceAllMapped(
       RegExp(r'[A-Z]'),
       (m) => '_${m.group(0)!.toLowerCase()}',
     );
-    return 'assets/sounds/$snakeName.opus';
+    return 'assets/sounds/$snakeName.wav';
   }
 
   /// Default volume for this cue type.

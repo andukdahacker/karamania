@@ -95,47 +95,52 @@ class ApiService {
     }
   }
 
-  Future<PlaylistImportResult> importPlaylist(String playlistUrl, {String? sessionId}) async {
-    final basePath = _baseUrl.endsWith('/')
-        ? _baseUrl.substring(0, _baseUrl.length - 1)
-        : _baseUrl;
-    final url = Uri.parse('$basePath/api/playlists/import');
-    final bodyMap = <String, dynamic>{'playlistUrl': playlistUrl};
-    if (sessionId != null) {
-      bodyMap['sessionId'] = sessionId;
-    }
-    final request = runtime.HttpRequest(
-      method: 'POST',
-      url: url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(bodyMap),
-    );
-
-    final response = await _chain.send(request);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final data = json['data'] as Map<String, dynamic>;
-      return PlaylistImportResult(
-        tracks: (data['tracks'] as List).map((e) => e as Map<String, dynamic>).toList(),
-        matched: (data['matched'] as List).map((e) => e as Map<String, dynamic>).toList(),
-        unmatchedCount: data['unmatchedCount'] as int,
-        totalFetched: data['totalFetched'] as int,
-      );
-    }
-
+  Future<PlaylistImportResult> importPlaylist(String playlistUrl, {String? sessionId, String? token}) async {
+    _authMiddleware.token = token;
     try {
-      final errorJson = jsonDecode(response.body) as Map<String, dynamic>;
-      final parsed = ErrorResponse.fromJson(errorJson);
-      throw ApiException(
-        code: parsed.error.code,
-        message: parsed.error.message,
+      final basePath = _baseUrl.endsWith('/')
+          ? _baseUrl.substring(0, _baseUrl.length - 1)
+          : _baseUrl;
+      final url = Uri.parse('$basePath/api/playlists/import');
+      final bodyMap = <String, dynamic>{'playlistUrl': playlistUrl};
+      if (sessionId != null) {
+        bodyMap['sessionId'] = sessionId;
+      }
+      final request = runtime.HttpRequest(
+        method: 'POST',
+        url: url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(bodyMap),
       );
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException(
-        code: 'UNKNOWN',
-        message: 'Request failed (status ${response.statusCode})',
-      );
+
+      final response = await _chain.send(request);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = json['data'] as Map<String, dynamic>;
+        return PlaylistImportResult(
+          tracks: (data['tracks'] as List).map((e) => e as Map<String, dynamic>).toList(),
+          matched: (data['matched'] as List).map((e) => e as Map<String, dynamic>).toList(),
+          unmatchedCount: data['unmatchedCount'] as int,
+          totalFetched: data['totalFetched'] as int,
+        );
+      }
+
+      try {
+        final errorJson = jsonDecode(response.body) as Map<String, dynamic>;
+        final parsed = ErrorResponse.fromJson(errorJson);
+        throw ApiException(
+          code: parsed.error.code,
+          message: parsed.error.message,
+        );
+      } catch (e) {
+        if (e is ApiException) rethrow;
+        throw ApiException(
+          code: 'UNKNOWN',
+          message: 'Request failed (status ${response.statusCode})',
+        );
+      }
+    } finally {
+      _authMiddleware.token = null;
     }
   }
 

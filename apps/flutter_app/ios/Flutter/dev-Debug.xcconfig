@@ -1,3 +1,4 @@
 #include "Debug.xcconfig"
 APP_DISPLAY_NAME=Karamania Dev
 PRODUCT_BUNDLE_IDENTIFIER=com.karamania.dev
+FIREBASE_AUTH_URL_SCHEME=app-1-26735432639-ios-a98b492395e1abb56bc70a

@@ -45,6 +45,9 @@ enum PartyVibe {
   final Color glow;
   final Color bg;
   final Color primary;
+
+  /// SVG icon asset path for this vibe.
+  String get iconAsset => 'assets/icons/vibe_${name}.svg';
 }
 
 /// DJ engine states matching server-side state machine.
@@ -86,37 +89,31 @@ Color djStateBackgroundColor(DJState state, PartyVibe vibe) {
 ThemeData createDJTheme({PartyVibe vibe = PartyVibe.general}) {
   const textTheme = TextTheme(
     displayLarge: TextStyle(
-      fontFamily: 'SpaceGrotesk',
       fontSize: 32,
       fontWeight: FontWeight.w700,
       color: DJTokens.textPrimary,
     ),
     titleLarge: TextStyle(
-      fontFamily: 'SpaceGrotesk',
       fontSize: 24,
       fontWeight: FontWeight.w700,
       color: DJTokens.textPrimary,
     ),
     titleMedium: TextStyle(
-      fontFamily: 'SpaceGrotesk',
       fontSize: 16,
       fontWeight: FontWeight.w600,
       color: DJTokens.textPrimary,
     ),
     bodyLarge: TextStyle(
-      fontFamily: 'SpaceGrotesk',
       fontSize: 16,
       fontWeight: FontWeight.w400,
       color: DJTokens.textPrimary,
     ),
     bodySmall: TextStyle(
-      fontFamily: 'SpaceGrotesk',
       fontSize: 12,
       fontWeight: FontWeight.w400,
       color: DJTokens.textSecondary,
     ),
     labelLarge: TextStyle(
-      fontFamily: 'SpaceGrotesk',
       fontSize: 16,
       fontWeight: FontWeight.w700,
       color: DJTokens.textPrimary,

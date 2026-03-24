@@ -14,6 +14,7 @@ import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
 import 'package:karamania/widgets/dj_tap_button.dart';
 import 'package:karamania/widgets/tv_pairing_overlay.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:karamania/widgets/playlist_import_card.dart';
 import 'package:karamania/widgets/reconnecting_banner.dart';
 
@@ -69,7 +70,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final currentVibe = partyProvider.vibe;
     final displayVibe = _previewVibe ?? currentVibe;
     final isHost = partyProvider.isHost;
-    final canStartParty = isHost && partyProvider.participantCount >= 3;
+    final canStartParty = isHost && partyProvider.participantCount >= 1; // TODO: restore to 3 before release
     final scaleFactor = MediaQuery.textScalerOf(context).scale(1.0);
     final horizontalPadding =
         DJTokens.spaceMd * scaleFactor.clamp(1.0, 1.5);
@@ -162,9 +163,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 key: Key('vibe-${vibe.name}'),
                                 tier: TapTier.social,
                                 onTap: () => _onVibeTap(vibe),
-                                child: Text(
-                                  vibeEmojiLabels[vibe]!,
-                                  style: const TextStyle(fontSize: 28),
+                                child: SvgPicture.asset(
+                                  vibe.iconAsset,
+                                  width: 28,
+                                  height: 28,
                                 ),
                               ),
                             );
@@ -328,6 +330,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   ),
                 ),
               ),
+            ),
+          ),
+          // Exit button (on top of scroll content)
+          Positioned(
+            top: DJTokens.spaceSm,
+            left: DJTokens.spaceSm,
+            child: IconButton(
+              key: const Key('leave-lobby-btn'),
+              icon: const Icon(Icons.close, color: DJTokens.textSecondary),
+              onPressed: () {
+                context.read<SocketClient>().disconnect();
+                context.go('/');
+              },
+              tooltip: Copy.leaveParty,
             ),
           ),
           if (partyProvider.connectionStatus == ConnectionStatus.reconnecting)

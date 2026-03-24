@@ -53,9 +53,10 @@ class Copy {
   static const String partyCodeLabel = 'CODE';
   static const String pickYourVibe = 'Pick your vibe';
   static const String pairWithTv = 'Pair with YouTube TV';
-  static const String skipNoTv = 'Skip — no TV';
+  static const String skipNoTv = 'Skip - no TV';
   static const String waitingForGuests = 'Waiting for guests...';
   static const String startParty = 'START PARTY';
+  static const String leaveParty = 'Leave party';
   static const String joined = 'joined';
   static const String shareParty = 'Share';
   static const String sharePartyMessage = 'Join my Karamania party! Code: ';
@@ -329,7 +330,7 @@ class Copy {
   static const String finaleLongestStreakLabel = 'Longest Streak';
   static const String finaleShareButton = 'Share Poster';
   static String finaleShareText(String date, List<String> songs) =>
-      'Karamania Night — $date\n${songs.join('\n')}';
+      'Karamania Night - $date\n${songs.join('\n')}';
 
   // Setlist Poster (Story 8.3)
   static const String setlistPosterNoSongs = 'No songs tonight';

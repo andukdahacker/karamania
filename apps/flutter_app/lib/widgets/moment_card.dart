@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:karamania/constants/copy.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
+import 'package:karamania/widgets/emoji_text.dart';
 
 /// Shareable moment card rendered at 9:16 aspect ratio.
 /// Content: performer name, song title (when available), award, vibe styling.
@@ -46,9 +47,9 @@ class MomentCard extends StatelessWidget {
           children: [
             const Spacer(flex: 2),
             // Confetti emojis
-            Text(
+            EmojiText(
               (vibeConfettiEmojis[vibe] ?? vibeConfettiEmojis[PartyVibe.general]!).join(' '),
-              style: const TextStyle(fontSize: DJTokens.iconSizeLg),
+              fontSize: DJTokens.iconSizeLg,
             ),
             const SizedBox(height: DJTokens.spaceLg),
             // Performer name

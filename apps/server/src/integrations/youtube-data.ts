@@ -40,11 +40,19 @@ export function extractPlaylistId(url: string): string | null {
   }
 }
 
+interface PlaylistPageItem {
+  snippet: {
+    title: string;
+    resourceId: { videoId: string };
+    videoOwnerChannelTitle?: string;
+  };
+}
+
 async function fetchPlaylistPage(
   playlistId: string,
   apiKey: string,
   pageToken?: string,
-): Promise<{ items: Array<{ snippet: { title: string; resourceId: { videoId: string } } }>; nextPageToken?: string }> {
+): Promise<{ items: PlaylistPageItem[]; nextPageToken?: string }> {
   const params = new URLSearchParams({
     part: 'snippet',
     playlistId,
@@ -61,7 +69,7 @@ async function fetchPlaylistPage(
     const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
 
     if (response.ok) {
-      return response.json() as Promise<{ items: Array<{ snippet: { title: string; resourceId: { videoId: string } } }>; nextPageToken?: string }>;
+      return response.json() as Promise<{ items: PlaylistPageItem[]; nextPageToken?: string }>;
     }
 
     if (response.status === 404) {
@@ -162,16 +170,24 @@ export async function fetchPlaylistTracks(playlistId: string, apiKey: string): P
     for (const item of data.items) {
       totalFetched++;
       const parsed = parseKaraokeTitle(item.snippet.title);
-      if (!parsed) {
+      if (parsed) {
+        tracks.push({
+          songTitle: parsed.songTitle,
+          artist: parsed.artist,
+          youtubeVideoId: item.snippet.resourceId.videoId,
+        });
+      } else if (item.snippet.videoOwnerChannelTitle) {
+        // Fallback: use video title as song title and channel as artist
+        // Strip " - Topic" suffix that YouTube Music auto-generated channels use
+        const artist = item.snippet.videoOwnerChannelTitle.replace(/\s*-\s*Topic$/, '');
+        tracks.push({
+          songTitle: item.snippet.title.trim(),
+          artist,
+          youtubeVideoId: item.snippet.resourceId.videoId,
+        });
+      } else {
         unparseable++;
-        continue;
       }
-
-      tracks.push({
-        songTitle: parsed.songTitle,
-        artist: parsed.artist,
-        youtubeVideoId: item.snippet.resourceId.videoId,
-      });
     }
 
     pageToken = data.nextPageToken;

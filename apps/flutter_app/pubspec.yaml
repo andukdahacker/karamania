@@ -27,10 +27,14 @@ dependencies:
   path_provider: ^2.1.5
   connectivity_plus: ^6.1.4
   shared_preferences: ^2.5.3
+  flutter_svg: ^2.0.17
   dart_open_fetch_runtime:
     git:
       url: https://github.com/andukdahacker/dart-open-fetch.git
       path: packages/dart_open_fetch_runtime
+
+dependency_overrides:
+  record_linux: 1.3.0
 
 dev_dependencies:
   flutter_test:
@@ -43,6 +47,7 @@ flutter:
 
   assets:
     - assets/fonts/
+    - assets/icons/
     - assets/sounds/
 
   fonts:

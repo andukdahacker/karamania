@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:karamania/api/api_service.dart';
 import 'package:karamania/constants/copy.dart';
+import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_tokens.dart';
@@ -54,11 +55,13 @@ class _PlaylistImportCardState extends State<PlaylistImportCard> {
 
     final partyProvider = context.read<PartyProvider>();
     final apiService = context.read<ApiService>();
+    final authProvider = context.read<AuthProvider>();
 
     partyProvider.onPlaylistImportStarted();
 
     try {
-      final result = await apiService.importPlaylist(url, sessionId: partyProvider.sessionId);
+      final token = await authProvider.currentToken;
+      final result = await apiService.importPlaylist(url, sessionId: partyProvider.sessionId, token: token);
       partyProvider.onPlaylistImportSuccess(
         result.tracks,
         result.matched,

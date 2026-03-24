@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:karamania/constants/copy.dart';
 import 'package:karamania/theme/dj_theme.dart';
 import 'package:karamania/theme/dj_tokens.dart';
+import 'package:karamania/widgets/emoji_text.dart';
 
 class CeremonyDisplay extends StatefulWidget {
   const CeremonyDisplay({
@@ -139,10 +140,10 @@ class _CeremonyDisplayState extends State<CeremonyDisplay>
           mainAxisSize: MainAxisSize.min,
           children: [
             // Confetti emojis row
-            Text(
+            EmojiText(
               vibeEmojis.join(' '),
               key: const Key('ceremony-confetti'),
-              style: const TextStyle(fontSize: DJTokens.iconSizeLg),
+              fontSize: DJTokens.iconSizeLg,
             ),
             const SizedBox(height: DJTokens.spaceLg),
             if (widget.performerName != null) ...[

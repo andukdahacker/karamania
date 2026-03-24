@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:karamania/widgets/emoji_text.dart';
 
 /// Floating emoji reaction display using implicit animations.
 /// Emoji particles float upward with random horizontal scatter.
@@ -108,9 +109,8 @@ class _ReactionParticleState extends State<_ReactionParticle>
           ),
         );
       },
-      child: Text(
+      child: EmojiText(
         widget.emoji,
-        style: const TextStyle(fontSize: 28),
       ),
     );
   }

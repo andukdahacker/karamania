@@ -3,6 +3,7 @@ import 'package:karamania/constants/copy.dart';
 import 'package:karamania/constants/tap_tiers.dart';
 import 'package:karamania/socket/client.dart';
 import 'package:karamania/theme/dj_theme.dart';
+import 'package:karamania/widgets/emoji_text.dart';
 import 'package:karamania/widgets/dj_tap_button.dart';
 
 /// Row of vibe-specific emoji reaction buttons.
@@ -28,9 +29,9 @@ class ReactionBar extends StatelessWidget {
           key: Key('reaction-emoji-$emoji'),
           tier: TapTier.social,
           onTap: () => SocketClient.instance.emitReaction(emoji),
-          child: Text(
+          child: EmojiText(
             emoji,
-            style: const TextStyle(fontSize: 32),
+            fontSize: 32,
           ),
         );
       }).toList(),
