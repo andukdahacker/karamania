@@ -408,7 +408,7 @@ void main() {
       // This is the exact resolution path used in the listener
       final cue = SoundCue.values.byName(soundId);
       expect(cue, SoundCue.sbAirHorn);
-      expect(cue.assetPath, 'assets/sounds/sb_air_horn.opus');
+      expect(cue.assetPath, 'assets/sounds/sb_air_horn.wav');
     });
 
     test('sound:play listener resolves all 6 soundboard cues correctly', () {

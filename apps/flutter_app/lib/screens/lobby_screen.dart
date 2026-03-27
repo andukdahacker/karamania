@@ -70,7 +70,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final currentVibe = partyProvider.vibe;
     final displayVibe = _previewVibe ?? currentVibe;
     final isHost = partyProvider.isHost;
-    final canStartParty = isHost && partyProvider.participantCount >= 1; // TODO: restore to 3 before release
+    final canStartParty = isHost && partyProvider.participantCount >= 3;
     final scaleFactor = MediaQuery.textScalerOf(context).scale(1.0);
     final horizontalPadding =
         DJTokens.spaceMd * scaleFactor.clamp(1.0, 1.5);

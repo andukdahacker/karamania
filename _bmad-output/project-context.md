@@ -158,8 +158,11 @@ Per-operation, not global (e.g., `playlistImportState`, not `isLoading`).
 - **DJ engine (`dj-engine/`): 100% unit test coverage required** -- all states, transitions, guards, timers, serialization round-trips
 - **Shared factories:** `tests/factories/` -- one per domain object. No inline test data
 - **DB tests:** transaction per test, rolled back after completion
+- **Integration/E2E tests:** Use real server (`tests/helpers/test-server.ts`) + real Socket.io connections (`tests/helpers/bot-client.ts`) + real DB (`tests/helpers/test-db.ts`). Never mock Socket.io for integration tests.
+- **Concurrency tests:** Validate race conditions with parallel bot actions (e.g., 12 simultaneous voters)
 - **DO NOT test:** animations, visual effects, confetti, color values, transition timings
 - **DO test:** state transitions, data flow, event handling, serialization, pure logic
+- **CI:** Server CI (GitHub Actions, Node 24 + PostgreSQL 16) + Flutter CI (GitHub Actions, Flutter 3.32)
 
 ---
 
@@ -234,9 +237,38 @@ dart_open_fetch generate \
 
 # 5. Run Flutter
 cd apps/flutter_app && flutter run --dart-define-from-file=dart_defines_local.json
+
+# 6. Spawn bot participants (for multiplayer testing)
+cd apps/server && npx tsx bots/manager.ts --bots 5 --party AUTO --behavior active
 ```
 
 Firebase Admin SDK gracefully skips initialization in development mode (placeholder credentials in `.env` are fine for local dev without Firebase features).
+
+### Bot System (Local Dev + Testing)
+
+The bot system (`apps/server/bots/`) simulates multiple party participants without physical devices:
+
+- **manager.ts** — CLI to spawn N bots: `npx tsx bots/manager.ts --bots 5 --party AUTO [--behavior active] [--server URL]`
+- **bot-behaviors.ts** — 4 profiles: `passive` (~30s reactions), `active` (~5s + voting), `chaos` (500ms spam + disconnects), `spectator` (logging only)
+- `--party AUTO` finds an active party or creates one; `--party XXXX` joins a specific code
+
+### Test Infrastructure
+
+**Integration/E2E tests** use real Socket.io connections (not mocks):
+- `tests/helpers/bot-client.ts` — Real Socket.io client with typed helpers (`waitForEvent()`, `waitForDjState()`, `sendReaction()`, `castQuickPickVote()`)
+- `tests/helpers/test-server.ts` — Real Fastify + Socket.io server on random port, `resetAllServiceState()` for clean isolation
+- `tests/helpers/test-db.ts` — DB seeding (`seedUser()`, `seedSession()`, `seedParticipant()`) and cleanup
+
+**Test levels:**
+- Unit tests (~80 files) — Mocked services/DB
+- Integration tests (3 files) — Real server + real sockets: party flow, socket lifecycle, auth upgrade
+- E2E tests (1 file) — Multi-bot party lifecycle scenarios
+- Concurrency tests (2 files) — Race conditions: simultaneous reactions, simultaneous voting
+
+**Performance tests** (`k6/`):
+- `party-load.js` — 12 VUs, 5 min, p95 <200ms target
+- `reaction-throughput.js` — 12 VUs, 2 min, broadcast latency stress test
+- Usage: `k6 run k6/party-load.js -e PARTY_CODE=XXXX`
 
 ### Commands
 
@@ -244,6 +276,8 @@ Firebase Admin SDK gracefully skips initialization in development mode (placehol
 - Flutter dev: `cd apps/flutter_app && flutter run --dart-define-from-file=dart_defines_local.json`
 - Server tests: `cd apps/server && npm test`
 - Flutter tests: `cd apps/flutter_app && flutter test`
+- Spawn bots: `cd apps/server && npx tsx bots/manager.ts --bots 5 --party AUTO --behavior active`
+- k6 load test: `k6 run apps/server/k6/party-load.js -e PARTY_CODE=XXXX`
 - Dart type generation: `dart_open_fetch generate --source http://localhost:3000/openapi.json --output apps/flutter_app/lib/api/generated --client-name KaramaniaApiClient`
 - Docker postgres: `docker compose up -d` (from repo root)
 - Server deploy: Railway auto-deploy on push to `main`
@@ -257,4 +291,4 @@ Firebase Admin SDK gracefully skips initialization in development mode (placehol
 - For deeper context on any decision, read the full architecture doc
 - Update this file when patterns change during implementation
 
-Last Updated: 2026-03-08
+Last Updated: 2026-03-25

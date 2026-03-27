@@ -33,7 +33,9 @@ Karamania is a real-time karaoke party companion app that transforms casual kara
 | **Testing (Flutter)** | flutter_test + mocktail | SDK / ^1.0.4 | flutter_app |
 | **Web** | Vanilla HTML/CSS/JS | — | web_landing |
 | **Infrastructure** | Docker Compose (local), Railway (prod) | — | project-wide |
-| **CI/CD** | GitHub Actions | — | server |
+| **CI/CD** | GitHub Actions | — | server + flutter_app |
+| **Bot System** | Custom Node.js bot manager | — | server (local dev + testing) |
+| **Performance Testing** | k6 | — | server (load + stress) |
 
 ## Architecture Classification
 
@@ -52,7 +54,7 @@ karamania/
 │   ├── flutter_app/      # Flutter mobile app (iOS + Android)
 │   ├── server/           # Fastify 5 backend API + Socket.IO
 │   └── web_landing/      # Static landing page + deep linking
-├── .github/workflows/    # CI/CD (server-ci.yml)
+├── .github/workflows/    # CI/CD (server-ci.yml + flutter-ci.yml)
 ├── docker-compose.yml    # Local PostgreSQL 16
 ├── SETUP_AND_DEPLOYMENT.md
 ├── _bmad/                # BMAD workflow tooling
@@ -76,6 +78,6 @@ karamania/
 
 | Part | Source Files | Test Files |
 |------|-------------|------------|
-| **server** | ~95 files in `src/` | ~89 test files in `tests/` |
-| **flutter_app** | ~85 files in `lib/` | ~50 test files in `test/` |
+| **server** | ~95 files in `src/` + 2 bot files | ~90+ test files in `tests/` (unit + integration + E2E + concurrency) |
+| **flutter_app** | ~85 files in `lib/` | ~72 test files in `test/` |
 | **web_landing** | 5 files | — |

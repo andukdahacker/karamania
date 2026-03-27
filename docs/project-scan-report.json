@@ -1,1 +1,56 @@
-{"workflow_version":"1.2.0","timestamps":{"started":"2026-03-24T00:00:00Z","last_updated":"2026-03-24T00:10:00Z","completed":"2026-03-24T00:10:00Z"},"mode":"initial_scan","scan_level":"exhaustive","project_root":"/Users/ducdo/Desktop/code/personal/karamania","output_folder":"/Users/ducdo/Desktop/code/personal/karamania/docs","completed_steps":[{"step":"step_1","status":"completed","timestamp":"2026-03-24T00:01:00Z","summary":"Classified as multi-part monorepo with 3 parts: flutter_app (mobile), server (backend), web_landing (web)"},{"step":"step_2","status":"completed","timestamp":"2026-03-24T00:02:00Z","summary":"Found 4 existing docs: SETUP_AND_DEPLOYMENT.md, flutter README, server-ci.yml, docker-compose.yml. Plus ~80 BMAD planning/implementation artifacts."},{"step":"step_3","status":"completed","timestamp":"2026-03-24T00:03:00Z","summary":"Tech stack: Flutter 3.9 + Fastify 5 + PostgreSQL 16 + Socket.IO + Firebase"},{"step":"step_4","status":"completed","timestamp":"2026-03-24T00:06:00Z","summary":"Exhaustive scan: read all ~200 source files across 7 parallel agents. API: 21 endpoints + 50+ socket events. Data: 5 tables + 20+ in-memory stores. UI: 44 widgets, 8 providers, 6 screens."},{"step":"step_5","status":"completed","timestamp":"2026-03-24T00:07:00Z","summary":"Source tree documented with all critical folders annotated"},{"step":"step_6","status":"completed","timestamp":"2026-03-24T00:07:30Z","summary":"Dev setup and deployment documented from existing SETUP_AND_DEPLOYMENT.md + CI workflow"},{"step":"step_7","status":"completed","timestamp":"2026-03-24T00:08:00Z","summary":"Integration architecture documented: 9 integration points across 3 parts + 5 external services"},{"step":"step_8","status":"completed","timestamp":"2026-03-24T00:08:30Z","summary":"Architecture docs written for 2 parts (server + flutter_app). Web landing is simple static site."},{"step":"step_9","status":"completed","timestamp":"2026-03-24T00:09:00Z","summary":"All supporting docs written: project-overview, source-tree-analysis, component-inventory, development-guide, api-contracts, data-models"},{"step":"step_10","status":"completed","timestamp":"2026-03-24T00:09:30Z","summary":"Master index generated with all links"},{"step":"step_11","status":"completed","timestamp":"2026-03-24T00:10:00Z","summary":"Validation and review complete"},{"step":"step_12","status":"completed","timestamp":"2026-03-24T00:10:00Z","summary":"Workflow complete"}],"current_step":"completed","project_types":[{"part_id":"flutter_app","project_type_id":"mobile","display_name":"Flutter Mobile App"},{"part_id":"server","project_type_id":"backend","display_name":"Fastify Backend Server"},{"part_id":"web_landing","project_type_id":"web","display_name":"Static Web Landing"}],"findings":{"project_classification":"multi-part monorepo, 3 parts, Flutter+Fastify+Static","technology_stack":"Flutter 3.9 on Dart, Fastify 5 on TypeScript, PostgreSQL 16","api_summary":"21 REST endpoints, 50+ Socket.IO events","data_summary":"5 tables, 20+ in-memory stores, JSONB for state/events/summary","ui_summary":"44 widgets, 8 providers, 6 screens, 5 vibes, 8 DJ states"},"outputs_generated":["project-scan-report.json","project-overview.md","source-tree-analysis.md","architecture-server.md","architecture-flutter-app.md","api-contracts-server.md","data-models-server.md","component-inventory-flutter-app.md","development-guide.md","integration-architecture.md","index.md","project-parts.json"],"resume_instructions":"Workflow complete"}
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2026-03-25T00:00:00Z",
+    "last_updated": "2026-03-25T00:15:00Z",
+    "completed": "2026-03-25T00:15:00Z"
+  },
+  "mode": "full_rescan",
+  "scan_level": "deep",
+  "project_root": "/Users/ducdo/Desktop/code/personal/karamania",
+  "output_folder": "/Users/ducdo/Desktop/code/personal/karamania/docs",
+  "completed_steps": [
+    {"step": "step_1", "status": "completed", "timestamp": "2026-03-25T00:01:00Z", "summary": "Classified as multi-part monorepo with 3 parts: flutter_app (mobile), server (backend), web_landing (web)"},
+    {"step": "step_2", "status": "completed", "timestamp": "2026-03-25T00:02:00Z", "summary": "Found 95+ existing docs across docs/, _bmad-output/, root. Plus CI workflows, test design docs."},
+    {"step": "step_3", "status": "completed", "timestamp": "2026-03-25T00:03:00Z", "summary": "Tech stack: Flutter 3.32 + Fastify 5 + PostgreSQL 16 + Socket.IO 4 + Firebase + k6"},
+    {"step": "step_4", "status": "completed", "timestamp": "2026-03-25T00:08:00Z", "summary": "Deep scan: read critical directories. Server: 21 endpoints, 50+ socket events, 36 services, 8 DJ states, 4 repos, bot system (2 files), integration/E2E/concurrency tests (6 files), k6 perf tests (2 files). Flutter: 6 screens, 8 providers, 43 widgets, 72 tests."},
+    {"step": "step_5", "status": "completed", "timestamp": "2026-03-25T00:09:00Z", "summary": "Source tree updated with bots/, k6/, tests/integration/, tests/e2e/, tests/concurrency/, tests/helpers/, flutter-ci.yml"},
+    {"step": "step_6", "status": "completed", "timestamp": "2026-03-25T00:10:00Z", "summary": "Dev guide updated with bot commands, k6 commands, integration test infrastructure, Flutter CI details"},
+    {"step": "step_7", "status": "completed", "timestamp": "2026-03-25T00:11:00Z", "summary": "Integration architecture unchanged (9 integration points)"},
+    {"step": "step_8", "status": "completed", "timestamp": "2026-03-25T00:12:00Z", "summary": "Architecture docs updated: server testing strategy (4 test levels, bot system, k6), Flutter testing (72 tests, CI)"},
+    {"step": "step_9", "status": "completed", "timestamp": "2026-03-25T00:13:00Z", "summary": "Supporting docs updated: project-overview (CI/CD + bot system), project-parts.json (test counts)"},
+    {"step": "step_10", "status": "completed", "timestamp": "2026-03-25T00:14:00Z", "summary": "Index updated: date, Flutter CI link, test docs links, bot quick start step"},
+    {"step": "step_11", "status": "completed", "timestamp": "2026-03-25T00:14:30Z", "summary": "Validation complete, no incomplete docs detected"},
+    {"step": "step_12", "status": "completed", "timestamp": "2026-03-25T00:15:00Z", "summary": "Workflow complete"}
+  ],
+  "current_step": "completed",
+  "project_types": [
+    {"part_id": "flutter_app", "project_type_id": "mobile", "display_name": "Flutter Mobile App"},
+    {"part_id": "server", "project_type_id": "backend", "display_name": "Fastify Backend Server"},
+    {"part_id": "web_landing", "project_type_id": "web", "display_name": "Static Web Landing"}
+  ],
+  "findings": {
+    "project_classification": "multi-part monorepo, 3 parts, Flutter+Fastify+Static",
+    "technology_stack": "Flutter 3.32 on Dart, Fastify 5 on TypeScript, PostgreSQL 16, k6 for perf testing",
+    "api_summary": "21 REST endpoints, 50+ Socket.IO events",
+    "data_summary": "5 tables, 20+ in-memory stores, JSONB for state/events/summary",
+    "ui_summary": "43 widgets, 8 providers, 6 screens, 5 vibes, 8 DJ states",
+    "testing_summary": "Server: 90+ tests (unit + integration + E2E + concurrency), bot system, k6 perf. Flutter: 72 tests. Both have CI.",
+    "new_since_last_scan": "Bot system (manager.ts, bot-behaviors.ts), integration tests (3), E2E tests (1), concurrency tests (2), test helpers (bot-client, test-server, test-db), k6 perf tests (2), Flutter CI workflow"
+  },
+  "outputs_generated": [
+    "project-scan-report.json",
+    "project-overview.md",
+    "source-tree-analysis.md",
+    "architecture-server.md",
+    "architecture-flutter-app.md",
+    "api-contracts-server.md",
+    "data-models-server.md",
+    "component-inventory-flutter-app.md",
+    "development-guide.md",
+    "integration-architecture.md",
+    "index.md",
+    "project-parts.json"
+  ],
+  "resume_instructions": "Workflow complete"
+}

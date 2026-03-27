@@ -3,35 +3,35 @@ import 'package:karamania/audio/sound_cue.dart';
 
 void main() {
   group('SoundCue', () {
-    test('assetPath converts camelCase to snake_case opus path', () {
-      expect(SoundCue.songStart.assetPath, 'assets/sounds/song_start.opus');
+    test('assetPath converts camelCase to snake_case wav path', () {
+      expect(SoundCue.songStart.assetPath, 'assets/sounds/song_start.wav');
       expect(
         SoundCue.ceremonyStart.assetPath,
-        'assets/sounds/ceremony_start.opus',
+        'assets/sounds/ceremony_start.wav',
       );
       expect(
         SoundCue.interludeStart.assetPath,
-        'assets/sounds/interlude_start.opus',
+        'assets/sounds/interlude_start.wav',
       );
       expect(
         SoundCue.partyCardDeal.assetPath,
-        'assets/sounds/party_card_deal.opus',
+        'assets/sounds/party_card_deal.wav',
       );
-      expect(SoundCue.pauseChime.assetPath, 'assets/sounds/pause_chime.opus');
+      expect(SoundCue.pauseChime.assetPath, 'assets/sounds/pause_chime.wav');
       expect(
         SoundCue.resumeChime.assetPath,
-        'assets/sounds/resume_chime.opus',
+        'assets/sounds/resume_chime.wav',
       );
       expect(
         SoundCue.partyJoined.assetPath,
-        'assets/sounds/party_joined.opus',
+        'assets/sounds/party_joined.wav',
       );
       expect(
         SoundCue.countdownTick.assetPath,
-        'assets/sounds/countdown_tick.opus',
+        'assets/sounds/countdown_tick.wav',
       );
-      expect(SoundCue.errorBuzz.assetPath, 'assets/sounds/error_buzz.opus');
-      expect(SoundCue.uiTap.assetPath, 'assets/sounds/ui_tap.opus');
+      expect(SoundCue.errorBuzz.assetPath, 'assets/sounds/error_buzz.wav');
+      expect(SoundCue.uiTap.assetPath, 'assets/sounds/ui_tap.wav');
     });
 
     test('defaultVolume returns correct values per cue type', () {
@@ -50,18 +50,18 @@ void main() {
     test('finaleAwardReveal reuses ceremony_start asset', () {
       expect(
         SoundCue.finaleAwardReveal.assetPath,
-        'assets/sounds/ceremony_start.opus',
+        'assets/sounds/ceremony_start.wav',
       );
       expect(SoundCue.finaleAwardReveal.defaultVolume, 0.8);
     });
 
     test('soundboard cues generate correct asset paths', () {
-      expect(SoundCue.sbAirHorn.assetPath, 'assets/sounds/sb_air_horn.opus');
-      expect(SoundCue.sbCrowdCheer.assetPath, 'assets/sounds/sb_crowd_cheer.opus');
-      expect(SoundCue.sbDrumRoll.assetPath, 'assets/sounds/sb_drum_roll.opus');
-      expect(SoundCue.sbRecordScratch.assetPath, 'assets/sounds/sb_record_scratch.opus');
-      expect(SoundCue.sbRimshot.assetPath, 'assets/sounds/sb_rimshot.opus');
-      expect(SoundCue.sbWolfWhistle.assetPath, 'assets/sounds/sb_wolf_whistle.opus');
+      expect(SoundCue.sbAirHorn.assetPath, 'assets/sounds/sb_air_horn.wav');
+      expect(SoundCue.sbCrowdCheer.assetPath, 'assets/sounds/sb_crowd_cheer.wav');
+      expect(SoundCue.sbDrumRoll.assetPath, 'assets/sounds/sb_drum_roll.wav');
+      expect(SoundCue.sbRecordScratch.assetPath, 'assets/sounds/sb_record_scratch.wav');
+      expect(SoundCue.sbRimshot.assetPath, 'assets/sounds/sb_rimshot.wav');
+      expect(SoundCue.sbWolfWhistle.assetPath, 'assets/sounds/sb_wolf_whistle.wav');
     });
 
     test('all soundboard cues have defaultVolume of 1.0', () {

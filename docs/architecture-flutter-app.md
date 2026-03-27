@@ -224,7 +224,24 @@ Auto-generated from server's OpenAPI spec (`/openapi.json`)
 
 ## Testing
 
-- **~50 test files** mirroring `lib/` structure
+**~72 test files** mirroring `lib/` structure:
+
+| Category | Files | Coverage |
+|----------|-------|----------|
+| State providers | 11 | Party, auth, capture, timeline, session detail, upload, accessibility |
+| Widget tests | 32 | All overlays, buttons, controls, displays, bars |
+| Screen tests | 6 | All 6 screens |
+| Service/API | 3 | Upload queue, media storage, API client |
+| Audio | 3 | Engine, cues, state transitions |
+| Theme/tokens | 3 | DJ theme, tokens, contrast compliance |
+| Models | 5 | Setlist entry, session stats, quick pick, spin wheel, vote tally |
+| Config/routing | 2 | App config, deep links |
+| Constants | 2 | Copy strings, party cards |
+
+**Patterns:**
 - **flutter_test** + **mocktail** for mocking
-- Coverage: state providers, screens, widgets, audio, theme, API, routing, models, constants, services
+- `fake_async` for timer-dependent logic
+- `MultiProvider` test harnesses for widget tests
 - **AppConfig.initializeForTest()** for test-safe configuration
+
+**CI:** GitHub Actions (`.github/workflows/flutter-ci.yml`) — Flutter 3.32.x, `flutter analyze` + `flutter test`, pub dependency caching

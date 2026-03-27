@@ -10,7 +10,7 @@
       "primary_language": "Dart",
       "primary_framework": "Flutter 3.9",
       "source_file_count": 85,
-      "test_file_count": 50
+      "test_file_count": 72
     },
     {
       "part_id": "server",
@@ -20,8 +20,8 @@
       "entry_point": "src/index.ts",
       "primary_language": "TypeScript",
       "primary_framework": "Fastify 5",
-      "source_file_count": 95,
-      "test_file_count": 89
+      "source_file_count": 97,
+      "test_file_count": 96
     },
     {
       "part_id": "web_landing",

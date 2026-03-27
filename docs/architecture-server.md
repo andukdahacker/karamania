@@ -222,11 +222,31 @@ On server startup, `recoverActiveSessions()` reloads active sessions from the da
 
 ## Testing Strategy
 
-- **89 test files** organized by domain (routes, socket-handlers, services, persistence, dj-engine, integrations, shared)
-- **Vitest** with mock-based unit tests + real PostgreSQL integration test (migrations)
-- **Flexible query chain pattern** for Kysely repository mocking
-- **Test factories** for consistent test data generation
-- **CI:** GitHub Actions with PostgreSQL 16 service container, Node 24
+**90+ test files** across 4 test levels:
+
+| Level | Files | Approach | Key Pattern |
+|-------|-------|----------|-------------|
+| **Unit** | ~80 | Vitest + mocks | Flexible query chain for Kysely mocking |
+| **Integration** | 3 | Real Fastify + Socket.io server + bot clients | `test-server.ts` on random port |
+| **E2E** | 1 | Multi-bot party lifecycle scenarios | Real DB + real sockets |
+| **Concurrency** | 2 | Race condition validation (12 simultaneous voters) | Parallel bot actions |
+
+**Test Infrastructure:**
+- `tests/helpers/bot-client.ts` — Real Socket.io client with typed event helpers (`waitForEvent()`, `waitForDjState()`, `sendReaction()`, `castQuickPickVote()`)
+- `tests/helpers/test-server.ts` — Full Fastify + Socket.io server with `resetAllServiceState()` for isolation
+- `tests/helpers/test-db.ts` — Database seeding (`seedUser()`, `seedSession()`, `seedParticipant()`) + cleanup
+- `tests/factories/` — Factories for all domain objects (dj-state, session, user, participant, catalog, media-capture)
+
+**Bot System** (`bots/`):
+- `manager.ts` — CLI tool to spawn N bot participants (`npx tsx bots/manager.ts --bots 5 --party AUTO`)
+- `bot-behaviors.ts` — 4 behavior profiles: passive (~30s reactions), active (~5s reactions + voting), chaos (500ms spam + disconnects), spectator (logging only)
+- Used for both local development and automated E2E testing
+
+**Performance Testing** (`k6/`):
+- `party-load.js` — 12 VUs, 5 min, targets p95 <200ms for state sync + reactions
+- `reaction-throughput.js` — 12 VUs, 2 min, stress test for reaction broadcast latency
+
+**CI:** GitHub Actions with PostgreSQL 16 service container, Node 24
 
 ## Deployment
 

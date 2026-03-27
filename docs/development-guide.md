@@ -64,7 +64,33 @@ cp dart_defines_dev.json.example dart_defines_dev.json
 flutter run --dart-define-from-file=dart_defines_dev.json
 ```
 
-### 4. Web landing (served by server)
+### 4. Bot participants (for multiplayer testing)
+
+```bash
+cd apps/server
+
+# Spawn 5 active bots into a new party
+npx tsx bots/manager.ts --bots 5 --party AUTO --behavior active
+
+# Or join a specific party code
+npx tsx bots/manager.ts --bots 3 --party ABCD
+
+# Stress test with chaos bots
+npx tsx bots/manager.ts --bots 11 --behavior chaos --party AUTO
+```
+
+**Bot behavior profiles:**
+
+| Profile | Description | Use Case |
+|---------|-------------|----------|
+| `passive` | Occasional reactions (~30s) | Baseline participant |
+| `active` | Frequent reactions, votes, accepts cards | Normal engaged user |
+| `chaos` | Rapid actions (500ms), random disconnects | Stress testing |
+| `spectator` | Listen-only, logs events | Debugging |
+
+The bot system eliminates the need for multiple physical devices during local development.
+
+### 5. Web landing (served by server)
 
 The web landing page is served automatically by the server's `web-landing.ts` route from `apps/web_landing/`. No separate setup needed.
 
@@ -117,6 +143,9 @@ The web landing page is served automatically by the server's `web-landing.ts` ro
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run generate-types` | Regenerate Kysely types from DB |
 | `npx kysely migrate:latest` | Run pending migrations |
+| `npx tsx bots/manager.ts --bots N --party CODE` | Spawn bot participants |
+| `k6 run k6/party-load.js -e PARTY_CODE=XXXX` | Run party load test (12 VUs, 5 min) |
+| `k6 run k6/reaction-throughput.js -e PARTY_CODE=XXXX` | Run reaction stress test |
 
 ### Flutter
 
@@ -141,10 +170,12 @@ The web landing page is served automatically by the server's `web-landing.ts` ro
 
 ### Server (Vitest)
 
-89 test files organized by domain:
+90+ test files organized by domain:
+
+**Unit Tests:**
 - `tests/routes/` — 12 REST endpoint tests
 - `tests/socket-handlers/` — 19 real-time event tests
-- `tests/services/` — 35 business logic tests
+- `tests/services/` — 35 business logic tests (including 20 session-manager specializations)
 - `tests/persistence/` — 5 repository tests
 - `tests/dj-engine/` — 4 state machine tests
 - `tests/integrations/` — 4 external API tests
@@ -152,10 +183,28 @@ The web landing page is served automatically by the server's `web-landing.ts` ro
 - `tests/migrations/` — 1 schema test (real PostgreSQL)
 - `tests/factories/` — Test data factory tests
 
+**Integration Tests (real Socket.io + real server):**
+- `tests/integration/party-flow.test.ts` — Full party lifecycle (create → join → play → end)
+- `tests/integration/socket-lifecycle.test.ts` — Connect/disconnect, reconnection, host transfer
+- `tests/integration/auth-upgrade.test.ts` — Guest-to-account upgrade flow
+
+**E2E Tests (multi-bot scenarios):**
+- `tests/e2e/party-lifecycle.e2e.test.ts` — Multiple bots, reactions, voting, ceremonies
+
+**Concurrency Tests (race conditions):**
+- `tests/concurrency/concurrent-reactions.test.ts` — Simultaneous reactions from multiple users
+- `tests/concurrency/concurrent-voting.test.ts` — Simultaneous voting conflicts
+
+**Test Infrastructure:**
+- `tests/helpers/bot-client.ts` — Real Socket.io client wrapper with typed event helpers (`waitForEvent()`, `waitForDjState()`, `sendReaction()`, `castQuickPickVote()`)
+- `tests/helpers/test-server.ts` — Real Fastify + Socket.io server on random port, with `resetAllServiceState()` for clean isolation
+- `tests/helpers/test-db.ts` — Database seeding (`seedUser()`, `seedSession()`, `seedParticipant()`) and cleanup
+- `tests/factories/` — Factories for `dj-state`, `session`, `user`, `participant`, `catalog`, `media-capture`
+
 **Patterns:**
-- Config and DB mocking in every test file
-- Flexible query chain pattern for Kysely mocking
-- Fastify app setup/teardown in route tests
+- Config and DB mocking in unit test files
+- Real server + real Socket.io connections for integration/E2E/concurrency tests
+- Bot client system with tracked event buffers for assertions
 - Test factories: `createTestUser()`, `createTestSession()`, `createTestParticipant()`, `createTestDJContext()`
 
 ### Flutter (flutter_test + mocktail)
@@ -183,11 +232,29 @@ The web landing page is served automatically by the server's `web-landing.ts` ro
 - Node 24, PostgreSQL 16 service container
 - Steps: npm ci → tsc --noEmit → migrate → test → verify codegen
 
-### Flutter CI
+### Flutter CI (GitHub Actions)
 
-Not yet configured. Recommended:
-- Trigger on `apps/flutter_app/**`
-- Steps: flutter analyze → flutter test → flutter build
+`.github/workflows/flutter-ci.yml`:
+- Triggers on push/PR to `apps/flutter_app/**` on main branch
+- Flutter 3.32.x (stable channel)
+- Steps: flutter pub get → flutter analyze → flutter test
+- Caching: Pub dependencies + .dart_tool
+- CI environment: Mock Firebase credentials
+
+## Performance Testing (k6)
+
+Load and stress tests for the real-time server using [k6](https://k6.io/):
+
+| Test | VUs | Duration | Target Metrics |
+|------|-----|----------|----------------|
+| `k6/party-load.js` | 12 | 5 min | Reaction round-trip p95 <200ms, DJ state sync p95 <200ms |
+| `k6/reaction-throughput.js` | 12 | 2 min | Broadcast latency p95 <200ms, >50% success rate, <50 WS errors |
+
+```bash
+# Requires a running server with an active party
+k6 run k6/party-load.js -e PARTY_CODE=ABC123 -e SERVER_URL=http://localhost:3000
+k6 run k6/reaction-throughput.js -e PARTY_CODE=ABC123
+```
 
 ## Deployment
 

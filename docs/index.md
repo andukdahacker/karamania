@@ -1,6 +1,6 @@
 # Karamania — Project Documentation Index
 
-> Generated: 2026-03-24 | Scan: Exhaustive | Mode: Initial Scan
+> Generated: 2026-03-25 | Scan: Deep | Mode: Full Rescan
 
 ## Project Overview
 
@@ -44,7 +44,11 @@
 ## Existing Documentation
 
 - [Setup & Deployment Guide](../SETUP_AND_DEPLOYMENT.md) — Firebase, Railway, signing, deep links, store listings
-- [Server CI](./.github/workflows/server-ci.yml) — GitHub Actions (Node 24, PostgreSQL 16)
+- [Server CI](../.github/workflows/server-ci.yml) — GitHub Actions (Node 24, PostgreSQL 16)
+- [Flutter CI](../.github/workflows/flutter-ci.yml) — GitHub Actions (Flutter 3.32, analyze + test)
+- [Test Design (System-Level)](../_bmad-output/test-design-system.md) — TEA Agent testability review, bot strategy, risk matrix
+- [Test Review](../_bmad-output/test-review.md) — Test quality review and findings
+- [Test Review (Integration Suite)](../_bmad-output/test-review-integration-suite.md) — Integration test suite review
 
 ## Planning Artifacts (BMAD)
 
@@ -65,7 +69,8 @@
 1. **Start PostgreSQL:** `docker compose up -d`
 2. **Server:** `cd apps/server && npm install && cp .env.example .env && npx kysely migrate:latest && npm run dev`
 3. **Flutter:** `cd apps/flutter_app && flutter pub get && flutter run --dart-define-from-file=dart_defines_dev.json`
-4. **Web landing** is served automatically by the server
+4. **Bots (multiplayer testing):** `cd apps/server && npx tsx bots/manager.ts --bots 5 --party AUTO --behavior active`
+5. **Web landing** is served automatically by the server
 
 ### For AI-Assisted Development
 

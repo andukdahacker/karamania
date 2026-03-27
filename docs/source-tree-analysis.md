@@ -215,15 +215,35 @@ karamania/
 │   │   ├── migrations/
 │   │   │   ├── 001-initial-schema.ts  # 5 tables, 8 indexes
 │   │   │   └── 002-session-summary.ts # Add summary JSONB column
-│   │   ├── tests/                     # ~89 test files (Vitest)
-│   │   │   ├── routes/                # 12 route tests
-│   │   │   ├── socket-handlers/       # 19 handler tests
-│   │   │   ├── services/              # 35 service tests
+│   │   ├── bots/                       # 🤖 Bot system for local dev + testing (NEW)
+│   │   │   ├── manager.ts            # CLI bot spawner (--bots N --party CODE --behavior X)
+│   │   │   └── bot-behaviors.ts      # Behavior profiles (passive/active/chaos/spectator)
+│   │   ├── k6/                        # ⚡ k6 performance tests (NEW)
+│   │   │   ├── party-load.js         # 12 VUs, 5 min party simulation (p95 <200ms)
+│   │   │   ├── reaction-throughput.js # 12 VUs, 2 min reaction stress test
+│   │   │   └── helpers/auth.js       # Shared guest auth helper
+│   │   ├── tests/                     # ~90+ test files (Vitest)
+│   │   │   ├── routes/                # 12 REST endpoint tests
+│   │   │   ├── socket-handlers/       # 19 real-time event tests
+│   │   │   ├── services/              # 35 business logic tests
 │   │   │   ├── persistence/           # 5 repository tests
 │   │   │   ├── dj-engine/             # 4 state machine tests
-│   │   │   ├── integrations/          # 4 integration tests
+│   │   │   ├── integrations/          # 4 external API tests
 │   │   │   ├── shared/                # 3 utility tests
 │   │   │   ├── migrations/            # 1 schema test (real DB)
+│   │   │   ├── integration/           # 🆕 Socket integration tests (real server + bots)
+│   │   │   │   ├── party-flow.test.ts        # Full party lifecycle
+│   │   │   │   ├── socket-lifecycle.test.ts  # Connect/disconnect, host transfer
+│   │   │   │   └── auth-upgrade.test.ts      # Guest-to-account upgrade
+│   │   │   ├── e2e/                   # 🆕 End-to-end tests (multi-bot scenarios)
+│   │   │   │   └── party-lifecycle.e2e.test.ts
+│   │   │   ├── concurrency/           # 🆕 Race condition tests
+│   │   │   │   ├── concurrent-reactions.test.ts
+│   │   │   │   └── concurrent-voting.test.ts
+│   │   │   ├── helpers/               # 🆕 Test infrastructure
+│   │   │   │   ├── bot-client.ts     # Real Socket.io client wrapper
+│   │   │   │   ├── test-server.ts    # Real Fastify+Socket.io server
+│   │   │   │   └── test-db.ts        # Database seeding + cleanup
 │   │   │   └── factories/             # Test data factories
 │   │   ├── package.json               # ★ Server dependencies
 │   │   ├── tsconfig.json              # TypeScript config (ES2022, strict)
@@ -242,7 +262,8 @@ karamania/
 │
 ├── .github/
 │   └── workflows/
-│       └── server-ci.yml              # Server CI (Node 24, PostgreSQL 16, Vitest)
+│       ├── server-ci.yml              # Server CI (Node 24, PostgreSQL 16, Vitest)
+│       └── flutter-ci.yml            # Flutter CI (Flutter 3.32, analyze + test)
 ├── docker-compose.yml                 # Local PostgreSQL 16
 ├── SETUP_AND_DEPLOYMENT.md            # Comprehensive deployment guide
 ├── _bmad/                             # BMAD workflow tooling
@@ -262,6 +283,9 @@ karamania/
 | `apps/flutter_app/lib/state/party_provider.dart` | Core party state for Flutter UI | Largest provider |
 | `apps/flutter_app/lib/screens/party_screen.dart` | Main gameplay screen (8 DJ state overlays) | Dynamic rendering |
 | `apps/server/src/shared/schemas/` | 17 Zod schema files defining all API contracts | REST + Socket.IO |
+| `apps/server/bots/` | Bot system for simulating multiplayer parties | `manager.ts`, `bot-behaviors.ts` |
+| `apps/server/tests/helpers/` | Integration test infrastructure (real server + bots) | `bot-client.ts`, `test-server.ts`, `test-db.ts` |
+| `apps/server/k6/` | k6 performance/load tests (12 VU party simulation) | `party-load.js`, `reaction-throughput.js` |
 
 ## Entry Points
 
