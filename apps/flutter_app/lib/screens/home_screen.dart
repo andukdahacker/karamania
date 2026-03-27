@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'package:karamania/api/api_service.dart';
@@ -117,14 +118,31 @@ class _HomeScreenState extends State<HomeScreen> {
     final horizontalPadding =
         DJTokens.spaceMd * scaleFactor.clamp(1.0, 1.5);
 
-    final mascotWidget = Lottie.asset(
-      'assets/images/mascot_animation.json',
-      height: 140,
-      width: 140,
-      repeat: true,
-      animate: !reducedMotion,
-      errorBuilder: (context, error, stackTrace) =>
-          const SizedBox(height: 140, width: 140),
+    final mascotWidget = Center(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: DJTokens.gold.withAlpha(40),
+              blurRadius: 40,
+              spreadRadius: 8,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Lottie.asset(
+            'assets/images/mascot_animation.json',
+            height: 180,
+            width: 180,
+            repeat: true,
+            animate: !reducedMotion,
+            errorBuilder: (context, error, stackTrace) =>
+                const SizedBox(height: 180, width: 180),
+          ),
+        ),
+      ),
     );
 
     final wordmarkWidget = Text(
@@ -135,13 +153,21 @@ class _HomeScreenState extends State<HomeScreen> {
       textAlign: TextAlign.center,
     );
 
+    final taglineWidget = Text(
+      Copy.appTagline,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: DJTokens.textSecondary,
+          ),
+      textAlign: TextAlign.center,
+    );
+
     final createButtonWidget = DJTapButton(
       key: const Key('create-party-btn'),
       tier: TapTier.consequential,
       onTap: () => _onCreateParty(context),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: DJTokens.spaceMd),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: DJTokens.gold,
           borderRadius: BorderRadius.circular(12),
@@ -173,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => context.go('/join'),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: DJTokens.spaceMd),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           border: Border.all(color: DJTokens.gold, width: 2),
           borderRadius: BorderRadius.circular(12),
@@ -201,15 +227,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const SizedBox(height: DJTokens.spaceXl),
+                          const SizedBox(height: DJTokens.spaceMd),
                           mascotWidget,
                           const SizedBox(height: DJTokens.spaceMd),
                           wordmarkWidget,
-                          const SizedBox(height: DJTokens.spaceXl),
+                          const SizedBox(height: DJTokens.spaceXs),
+                          taglineWidget,
+                          const SizedBox(height: DJTokens.spaceLg),
                           createButtonWidget,
-                          const SizedBox(height: DJTokens.spaceMd),
+                          const SizedBox(height: DJTokens.spaceXs),
                           joinButtonWidget,
-                          const SizedBox(height: DJTokens.spaceXl),
+                          const SizedBox(height: DJTokens.spaceLg),
                           if (authProvider.avatarUrl != null)
                             CircleAvatar(
                               key: const Key('user-avatar'),
@@ -262,20 +290,27 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     )
-                  : SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const SizedBox(height: DJTokens.spaceXl),
-                          mascotWidget,
-                          const SizedBox(height: DJTokens.spaceMd),
-                          wordmarkWidget,
-                          const SizedBox(height: DJTokens.spaceXl),
-                          createButtonWidget,
-                          const SizedBox(height: DJTokens.spaceMd),
-                          joinButtonWidget,
-                          const SizedBox(height: DJTokens.spaceXl),
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                mascotWidget,
+                                const SizedBox(height: DJTokens.spaceMd),
+                                wordmarkWidget,
+                                const SizedBox(height: DJTokens.spaceXs),
+                                taglineWidget,
+                                const SizedBox(height: DJTokens.spaceLg),
+                                createButtonWidget,
+                                const SizedBox(height: DJTokens.spaceXs),
+                                joinButtonWidget,
+                                const SizedBox(height: DJTokens.spaceLg),
                           Text(
                             Copy.guestSignInPrompt,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -283,25 +318,51 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: DJTokens.spaceSm),
-                          TextButton(
-                            onPressed: () async {
-                              try {
-                                await authProvider.signInWithGoogle();
-                              } catch (_) {
-                                // Error handled by AuthProvider state
-                              }
-                            },
-                            child: Text(
-                              Copy.signIn,
-                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                    color: Theme.of(context).colorScheme.secondary,
-                                  ),
+                          const SizedBox(height: DJTokens.spaceMd),
+                          Center(
+                            child: GestureDetector(
+                              onTap: () async {
+                                try {
+                                  await authProvider.signInWithGoogle();
+                                } catch (_) {
+                                  // Error handled by AuthProvider state
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: DJTokens.spaceMd,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SvgPicture.asset(
+                                      'assets/icons/google_g.svg',
+                                      width: 20,
+                                      height: 20,
+                                    ),
+                                    const SizedBox(width: DJTokens.spaceSm),
+                                    Text(
+                                      Copy.signIn,
+                                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                            color: const Color(0xFF1F1F1F),
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
+                  );
+                },
+              ),
             ),
           ),
         ),

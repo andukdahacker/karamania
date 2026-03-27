@@ -32,12 +32,13 @@ class Copy {
   Copy._();
 
   static const String appTitle = 'KARAMANIA';
+  static const String appTagline = 'Your karaoke party starts here';
   static const String createParty = 'CREATE PARTY';
   static const String joinParty = 'JOIN PARTY';
   static const String enterYourName = 'Enter your name';
   static const String guestSignInPrompt =
       'Create an account to save your session history';
-  static const String signIn = 'Sign in';
+  static const String signIn = 'Sign in with Google';
   static const String signOut = 'Sign Out';
   static const String defaultUserName = 'User';
   static const String yourSessions = 'Your Sessions';

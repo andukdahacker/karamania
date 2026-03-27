@@ -151,7 +151,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Create an account to save your session history'), findsOneWidget);
-      expect(find.text('Sign in'), findsOneWidget);
+      expect(find.text('Sign in with Google'), findsOneWidget);
     });
 
     testWidgets('renders app title', (tester) async {
@@ -296,7 +296,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Create an account to save your session history'), findsOneWidget);
-      expect(find.text('Sign in'), findsOneWidget);
+      expect(find.text('Sign in with Google'), findsOneWidget);
       // No "Your Sessions" heading for guests
       expect(find.text('Your Sessions'), findsNothing);
     });
