@@ -288,7 +288,7 @@ void main() {
       ));
       await tester.pump();
 
-      expect(find.text('Start your first party!'), findsOneWidget);
+      expect(find.text('Time to make some memories!'), findsOneWidget);
     });
 
     testWidgets('guest user sees sign-in prompt, no timeline', (tester) async {
@@ -374,8 +374,15 @@ void main() {
       ));
       await tester.pump();
 
+      // Scroll down to make session card visible (mascot pushes it below fold)
+      await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -400));
+      await tester.pump();
+
       await tester.tap(find.text('Studio A'));
-      await tester.pumpAndSettle();
+      // Use pump with duration instead of pumpAndSettle — Lottie animation
+      // loops infinitely and prevents settling
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('Session Detail: session-abc'), findsOneWidget);
     });
