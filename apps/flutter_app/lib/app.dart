@@ -36,7 +36,8 @@ final GoRouter _router = GoRouter(
     // Deep link: /?session=SESSION_ID → /session/SESSION_ID
     if (state.matchedLocation == '/' && state.uri.queryParameters.containsKey('session')) {
       final sessionId = state.uri.queryParameters['session'];
-      if (sessionId != null && sessionId.isNotEmpty) {
+      final uuidPattern = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+      if (sessionId != null && uuidPattern.hasMatch(sessionId)) {
         return '/session/$sessionId';
       }
     }

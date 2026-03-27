@@ -600,7 +600,7 @@ class _SessionActions extends StatelessWidget {
   }
 
   void _shareSession() {
-    final shareUrl = '${AppConfig.instance.webLandingUrl}?session=${detail.id}';
+    final shareUrl = '${AppConfig.instance.webLandingUrl}?session=${Uri.encodeComponent(detail.id)}';
     final shareText = Copy.shareSessionMessage(
       venueName: detail.venueName,
       url: shareUrl,

@@ -9,12 +9,6 @@
     return;
   }
 
-  // Set OG URL meta tag
-  var ogUrl = document.querySelector('meta[property="og:url"]');
-  if (ogUrl) {
-    ogUrl.setAttribute('content', window.location.href);
-  }
-
   // Platform detection
   var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
   var isAndroid = /Android/i.test(navigator.userAgent);
@@ -149,6 +143,7 @@
       mediaSection.classList.remove('hidden');
       var grid = document.getElementById('share-media-grid');
       session.mediaUrls.forEach(function (url) {
+        if (typeof url !== 'string' || !url.startsWith('https://')) return;
         var img = document.createElement('img');
         img.src = url;
         img.loading = 'lazy';

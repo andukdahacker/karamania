@@ -10,7 +10,7 @@ import type { SessionSummary } from '../shared/schemas/finale-schemas.js';
 export async function shareRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get<{ Params: { id: string } }>('/api/sessions/:id/share', {
     schema: {
-      params: z.object({ id: z.string() }),
+      params: z.object({ id: z.string().min(1) }),
       response: {
         200: shareSessionResponseSchema,
         404: errorResponseSchema,
@@ -38,27 +38,33 @@ export async function shareRoutes(fastify: FastifyInstance): Promise<void> {
       });
     }
 
-    const summary = JSON.parse(session.summary as string) as SessionSummary;
+    let summary: SessionSummary;
+    try {
+      summary = JSON.parse(session.summary as string) as SessionSummary;
+    } catch {
+      return reply.status(404).send({
+        error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' },
+      });
+    }
 
     // Fetch media captures and generate signed URLs
     const captures = await findMediaBySessionId(sessionId);
-    const mediaUrls: string[] = [];
-    await Promise.all(
-      captures.map(async (capture) => {
+    const mediaUrls = (await Promise.all(
+      captures.map(async (capture): Promise<string | null> => {
         if (capture.storage_path) {
           try {
             const result = await generateDownloadUrl(capture.storage_path);
-            mediaUrls.push(result.url);
+            return result.url;
           } catch (error: unknown) {
             if (error instanceof StorageUnavailableError) {
-              // Filter out captures with unavailable URLs
-              return;
+              return null;
             }
             throw error;
           }
         }
+        return null;
       }),
-    );
+    )).filter((url): url is string => url !== null);
 
     const sessionDurationMs = session.ended_at && session.created_at
       ? new Date(session.ended_at).getTime() - new Date(session.created_at).getTime()
@@ -82,7 +88,14 @@ export async function shareRoutes(fastify: FastifyInstance): Promise<void> {
           participationScore: p.participationScore,
           topAward: p.topAward,
         })),
-        setlist: summary.setlist,
+        setlist: summary.setlist.map((s) => ({
+          position: s.position,
+          title: s.title,
+          artist: s.artist,
+          performerName: s.performerName,
+          awardTitle: s.awardTitle,
+          awardTone: s.awardTone,
+        })),
         mediaUrls,
       },
     });

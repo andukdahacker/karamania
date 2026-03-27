@@ -129,6 +129,17 @@ development_status:
   9-2-guest-to-account-upgrade: done
   9-3-session-timeline-screen: done
   9-4-session-detail-screen: done
-  9-5-session-sharing-and-re-engagement: review
+  9-5-session-sharing-and-re-engagement: done
   9-6-media-linking-and-guest-access: done
   epic-9-retrospective: optional
+
+  # Epic 10: UX Redesign & Brand Identity (7 stories)
+  epic-10: backlog
+  10-1-home-screen-brand-identity: backlog
+  10-2-join-screen-layout-and-input-sizing: backlog
+  10-3-lobby-guest-waiting-and-playlist: backlog
+  10-4-party-screen-song-and-performer: backlog
+  10-5-ceremony-celebration-energy: backlog
+  10-6-branded-custom-dialogs: backlog
+  10-7-color-consistency-party-flow: backlog
+  epic-10-retrospective: optional
