@@ -75,4 +75,89 @@ void main() {
       expect(notifyCount, 4);
     });
   });
+
+  group('PartyProvider removeImportedTrack', () {
+    test('removes track at index and notifies listeners', () {
+      provider.onPlaylistImportSuccess(
+        [
+          {'songTitle': 'Hello', 'artist': 'Adele'},
+          {'songTitle': 'Rolling', 'artist': 'Adele'},
+        ],
+        [
+          {'songTitle': 'Hello', 'artist': 'Adele'},
+        ],
+        1,
+      );
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.removeImportedTrack(0);
+
+      expect(provider.importedTracks.length, 1);
+      expect(provider.importedTracks[0]['songTitle'], 'Rolling');
+      expect(provider.matchedTracks, isEmpty);
+      expect(notifyCount, 1);
+    });
+
+    test('with invalid index does nothing', () {
+      provider.onPlaylistImportSuccess(
+        [{'songTitle': 'Hello', 'artist': 'Adele'}],
+        [],
+        1,
+      );
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.removeImportedTrack(-1);
+      provider.removeImportedTrack(5);
+
+      expect(provider.importedTracks.length, 1);
+      expect(notifyCount, 0);
+    });
+
+    test('removing all tracks resets to idle state', () {
+      provider.onPlaylistImportSuccess(
+        [{'songTitle': 'Hello', 'artist': 'Adele'}],
+        [{'songTitle': 'Hello', 'artist': 'Adele'}],
+        0,
+      );
+
+      provider.removeImportedTrack(0);
+
+      expect(provider.playlistImportState, LoadingState.idle);
+      expect(provider.importedTracks, isEmpty);
+    });
+  });
+
+  group('PartyProvider addManualTrack', () {
+    test('adds track and notifies listeners', () {
+      provider.onPlaylistImportSuccess(
+        [{'songTitle': 'Hello', 'artist': 'Adele'}],
+        [{'songTitle': 'Hello', 'artist': 'Adele'}],
+        0,
+      );
+
+      int notifyCount = 0;
+      provider.addListener(() => notifyCount++);
+
+      provider.addManualTrack('My Song', 'Artist');
+
+      expect(provider.importedTracks.length, 2);
+      expect(provider.importedTracks[1]['songTitle'], 'My Song');
+      expect(provider.importedTracks[1]['artist'], 'Artist');
+      expect(provider.importedTracks[1]['manual'], true);
+      expect(notifyCount, 1);
+    });
+
+    test('sets state to success if not already success', () {
+      expect(provider.playlistImportState, LoadingState.idle);
+
+      provider.addManualTrack('My Song', 'Artist');
+
+      expect(provider.playlistImportState, LoadingState.success);
+      expect(provider.importedTracks.length, 1);
+    });
+  });
 }

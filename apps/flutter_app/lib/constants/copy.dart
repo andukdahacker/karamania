@@ -203,6 +203,17 @@ class Copy {
   static const String hypeSignalButton = 'Hype';
   static const String hypeSignalCooldown = 'Recharging...';
 
+  // Lobby — guest waiting
+  static const String waitingForHost = 'Waiting for host to start...';
+  static const String addSongManually = 'Add song manually';
+  static const String songsImported = 'songs imported';
+  static const String matchedToCatalog = 'matched to catalog';
+  static const String unknownTrackTitle = 'Unknown';
+  static const String unknownTrackArtist = 'Unknown Artist';
+  static const String manualSongTitle = 'Song title';
+  static const String manualSongArtist = 'Artist (optional)';
+  static const String addSong = 'Add';
+
   // Playlist import
   static const String playlistImportTitle = 'Import Playlist';
   static const String playlistImportHint = 'Paste YouTube Music or Spotify playlist URL';

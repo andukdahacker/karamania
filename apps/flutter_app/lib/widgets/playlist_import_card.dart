@@ -6,6 +6,8 @@ import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_tokens.dart';
+import 'package:karamania/constants/tap_tiers.dart';
+import 'package:karamania/widgets/dj_tap_button.dart';
 import 'package:karamania/widgets/spotify_guide.dart';
 
 class PlaylistImportCard extends StatefulWidget {
@@ -17,12 +19,17 @@ class PlaylistImportCard extends StatefulWidget {
 
 class _PlaylistImportCardState extends State<PlaylistImportCard> {
   final _urlController = TextEditingController();
+  final _manualTitleController = TextEditingController();
+  final _manualArtistController = TextEditingController();
   String? _detectedPlatform;
   bool _isPrivateError = false;
+  bool _showManualEntry = false;
 
   @override
   void dispose() {
     _urlController.dispose();
+    _manualTitleController.dispose();
+    _manualArtistController.dispose();
     super.dispose();
   }
 
@@ -110,7 +117,7 @@ class _PlaylistImportCardState extends State<PlaylistImportCard> {
                   borderRadius: BorderRadius.circular(DJTokens.spaceSm),
                 ),
               ),
-              style: TextStyle(color: DJTokens.textPrimary),
+              style: TextStyle(color: DJTokens.textPrimary, fontSize: 14),
             ),
             if (_detectedPlatform != null) ...[
               const SizedBox(height: DJTokens.spaceXs),
@@ -149,12 +156,27 @@ class _PlaylistImportCardState extends State<PlaylistImportCard> {
                   ? SpotifyGuide(onRetry: _onRetryFromGuide)
                   : _buildError()
             else
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  key: const Key('playlist-import-btn'),
-                  onPressed: _detectedPlatform != null ? _onImport : null,
-                  child: const Text(Copy.playlistImportButton),
+              DJTapButton(
+                key: const Key('playlist-import-btn'),
+                tier: TapTier.social,
+                onTap: _detectedPlatform != null ? _onImport : () {},
+                child: Opacity(
+                  opacity: _detectedPlatform != null ? 1.0 : 0.5,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: DJTokens.spaceMd),
+                    decoration: BoxDecoration(
+                      color: DJTokens.actionPrimary,
+                      borderRadius: BorderRadius.circular(DJTokens.spaceSm + DJTokens.spaceXs),
+                    ),
+                    child: Text(
+                      Copy.playlistImportButton,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: DJTokens.textPrimary,
+                          ),
+                    ),
+                  ),
                 ),
               ),
           ],
@@ -163,19 +185,140 @@ class _PlaylistImportCardState extends State<PlaylistImportCard> {
     );
   }
 
+  void _onRemoveTrack(int index) {
+    context.read<PartyProvider>().removeImportedTrack(index);
+  }
+
+  void _onAddManualSong() {
+    setState(() => _showManualEntry = true);
+  }
+
+  void _onSubmitManualSong() {
+    final title = _manualTitleController.text.trim();
+    if (title.isEmpty) return;
+    final artist = _manualArtistController.text.trim();
+    context.read<PartyProvider>().addManualTrack(title, artist);
+    _manualTitleController.clear();
+    _manualArtistController.clear();
+    if (mounted) setState(() => _showManualEntry = false);
+  }
+
   Widget _buildResults(PartyProvider provider) {
+    final tracks = provider.importedTracks;
+    final bodyMedium = Theme.of(context).textTheme.bodyMedium;
+    final bodySmall = Theme.of(context).textTheme.bodySmall;
+    final titleSmall = Theme.of(context).textTheme.titleSmall;
+
     return Column(
+      key: const Key('playlist-import-results'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          Copy.playlistImportResults(
-            provider.importedTracks.length,
-            provider.matchedTracks.length,
-            provider.unmatchedCount,
-          ),
-          key: const Key('playlist-import-results'),
-          style: TextStyle(color: DJTokens.textPrimary),
+          '${tracks.length} ${Copy.songsImported}',
+          key: const Key('playlist-song-count'),
+          style: titleSmall?.copyWith(color: DJTokens.textPrimary),
         ),
+        const SizedBox(height: DJTokens.spaceSm),
+        SizedBox(
+          height: (tracks.length * 56.0).clamp(0, 224.0),
+          child: ListView.builder(
+            itemCount: tracks.length,
+            itemBuilder: (context, index) {
+              final track = tracks[index];
+              return Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          track['songTitle'] ?? Copy.unknownTrackTitle,
+                          style: bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: DJTokens.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          track['artist'] ?? Copy.unknownTrackArtist,
+                          style: bodySmall?.copyWith(
+                            color: DJTokens.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    key: Key('remove-track-$index'),
+                    icon: Icon(Icons.close, size: 18, color: DJTokens.textSecondary),
+                    onPressed: () => _onRemoveTrack(index),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        Text(
+          '${provider.matchedTracks.length} ${Copy.matchedToCatalog}',
+          style: bodySmall?.copyWith(color: DJTokens.textSecondary),
+        ),
+        const SizedBox(height: DJTokens.spaceXs),
+        GestureDetector(
+          key: const Key('add-song-manually'),
+          onTap: _onAddManualSong,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: DJTokens.spaceSm),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, size: 18, color: DJTokens.actionPrimary),
+                SizedBox(width: DJTokens.spaceXs),
+                Text(
+                  Copy.addSongManually,
+                  style: bodySmall?.copyWith(color: DJTokens.actionPrimary),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_showManualEntry) ...[
+          const SizedBox(height: DJTokens.spaceSm),
+          TextField(
+            key: const Key('manual-song-field'),
+            controller: _manualTitleController,
+            decoration: InputDecoration(
+              hintText: Copy.manualSongTitle,
+              hintStyle: TextStyle(color: DJTokens.textSecondary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(DJTokens.spaceSm),
+              ),
+              isDense: true,
+            ),
+            style: TextStyle(color: DJTokens.textPrimary, fontSize: 14),
+          ),
+          const SizedBox(height: DJTokens.spaceXs),
+          TextField(
+            key: const Key('manual-artist-field'),
+            controller: _manualArtistController,
+            decoration: InputDecoration(
+              hintText: Copy.manualSongArtist,
+              hintStyle: TextStyle(color: DJTokens.textSecondary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(DJTokens.spaceSm),
+              ),
+              isDense: true,
+            ),
+            style: TextStyle(color: DJTokens.textPrimary, fontSize: 14),
+          ),
+          const SizedBox(height: DJTokens.spaceXs),
+          GestureDetector(
+            key: const Key('manual-song-submit'),
+            onTap: _onSubmitManualSong,
+            child: Text(
+              Copy.addSong,
+              style: bodySmall?.copyWith(color: DJTokens.actionPrimary),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -189,12 +332,27 @@ class _PlaylistImportCardState extends State<PlaylistImportCard> {
           style: TextStyle(color: DJTokens.actionDanger),
         ),
         const SizedBox(height: DJTokens.spaceSm),
-        ElevatedButton(
+        DJTapButton(
           key: const Key('playlist-retry-btn'),
-          onPressed: () {
+          tier: TapTier.social,
+          onTap: () {
             context.read<PartyProvider>().resetPlaylistImport();
           },
-          child: const Text(Copy.playlistImportRetry),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: DJTokens.spaceMd),
+            decoration: BoxDecoration(
+              color: DJTokens.actionPrimary,
+              borderRadius: BorderRadius.circular(DJTokens.spaceSm + DJTokens.spaceXs),
+            ),
+            child: Text(
+              Copy.playlistImportRetry,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: DJTokens.textPrimary,
+                  ),
+            ),
+          ),
         ),
       ],
     );

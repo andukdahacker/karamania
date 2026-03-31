@@ -998,6 +998,38 @@ class PartyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void removeImportedTrack(int index) {
+    if (index >= 0 && index < _importedTracks.length) {
+      final removed = _importedTracks[index];
+      _importedTracks = List.from(_importedTracks)..removeAt(index);
+      _matchedTracks = List.from(_matchedTracks)
+        ..removeWhere(
+          (m) =>
+              m['songTitle'] == removed['songTitle'] &&
+              m['artist'] == removed['artist'],
+        );
+      _unmatchedCount = _importedTracks.length - _matchedTracks.length;
+      if (_importedTracks.isEmpty) {
+        _playlistImportState = LoadingState.idle;
+      }
+      notifyListeners();
+    }
+  }
+
+  void addManualTrack(String songTitle, String artist) {
+    _importedTracks = List.from(_importedTracks)
+      ..add({
+        'songTitle': songTitle,
+        'artist': artist,
+        'manual': true,
+      });
+    _unmatchedCount = _importedTracks.length - _matchedTracks.length;
+    if (_playlistImportState != LoadingState.success) {
+      _playlistImportState = LoadingState.success;
+    }
+    notifyListeners();
+  }
+
   void resetPlaylistImport() {
     _playlistImportState = LoadingState.idle;
     _importedTracks = [];

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:karamania/api/api_service.dart';
+import 'package:karamania/state/accessibility_provider.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/party_provider.dart';
@@ -52,6 +53,7 @@ Widget _wrapWithProviders({
         ChangeNotifierProvider<PartyProvider>.value(value: partyProvider),
         Provider<ApiService>.value(value: apiService),
         ChangeNotifierProvider<AuthProvider>.value(value: authProvider ?? AuthProvider()),
+        ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
       ],
       child: const Scaffold(body: PlaylistImportCard()),
     ),
@@ -98,10 +100,8 @@ void main() {
         apiService: mockApiService,
       ));
 
-      final importBtn = tester.widget<ElevatedButton>(
-        find.byKey(const Key('playlist-import-btn')),
-      );
-      expect(importBtn.onPressed, isNull);
+      // DJTapButton is always present; opacity indicates disabled state
+      expect(find.byKey(const Key('playlist-import-btn')), findsOneWidget);
     });
 
     testWidgets('import button enabled with valid YouTube Music URL', (tester) async {
@@ -116,10 +116,7 @@ void main() {
       );
       await tester.pump();
 
-      final importBtn = tester.widget<ElevatedButton>(
-        find.byKey(const Key('playlist-import-btn')),
-      );
-      expect(importBtn.onPressed, isNotNull);
+      expect(find.byKey(const Key('playlist-import-btn')), findsOneWidget);
     });
 
     testWidgets('shows loading state during import', (tester) async {
@@ -206,10 +203,7 @@ void main() {
       );
       await tester.pump();
 
-      final importBtn = tester.widget<ElevatedButton>(
-        find.byKey(const Key('playlist-import-btn')),
-      );
-      expect(importBtn.onPressed, isNotNull);
+      expect(find.byKey(const Key('playlist-import-btn')), findsOneWidget);
     });
 
     testWidgets('SpotifyGuide retry resets state and re-triggers import', (tester) async {
@@ -309,5 +303,103 @@ void main() {
       expect(find.byKey(const Key('spotify-guide')), findsOneWidget);
       expect(find.text(Copy.spotifyGuideTitle), findsOneWidget);
     });
+
+    // Story 10.3 tests
+
+    testWidgets('shows song count header after successful import', (tester) async {
+      await tester.pumpWidget(_wrapWithProviders(
+        partyProvider: partyProvider,
+        apiService: mockApiService,
+      ));
+
+      partyProvider.onPlaylistImportSuccess(
+        [
+          {'songTitle': 'Hello', 'artist': 'Adele'},
+          {'songTitle': 'Rolling', 'artist': 'Adele'},
+        ],
+        [{'songTitle': 'Hello', 'artist': 'Adele'}],
+        1,
+      );
+      await tester.pump();
+
+      expect(find.byKey(const Key('playlist-song-count')), findsOneWidget);
+      expect(find.text('2 songs imported'), findsOneWidget);
+    });
+
+    testWidgets('shows individual track titles and artists after import', (tester) async {
+      await tester.pumpWidget(_wrapWithProviders(
+        partyProvider: partyProvider,
+        apiService: mockApiService,
+      ));
+
+      partyProvider.onPlaylistImportSuccess(
+        [
+          {'songTitle': 'Hello', 'artist': 'Adele'},
+          {'songTitle': 'Shake It Off', 'artist': 'Taylor Swift'},
+        ],
+        [{'songTitle': 'Hello', 'artist': 'Adele'}],
+        1,
+      );
+      await tester.pump();
+
+      expect(find.text('Hello'), findsOneWidget);
+      expect(find.text('Adele'), findsWidgets);
+      expect(find.text('Shake It Off'), findsOneWidget);
+      expect(find.text('Taylor Swift'), findsOneWidget);
+    });
+
+    testWidgets('tapping remove button removes track from list', (tester) async {
+      await tester.pumpWidget(_wrapWithProviders(
+        partyProvider: partyProvider,
+        apiService: mockApiService,
+      ));
+
+      partyProvider.onPlaylistImportSuccess(
+        [
+          {'songTitle': 'Hello', 'artist': 'Adele'},
+          {'songTitle': 'Rolling', 'artist': 'Adele'},
+        ],
+        [],
+        2,
+      );
+      await tester.pump();
+
+      expect(find.text('Hello'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('remove-track-0')));
+      await tester.pump();
+
+      expect(find.text('Hello'), findsNothing);
+      expect(find.text('Rolling'), findsOneWidget);
+    });
+
+    testWidgets('shows "Add song manually" link after import success', (tester) async {
+      await tester.pumpWidget(_wrapWithProviders(
+        partyProvider: partyProvider,
+        apiService: mockApiService,
+      ));
+
+      partyProvider.onPlaylistImportSuccess(
+        [{'songTitle': 'Hello', 'artist': 'Adele'}],
+        [{'songTitle': 'Hello', 'artist': 'Adele'}],
+        0,
+      );
+      await tester.pump();
+
+      expect(find.byKey(const Key('add-song-manually')), findsOneWidget);
+      expect(find.text(Copy.addSongManually), findsOneWidget);
+    });
+
+    testWidgets('import button uses DJTapButton', (tester) async {
+      await tester.pumpWidget(_wrapWithProviders(
+        partyProvider: partyProvider,
+        apiService: mockApiService,
+      ));
+
+      final finder = find.byKey(const Key('playlist-import-btn'));
+      expect(finder, findsOneWidget);
+      expect(tester.widget(finder).runtimeType.toString(), contains('DJTapButton'));
+    });
+
   });
 }

@@ -16,6 +16,7 @@ import 'package:karamania/widgets/dj_tap_button.dart';
 import 'package:karamania/widgets/tv_pairing_overlay.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:karamania/widgets/playlist_import_card.dart';
+import 'package:karamania/state/accessibility_provider.dart';
 import 'package:karamania/widgets/reconnecting_banner.dart';
 
 const double _qrSize = 280.0;
@@ -29,15 +30,66 @@ class LobbyScreen extends StatefulWidget {
   State<LobbyScreen> createState() => _LobbyScreenState();
 }
 
-class _LobbyScreenState extends State<LobbyScreen> {
+class _LobbyScreenState extends State<LobbyScreen>
+    with SingleTickerProviderStateMixin {
   PartyVibe? _previewVibe;
   Timer? _previewTimer;
   bool _hasNavigatedToParty = false;
+  AnimationController? _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    final isHost = context.read<PartyProvider>().isHost;
+    if (!isHost) {
+      final reducedMotion =
+          context.read<AccessibilityProvider>().reducedMotion;
+      if (!reducedMotion) {
+        _pulseController = AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 1500),
+        )..repeat(reverse: true);
+      }
+    }
+  }
 
   @override
   void dispose() {
     _previewTimer?.cancel();
+    _pulseController?.dispose();
     super.dispose();
+  }
+
+  Widget _buildWaitingForHostIndicator(BuildContext context) {
+    final child = Row(
+      key: const Key('waiting-for-host-indicator'),
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.hourglass_bottom, color: DJTokens.textSecondary, size: 20),
+        SizedBox(width: DJTokens.spaceSm),
+        Flexible(
+          child: Text(
+            Copy.waitingForHost,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DJTokens.textSecondary,
+                ),
+          ),
+        ),
+      ],
+    );
+
+    if (_pulseController != null) {
+      return AnimatedBuilder(
+        animation: _pulseController!,
+        builder: (context, child) => Opacity(
+          opacity: 0.4 + (_pulseController!.value * 0.6),
+          child: child,
+        ),
+        child: child,
+      );
+    }
+    return child;
   }
 
   void _onVibeTap(PartyVibe tappedVibe) {
@@ -259,7 +311,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                       ),
-                      if (partyProvider.participantCount < 3) ...[
+                      if (!isHost) ...[
+                        const SizedBox(height: DJTokens.spaceXs),
+                        Semantics(
+                          liveRegion: true,
+                          child: _buildWaitingForHostIndicator(context),
+                        ),
+                      ],
+                      if (isHost && partyProvider.participantCount < 3) ...[
                         const SizedBox(height: DJTokens.spaceXs),
                         Text(
                           Copy.waitingForGuests,

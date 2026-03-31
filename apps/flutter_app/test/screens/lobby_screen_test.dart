@@ -2,12 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:karamania/api/api_service.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/screens/lobby_screen.dart';
 import 'package:karamania/socket/client.dart';
 import 'package:karamania/state/accessibility_provider.dart';
+import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
+
+class _MockApiService extends ApiService {
+  _MockApiService() : super(baseUrl: 'http://localhost:3000');
+
+  @override
+  Future<PlaylistImportResult> importPlaylist(String playlistUrl,
+      {String? sessionId, String? token}) async {
+    return const PlaylistImportResult(
+      tracks: [],
+      matched: [],
+      unmatchedCount: 0,
+      totalFetched: 0,
+    );
+  }
+}
 
 Widget _wrapWithProviders(Widget child, {PartyProvider? partyProvider}) {
   final provider = partyProvider ??
@@ -18,6 +35,8 @@ Widget _wrapWithProviders(Widget child, {PartyProvider? partyProvider}) {
       ChangeNotifierProvider<PartyProvider>.value(value: provider),
       ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
       Provider<SocketClient>(create: (_) => SocketClient.instance),
+      Provider<ApiService>.value(value: _MockApiService()),
+      ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()),
     ],
     child: MediaQuery(
       data: const MediaQueryData(),
@@ -302,6 +321,39 @@ void main() {
       await tester.pump();
 
       expect(find.byKey(const Key('reconnecting-banner')), findsNothing);
+    });
+
+    // Story 10.3 tests
+
+    testWidgets('guest sees waiting-for-host indicator', (tester) async {
+      final guestProvider = PartyProvider()
+        ..onPartyJoined(
+          sessionId: 'session-1',
+          partyCode: 'ROCK',
+          vibe: PartyVibe.rock,
+        );
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const LobbyScreen(), partyProvider: guestProvider));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byKey(const Key('waiting-for-host-indicator')), findsOneWidget);
+      expect(find.text('Waiting for host to start...'), findsOneWidget);
+    });
+
+    testWidgets('host does NOT see waiting-for-host indicator', (tester) async {
+      await tester.pumpWidget(_wrapWithProviders(const LobbyScreen()));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byKey(const Key('waiting-for-host-indicator')), findsNothing);
+    });
+
+    testWidgets('host still sees "Waiting for guests..." with < 3 participants (regression)',
+        (tester) async {
+      await tester.pumpWidget(_wrapWithProviders(const LobbyScreen()));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Waiting for guests...'), findsOneWidget);
     });
   });
 }
