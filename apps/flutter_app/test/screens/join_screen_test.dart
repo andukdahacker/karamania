@@ -22,6 +22,18 @@ import 'package:karamania/state/capture_provider.dart';
 import 'package:karamania/state/timeline_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 
+/// Fake AuthProvider that can simulate Firebase auth without a real Firebase User.
+class _FakeFirebaseAuthProvider extends AuthProvider {
+  final String _fakeName;
+  _FakeFirebaseAuthProvider(this._fakeName);
+
+  @override
+  AuthState get state => AuthState.authenticatedFirebase;
+
+  @override
+  String? get displayName => _fakeName;
+}
+
 class _MockHttpAdapter implements HttpAdapter {
   _MockHttpAdapter(this._handler);
   final Future<HttpResponse> Function(HttpRequest) _handler;
@@ -88,6 +100,14 @@ Widget _wrapWithRouter({String initialLocation = '/join', HttpAdapter? adapter})
   );
 }
 
+/// Helper to enter a 4-character code into the individual code boxes.
+Future<void> _enterCode(WidgetTester tester, String code) async {
+  for (int i = 0; i < code.length && i < 4; i++) {
+    await tester.enterText(find.byKey(Key('party-code-$i')), code[i]);
+    await tester.pump();
+  }
+}
+
 /// Simulates a consequential-tier tap (500ms hold to confirm).
 Future<void> _consequentialTap(WidgetTester tester, Finder finder) async {
   final center = tester.getCenter(finder);
@@ -107,11 +127,15 @@ void main() {
   });
 
   group('JoinScreen', () {
-    testWidgets('renders party code input field', (tester) async {
+    testWidgets('renders party code input area', (tester) async {
       await tester.pumpWidget(_wrap(const JoinScreen()));
       await tester.pump();
 
       expect(find.byKey(const Key('party-code-input')), findsOneWidget);
+      // Verify all 4 individual code boxes exist
+      for (int i = 0; i < 4; i++) {
+        expect(find.byKey(Key('party-code-$i')), findsOneWidget);
+      }
     });
 
     testWidgets('renders display name input field', (tester) async {
@@ -128,13 +152,76 @@ void main() {
       expect(find.byKey(const Key('join-party-submit-btn')), findsOneWidget);
     });
 
+    testWidgets('renders helper text below code boxes', (tester) async {
+      await tester.pumpWidget(_wrap(const JoinScreen()));
+      await tester.pump();
+
+      expect(find.text(Copy.partyCodeHint), findsOneWidget);
+    });
+
+    testWidgets('renders back arrow button', (tester) async {
+      await tester.pumpWidget(_wrapWithRouter());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('join-back-btn')), findsOneWidget);
+    });
+
     testWidgets('pre-fills code when initialCode is provided', (tester) async {
       await tester.pumpWidget(_wrap(const JoinScreen(initialCode: 'VIBE')));
       await tester.pump();
 
-      final textField = tester.widget<TextField>(
-          find.byKey(const Key('party-code-input')));
-      expect(textField.controller!.text, 'VIBE');
+      // Each box should have one character
+      for (int i = 0; i < 4; i++) {
+        final textField = tester.widget<TextField>(
+            find.byKey(Key('party-code-$i')));
+        expect(textField.controller!.text, 'VIBE'[i]);
+      }
+    });
+
+    testWidgets('auto-advance focus moves to next box on character entry',
+        (tester) async {
+      await tester.pumpWidget(_wrap(const JoinScreen()));
+      await tester.pump();
+
+      await tester.enterText(find.byKey(const Key('party-code-0')), 'V');
+      await tester.pump();
+
+      // Focus should have moved to box 1
+      final focusNode1 = tester.widget<TextField>(
+          find.byKey(const Key('party-code-1')));
+      expect(focusNode1.focusNode!.hasFocus, isTrue);
+    });
+
+    testWidgets('backspace moves focus to previous box', (tester) async {
+      await tester.pumpWidget(_wrap(const JoinScreen(initialCode: 'VI')));
+      await tester.pump();
+
+      // Focus box 1, clear it
+      await tester.tap(find.byKey(const Key('party-code-1')));
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('party-code-1')), '');
+      await tester.pump();
+
+      // Focus should have moved back to box 0
+      final focusNode0 = tester.widget<TextField>(
+          find.byKey(const Key('party-code-0')));
+      expect(focusNode0.focusNode!.hasFocus, isTrue);
+    });
+
+    testWidgets('paste distributes across all 4 boxes', (tester) async {
+      await tester.pumpWidget(_wrap(const JoinScreen()));
+      await tester.pump();
+
+      // Simulate paste into first box (enters multiple chars)
+      await tester.enterText(find.byKey(const Key('party-code-0')), 'VIBE');
+      await tester.pump();
+
+      // All 4 boxes should be filled
+      for (int i = 0; i < 4; i++) {
+        final textField = tester.widget<TextField>(
+            find.byKey(Key('party-code-$i')));
+        expect(textField.controller!.text, 'VIBE'[i]);
+      }
     });
 
     testWidgets('join button is disabled (opacity 0.5) when code is empty',
@@ -156,8 +243,10 @@ void main() {
       await tester.pumpWidget(_wrap(const JoinScreen()));
       await tester.pump();
 
-      await tester.enterText(
-          find.byKey(const Key('party-code-input')), 'AB');
+      // Only fill 2 of 4 boxes
+      await tester.enterText(find.byKey(const Key('party-code-0')), 'A');
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('party-code-1')), 'B');
       await tester.pump();
 
       final opacityFinder = find.ancestor(
@@ -226,15 +315,16 @@ void main() {
       expect(find.text(Copy.joiningParty), findsOneWidget);
     });
 
-    testWidgets('back to home button navigates to home screen',
-        (tester) async {
+    testWidgets('back arrow navigates to home screen', (tester) async {
       await tester.pumpWidget(_wrapWithRouter());
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(JoinScreen), findsOneWidget);
 
-      await tester.tap(find.text('Back to home'));
-      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('join-back-btn')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(HomeScreen), findsOneWidget);
     });
@@ -331,9 +421,6 @@ void main() {
 
     testWidgets('_onJoin navigates to /party when sessionStatus is active',
         (tester) async {
-      // Test routing config: /party route is reachable from /join
-      // The _onJoin logic calls context.go('/party') when status == 'active'
-      // We verify the route exists and shows the right screen
       final partyProvider = PartyProvider()
         ..onPartyJoined(
           sessionId: 'session-1',
@@ -376,10 +463,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Verify sessionStatus is 'active' (as it would be after joinParty)
       expect(partyProvider.sessionStatus, 'active');
 
-      // Programmatically navigate as _onJoin would
       router.go('/party');
       await tester.pumpAndSettle();
 
@@ -398,10 +483,8 @@ void main() {
       await tester.pumpWidget(_wrapWithRouter());
       await tester.pumpAndSettle();
 
-      // Verify sessionStatus is 'lobby' (as it would be after joinParty)
       expect(partyProvider.sessionStatus, 'lobby');
 
-      // Programmatically navigate as _onJoin would — verify /lobby route works
       final element = tester.element(find.byType(JoinScreen));
       GoRouter.of(element).go('/lobby');
       await tester.pumpAndSettle();
@@ -409,9 +492,34 @@ void main() {
       expect(find.byType(LobbyScreen), findsOneWidget);
     });
 
+    testWidgets(
+        'firebase-authenticated user sees read-only name instead of text field',
+        (tester) async {
+      final authProvider = _FakeFirebaseAuthProvider('FirebaseUser');
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => PartyProvider()),
+            ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
+            ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
+            Provider<SocketClient>(create: (_) => SocketClient.instance),
+            Provider<ApiService>(
+                create: (_) => ApiService(baseUrl: 'http://localhost')),
+          ],
+          child: const MaterialApp(home: JoinScreen()),
+        ),
+      );
+      await tester.pump();
+
+      // Should NOT show editable name input
+      expect(find.byKey(const Key('display-name-input')), findsNothing);
+      // Should show the Firebase display name as read-only text
+      expect(find.text('FirebaseUser'), findsOneWidget);
+    });
+
     testWidgets('guest-authenticated user still sees name input',
         (tester) async {
-      // Guest auth sets displayName but state is authenticatedGuest, not Firebase
       final authProvider = AuthProvider();
       authProvider.onGuestAuthenticated('token', 'guest-1', 'GuestUser');
 
@@ -430,8 +538,19 @@ void main() {
       );
       await tester.pump();
 
-      // Name input should be visible (not Firebase-authenticated)
       expect(find.byKey(const Key('display-name-input')), findsOneWidget);
+    });
+
+    testWidgets('accessibility labels exist on code boxes', (tester) async {
+      await tester.pumpWidget(_wrap(const JoinScreen()));
+      await tester.pump();
+
+      for (int i = 0; i < 4; i++) {
+        expect(
+          find.bySemanticsLabel('Party code digit ${i + 1} of 4'),
+          findsOneWidget,
+        );
+      }
     });
   });
 }

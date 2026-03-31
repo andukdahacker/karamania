@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:karamania/api/api_service.dart';
@@ -13,6 +12,7 @@ import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/constants/tap_tiers.dart';
 import 'package:karamania/theme/dj_tokens.dart';
 import 'package:karamania/widgets/dj_tap_button.dart';
+import 'package:karamania/widgets/party_code_input.dart';
 
 class JoinScreen extends StatefulWidget {
   const JoinScreen({super.key, this.initialCode});
@@ -23,19 +23,18 @@ class JoinScreen extends StatefulWidget {
 }
 
 class _JoinScreenState extends State<JoinScreen> {
-  late final TextEditingController _codeController;
   late final TextEditingController _nameController;
+  String _currentCode = '';
   String? _errorMessage;
 
   bool get _canJoin =>
-      _codeController.text.length == 4 &&
+      _currentCode.length == 4 &&
       _nameController.text.trim().isNotEmpty;
 
   @override
   void initState() {
     super.initState();
-    _codeController = TextEditingController(text: widget.initialCode ?? '');
-    _codeController.addListener(() => setState(() {}));
+    _currentCode = (widget.initialCode ?? '').toUpperCase();
 
     // If user is Firebase-authenticated with a display name, pre-fill it
     final authProvider = context.read<AuthProvider>();
@@ -48,7 +47,6 @@ class _JoinScreenState extends State<JoinScreen> {
 
   @override
   void dispose() {
-    _codeController.dispose();
     _nameController.dispose();
     super.dispose();
   }
@@ -63,17 +61,17 @@ class _JoinScreenState extends State<JoinScreen> {
         partyProvider: context.read<PartyProvider>(),
         serverUrl: AppConfig.instance.serverUrl,
         displayName: _nameController.text.trim(),
-        partyCode: _codeController.text.toUpperCase(),
+        partyCode: _currentCode,
         captureProvider: context.read<CaptureProvider>(),
       );
       if (mounted) {
-          final status = context.read<PartyProvider>().sessionStatus;
-          if (status == 'active') {
-            context.go('/party');
-          } else {
-            context.go('/lobby');
-          }
+        final status = context.read<PartyProvider>().sessionStatus;
+        if (status == 'active') {
+          context.go('/party');
+        } else {
+          context.go('/lobby');
         }
+      }
     } on ApiException catch (e) {
       if (mounted) {
         setState(() {
@@ -99,41 +97,46 @@ class _JoinScreenState extends State<JoinScreen> {
     final partyProvider = context.watch<PartyProvider>();
     final authProvider = context.watch<AuthProvider>();
     final isLoading = partyProvider.joinPartyLoading == LoadingState.loading;
-    final hasFirebaseName = authProvider.state == AuthState.authenticatedFirebase &&
-        authProvider.displayName != null &&
-        authProvider.displayName!.isNotEmpty;
+    final hasFirebaseName =
+        authProvider.state == AuthState.authenticatedFirebase &&
+            authProvider.displayName != null &&
+            authProvider.displayName!.isNotEmpty;
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          key: const Key('join-back-btn'),
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/'),
+        ),
+      ),
       body: SafeArea(
-        child: Center(
+        child: Align(
+          alignment: const Alignment(0, -0.3),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 428),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: DJTokens.spaceMd),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: DJTokens.spaceMd),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(Copy.joinParty, style: Theme.of(context).textTheme.headlineMedium),
+                  Text(Copy.joinParty,
+                      style: Theme.of(context).textTheme.headlineMedium),
                   const SizedBox(height: DJTokens.spaceLg),
-                  TextField(
-                    key: const Key('party-code-input'),
-                    controller: _codeController,
-                    maxLength: 4,
-                    textAlign: TextAlign.center,
-                    textCapitalization: TextCapitalization.characters,
-                    style: Theme.of(context).textTheme.displayMedium,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-                    ],
-                    decoration: const InputDecoration(
-                      hintText: Copy.enterPartyCode,
-                      counterText: '',
-                    ),
+                  PartyCodeInput(
+                    initialCode: widget.initialCode,
+                    onCodeChanged: (code) {
+                      setState(() => _currentCode = code);
+                    },
                   ),
                   const SizedBox(height: DJTokens.spaceMd),
                   if (hasFirebaseName)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: DJTokens.spaceMd),
+                      padding:
+                          const EdgeInsets.only(bottom: DJTokens.spaceMd),
                       child: Text(
                         authProvider.displayName!,
                         style: Theme.of(context).textTheme.bodyLarge,
@@ -141,12 +144,14 @@ class _JoinScreenState extends State<JoinScreen> {
                     )
                   else
                     Padding(
-                      padding: const EdgeInsets.only(bottom: DJTokens.spaceMd),
+                      padding:
+                          const EdgeInsets.only(bottom: DJTokens.spaceMd),
                       child: TextField(
                         key: const Key('display-name-input'),
                         controller: _nameController,
                         maxLength: 30,
                         textCapitalization: TextCapitalization.words,
+                        style: Theme.of(context).textTheme.bodyLarge,
                         decoration: const InputDecoration(
                           hintText: Copy.enterYourName,
                           counterText: '',
@@ -160,20 +165,45 @@ class _JoinScreenState extends State<JoinScreen> {
                       key: const Key('join-party-submit-btn'),
                       tier: TapTier.consequential,
                       onTap: _canJoin && !isLoading ? _onJoin : () {},
-                      child: isLoading
-                          ? Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                                const SizedBox(width: DJTokens.spaceSm),
-                                const Text(Copy.joiningParty),
-                              ],
-                            )
-                          : const Text(Copy.joinParty),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: DJTokens.spaceMd),
+                        decoration: BoxDecoration(
+                          color: DJTokens.gold,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: isLoading
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: DJTokens.bgColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: DJTokens.spaceSm),
+                                  Text(
+                                    Copy.joiningParty,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelLarge
+                                        ?.copyWith(color: DJTokens.bgColor),
+                                  ),
+                                ],
+                              )
+                            : Text(
+                                Copy.joinParty,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
+                                    ?.copyWith(color: DJTokens.bgColor),
+                              ),
+                      ),
                     ),
                   ),
                   if (_errorMessage != null) ...[
@@ -187,11 +217,6 @@ class _JoinScreenState extends State<JoinScreen> {
                       textAlign: TextAlign.center,
                     ),
                   ],
-                  const SizedBox(height: DJTokens.spaceMd),
-                  TextButton(
-                    onPressed: () => context.go('/'),
-                    child: const Text(Copy.backToHome),
-                  ),
                 ],
               ),
             ),

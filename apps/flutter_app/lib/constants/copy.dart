@@ -63,8 +63,7 @@ class Copy {
   static const String sharePartyMessage = 'Join my Karamania party! Code: ';
 
   // Join screen
-  static const String enterPartyCode = 'Enter party code';
-  static const String backToHome = 'Back to home';
+  static const String partyCodeHint = 'Ask your host for the 4-letter code';
 
   // Join flow
   static const String joiningParty = 'Joining party...';

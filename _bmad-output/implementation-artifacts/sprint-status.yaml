@@ -136,7 +136,7 @@ development_status:
   # Epic 10: UX Redesign & Brand Identity (7 stories)
   epic-10: in-progress
   10-1-home-screen-brand-identity: done
-  10-2-join-screen-layout-and-input-sizing: backlog
+  10-2-join-screen-layout-and-input-sizing: done
   10-3-lobby-guest-waiting-and-playlist: backlog
   10-4-party-screen-song-and-performer: backlog
   10-5-ceremony-celebration-energy: backlog

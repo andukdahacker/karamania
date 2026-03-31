@@ -77,6 +77,22 @@ Widget _wrapWithRouter(GoRouter router) {
   );
 }
 
+/// Helper to verify the 4 individual code boxes contain the expected code.
+void _expectCodeBoxes(WidgetTester tester, String expectedCode) {
+  for (int i = 0; i < expectedCode.length && i < 4; i++) {
+    final textField = tester.widget<TextField>(find.byKey(Key('party-code-$i')));
+    expect(textField.controller!.text, expectedCode[i]);
+  }
+}
+
+/// Helper to verify all 4 code boxes are empty.
+void _expectEmptyCodeBoxes(WidgetTester tester) {
+  for (int i = 0; i < 4; i++) {
+    final textField = tester.widget<TextField>(find.byKey(Key('party-code-$i')));
+    expect(textField.controller!.text, '');
+  }
+}
+
 void main() {
   setUpAll(() {
     AppConfig.initializeForTest(flavor: 'dev');
@@ -86,38 +102,39 @@ void main() {
     testWidgets('/?code=VIBE redirects to /join?code=VIBE', (tester) async {
       final router = _createTestRouter(initialLocation: '/?code=VIBE');
       await tester.pumpWidget(_wrapWithRouter(router));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-      // Should show JoinScreen with code pre-filled
+      // Should show JoinScreen with code pre-filled across 4 boxes
       expect(find.byType(JoinScreen), findsOneWidget);
-      final textField = tester.widget<TextField>(find.byKey(const Key('party-code-input')));
-      expect(textField.controller!.text, 'VIBE');
+      _expectCodeBoxes(tester, 'VIBE');
     });
 
     testWidgets('/join?code=VIBE shows JoinScreen with code pre-filled', (tester) async {
       final router = _createTestRouter(initialLocation: '/join?code=VIBE');
       await tester.pumpWidget(_wrapWithRouter(router));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(JoinScreen), findsOneWidget);
-      final textField = tester.widget<TextField>(find.byKey(const Key('party-code-input')));
-      expect(textField.controller!.text, 'VIBE');
+      _expectCodeBoxes(tester, 'VIBE');
     });
 
     testWidgets('/join without code shows JoinScreen with empty code field', (tester) async {
       final router = _createTestRouter(initialLocation: '/join');
       await tester.pumpWidget(_wrapWithRouter(router));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(JoinScreen), findsOneWidget);
-      final textField = tester.widget<TextField>(find.byKey(const Key('party-code-input')));
-      expect(textField.controller!.text, '');
+      _expectEmptyCodeBoxes(tester);
     });
 
     testWidgets('/ without code shows HomeScreen (no redirect)', (tester) async {
       final router = _createTestRouter(initialLocation: '/');
       await tester.pumpWidget(_wrapWithRouter(router));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(HomeScreen), findsOneWidget);
     });
