@@ -401,7 +401,7 @@ class _WheelPainter extends CustomPainter {
               ? '${segments[i].songTitle.substring(0, 12)}...'
               : segments[i].songTitle,
           style: const TextStyle(
-            color: Colors.white,
+            color: DJTokens.textPrimary,
             fontSize: 10,
             fontWeight: FontWeight.bold,
           ),

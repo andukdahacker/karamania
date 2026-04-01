@@ -210,8 +210,7 @@ class _QuickVoteOverlayState extends State<QuickVoteOverlay>
         style: ElevatedButton.styleFrom(
           backgroundColor:
               isSelected ? DJTokens.actionConfirm : DJTokens.surfaceElevated,
-          foregroundColor:
-              isSelected ? Colors.white : DJTokens.textPrimary,
+          foregroundColor: DJTokens.textPrimary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(DJTokens.spaceSm),
             side: BorderSide(
@@ -225,7 +224,7 @@ class _QuickVoteOverlayState extends State<QuickVoteOverlay>
           label,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : DJTokens.textPrimary,
+                color: DJTokens.textPrimary,
               ),
         ),
       ),

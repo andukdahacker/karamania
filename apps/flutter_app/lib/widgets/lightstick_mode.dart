@@ -53,7 +53,7 @@ class _LightstickModeState extends State<LightstickMode>
       vibe.accent,
       vibe.glow,
       vibe.primary,
-      const Color(0xFFFFFFFF),
+      Colors.white,
       const Color(0xFFFF4444),
     ];
 

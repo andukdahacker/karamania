@@ -141,12 +141,12 @@ class _CaptureOverlayState extends State<CaptureOverlay>
               color: Theme.of(context).colorScheme.secondary,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: Colors.white, size: 24),
+            child: Icon(icon, color: DJTokens.textPrimary, size: 24),
           ),
           const SizedBox(height: DJTokens.spaceXs),
           Text(
             label,
-            style: const TextStyle(color: Colors.white, fontSize: 12),
+            style: const TextStyle(color: DJTokens.textPrimary, fontSize: 12),
           ),
         ],
       ),
@@ -188,13 +188,13 @@ class _CaptureOverlayState extends State<CaptureOverlay>
                 const SizedBox(width: DJTokens.spaceSm),
                 Text(
                   '${Copy.captureRecording} ${provider.recordingSecondsRemaining}s',
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  style: const TextStyle(color: DJTokens.textPrimary, fontSize: 14),
                 ),
                 const SizedBox(width: DJTokens.spaceSm),
                 Text(
                   Copy.captureRecordingStop,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: DJTokens.textPrimary.withValues(alpha: 0.7),
                     fontSize: 12,
                   ),
                 ),

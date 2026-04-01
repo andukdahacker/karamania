@@ -62,6 +62,10 @@ void main() {
         const Color(0xFF0A0A1A),
       );
       expect(
+        djStateBackgroundColor(DJState.icebreaker, vibe),
+        const Color(0xFF0F0A1E),
+      );
+      expect(
         djStateBackgroundColor(DJState.songSelection, vibe),
         const Color(0xFF0F0A1E),
       );
@@ -90,6 +94,32 @@ void main() {
           vibe.bg,
           reason: '${vibe.name} ceremony should use vibe.bg',
         );
+      }
+    });
+
+    test('all DJ state backgrounds are dark (luminance < 0.15)', () {
+      for (final state in DJState.values) {
+        for (final vibe in PartyVibe.values) {
+          final color = djStateBackgroundColor(state, vibe);
+          expect(
+            color.computeLuminance(),
+            lessThan(0.15),
+            reason:
+                '${state.name} with ${vibe.name} vibe has luminance ${color.computeLuminance()} (should be < 0.15)',
+          );
+        }
+      }
+    });
+
+    test('no DJ state background is white or grey', () {
+      for (final state in DJState.values) {
+        for (final vibe in PartyVibe.values) {
+          final color = djStateBackgroundColor(state, vibe);
+          expect(color, isNot(equals(Colors.white)),
+              reason: '${state.name} should not be white');
+          expect(color, isNot(equals(Colors.grey)),
+              reason: '${state.name} should not be grey');
+        }
       }
     });
 

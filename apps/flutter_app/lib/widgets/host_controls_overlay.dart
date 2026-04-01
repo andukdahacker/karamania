@@ -154,7 +154,7 @@ class _HostControlsOverlayState extends State<HostControlsOverlay> {
                   onPressed: _toggle,
                   child: Icon(
                     _expanded ? Icons.close : Icons.settings,
-                    color: Colors.white,
+                    color: DJTokens.textPrimary,
                   ),
                 ),
               ),

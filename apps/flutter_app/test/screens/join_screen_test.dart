@@ -161,7 +161,8 @@ void main() {
 
     testWidgets('renders back arrow button', (tester) async {
       await tester.pumpWidget(_wrapWithRouter());
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byKey(const Key('join-back-btn')), findsOneWidget);
     });
@@ -461,12 +462,14 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(partyProvider.sessionStatus, 'active');
 
       router.go('/party');
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('PARTY SCREEN'), findsOneWidget);
     });
@@ -481,13 +484,15 @@ void main() {
         );
 
       await tester.pumpWidget(_wrapWithRouter());
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(partyProvider.sessionStatus, 'lobby');
 
       final element = tester.element(find.byType(JoinScreen));
       GoRouter.of(element).go('/lobby');
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(LobbyScreen), findsOneWidget);
     });

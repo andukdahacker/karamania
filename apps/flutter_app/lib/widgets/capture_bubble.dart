@@ -77,7 +77,7 @@ class _CaptureBubbleState extends State<CaptureBubble>
             ),
             child: const Icon(
               Icons.camera_alt_rounded,
-              color: Colors.white,
+              color: DJTokens.textPrimary,
               size: 24,
             ),
           ),
