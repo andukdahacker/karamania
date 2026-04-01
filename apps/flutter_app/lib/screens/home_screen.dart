@@ -16,6 +16,7 @@ import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/state/timeline_provider.dart';
 import 'package:karamania/theme/dj_tokens.dart';
 import 'package:karamania/widgets/dj_tap_button.dart';
+import 'package:karamania/widgets/branded_dialog.dart';
 import 'package:karamania/widgets/session_timeline_card.dart';
 import 'package:go_router/go_router.dart';
 
@@ -534,12 +535,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final controller = TextEditingController();
     return showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: DJTokens.surfaceElevated,
-        title: Text(
-          Copy.enterYourName,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+      builder: (context) => BrandedDialog(
+        title: Copy.enterYourName,
         content: TextField(
           key: const Key('guest-name-input'),
           controller: controller,
@@ -552,13 +549,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         actions: [
-          TextButton(
+          BrandedDialogAction(
+            label: Copy.cancel,
+            style: BrandedDialogActionStyle.cancel,
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text(Copy.cancel),
           ),
-          TextButton(
+          const SizedBox(width: DJTokens.spaceSm),
+          BrandedDialogAction(
+            label: Copy.ok,
+            style: BrandedDialogActionStyle.confirm,
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text(Copy.ok),
           ),
         ],
       ),

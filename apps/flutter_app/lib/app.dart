@@ -11,7 +11,8 @@ import 'package:karamania/screens/session_detail_screen.dart';
 import 'package:karamania/screens/media_gallery_screen.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
-import 'package:karamania/theme/dj_tokens.dart';
+import 'package:karamania/constants/copy.dart';
+import 'package:karamania/widgets/branded_dialog.dart';
 
 /// Custom scroll behavior that disables Android overscroll glow (Task 1.9).
 class _NoOverscrollGlowBehavior extends ScrollBehavior {
@@ -75,25 +76,14 @@ final GoRouter _router = GoRouter(
       builder: (context, state) => const PartyScreen(),
       // Back button during party shows confirm exit dialog (Task 1.8)
       onExit: (context, state) async {
-        final shouldExit = await showDialog<bool>(
+        final shouldExit = await showBrandedConfirm(
           context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: DJTokens.surfaceElevated,
-            title: const Text('Leave Party?'),
-            content: const Text('Are you sure you want to leave the party?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('STAY'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('LEAVE'),
-              ),
-            ],
-          ),
+          title: Copy.leavePartyConfirmTitle,
+          message: Copy.leavePartyConfirmBody,
+          confirmLabel: Copy.leavePartyConfirmYes,
+          cancelLabel: Copy.leavePartyConfirmNo,
         );
-        return shouldExit ?? false;
+        return shouldExit;
       },
     ),
   ],

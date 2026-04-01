@@ -58,6 +58,10 @@ class Copy {
   static const String waitingForGuests = 'Waiting for guests...';
   static const String startParty = 'START PARTY';
   static const String leaveParty = 'Leave party';
+  static const String leavePartyConfirmTitle = 'Leave Party?';
+  static const String leavePartyConfirmBody = 'Are you sure you want to leave the party?';
+  static const String leavePartyConfirmYes = 'LEAVE';
+  static const String leavePartyConfirmNo = 'STAY';
   static const String joined = 'joined';
   static const String shareParty = 'Share';
   static const String sharePartyMessage = 'Join my Karamania party! Code: ';

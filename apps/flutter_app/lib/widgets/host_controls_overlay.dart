@@ -5,6 +5,7 @@ import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/socket/client.dart';
 import 'package:karamania/theme/dj_tokens.dart';
 import 'package:karamania/theme/dj_theme.dart';
+import 'package:karamania/widgets/branded_dialog.dart';
 
 class HostControlsOverlay extends StatefulWidget {
   const HostControlsOverlay({
@@ -240,40 +241,21 @@ class _HostControlsOverlayState extends State<HostControlsOverlay> {
     );
   }
 
-  void _showEndPartyConfirmation(BuildContext context) {
-    showDialog(
+  void _showEndPartyConfirmation(BuildContext context) async {
+    final confirmed = await showBrandedConfirm(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        key: const Key('end-party-dialog'),
-        backgroundColor: DJTokens.surfaceColor,
-        title: const Text(
-          Copy.hostControlEndPartyConfirmTitle,
-          style: TextStyle(color: DJTokens.textPrimary),
-        ),
-        content: const Text(
-          Copy.hostControlEndPartyConfirmBody,
-          style: TextStyle(color: DJTokens.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            key: const Key('end-party-cancel'),
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text(Copy.hostControlEndPartyConfirmNo),
-          ),
-          TextButton(
-            key: const Key('end-party-confirm'),
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              SocketClient.instance.emitHostEndParty();
-            },
-            child: const Text(
-              Copy.hostControlEndPartyConfirmYes,
-              style: TextStyle(color: DJTokens.actionDanger),
-            ),
-          ),
-        ],
-      ),
+      title: Copy.hostControlEndPartyConfirmTitle,
+      message: Copy.hostControlEndPartyConfirmBody,
+      confirmLabel: Copy.hostControlEndPartyConfirmYes,
+      cancelLabel: Copy.hostControlEndPartyConfirmNo,
+      isDanger: true,
+      key: const Key('end-party-dialog'),
+      cancelKey: const Key('end-party-cancel'),
+      confirmKey: const Key('end-party-confirm'),
     );
+    if (confirmed && context.mounted) {
+      SocketClient.instance.emitHostEndParty();
+    }
   }
 }
 
