@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:karamania/config/app_config.dart';
 import 'package:karamania/constants/copy.dart';
 import 'package:karamania/theme/dj_theme.dart';
+import 'package:karamania/widgets/emoji_text.dart';
 import 'package:karamania/widgets/quick_ceremony_display.dart';
 
 void main() {
@@ -68,6 +69,22 @@ void main() {
       await tester.pump();
 
       expect(find.byKey(const Key('quick-ceremony-display')), findsOneWidget);
+    });
+
+    testWidgets('renders Quick Award label with expected key', (tester) async {
+      await tester.pumpWidget(buildTestWidget(award: 'Star of the Show'));
+      await tester.pump();
+
+      expect(find.byKey(const Key('quick-ceremony-label')), findsOneWidget);
+      expect(find.text(Copy.quickCeremonyLabel), findsOneWidget);
+    });
+
+    testWidgets('renders scattered confetti EmojiText widgets', (tester) async {
+      await tester.pumpWidget(buildTestWidget(award: 'Star of the Show'));
+      await tester.pump();
+
+      // Quick ceremony has 3 scattered confetti EmojiText widgets
+      expect(find.byType(EmojiText), findsAtLeast(3));
     });
   });
 }

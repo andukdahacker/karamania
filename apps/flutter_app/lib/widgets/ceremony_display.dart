@@ -13,6 +13,7 @@ class CeremonyDisplay extends StatefulWidget {
     required this.vibe,
     this.award,
     this.tone,
+    this.songTitle,
   });
 
   final String? performerName;
@@ -20,6 +21,7 @@ class CeremonyDisplay extends StatefulWidget {
   final PartyVibe vibe;
   final String? award;
   final String? tone;
+  final String? songTitle;
 
   @override
   State<CeremonyDisplay> createState() => _CeremonyDisplayState();
@@ -136,42 +138,78 @@ class _CeremonyDisplayState extends State<CeremonyDisplay>
       opacity: _revealOpacity,
       child: ScaleTransition(
         scale: Tween<double>(begin: 0.5, end: 1.0).animate(_revealScale),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
           children: [
-            // Confetti emojis row
-            EmojiText(
-              vibeEmojis.join(' '),
-              key: const Key('ceremony-confetti'),
-              fontSize: DJTokens.iconSizeLg,
+            // Radial glow behind award text
+            Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    widget.vibe.glow.withValues(alpha: 0.3),
+                    widget.vibe.glow.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: DJTokens.spaceLg),
-            if (widget.performerName != null) ...[
-              Text(
-                widget.performerName!,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            // Scattered confetti emojis
+            Positioned(top: -20, left: -30, child: EmojiText(vibeEmojis[0 % vibeEmojis.length], fontSize: 24)),
+            Positioned(top: -10, right: -40, child: EmojiText(vibeEmojis[1 % vibeEmojis.length], fontSize: 20)),
+            Positioned(bottom: -30, left: -50, child: EmojiText(vibeEmojis[2 % vibeEmojis.length], fontSize: 28)),
+            Positioned(bottom: -20, right: -30, child: EmojiText(vibeEmojis[3 % vibeEmojis.length], fontSize: 22)),
+            Positioned(top: 30, left: -60, child: EmojiText(vibeEmojis[4 % vibeEmojis.length], fontSize: 18)),
+            // Main content column
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.performerName != null) ...[
+                  Text(
+                    widget.performerName!,
+                    style: const TextStyle(
+                      fontSize: 22,
                       color: DJTokens.textSecondary,
                     ),
-              ),
-              const SizedBox(height: DJTokens.spaceSm),
-            ],
-            // Award title — the star of the show
-            Text(
-              award,
-              key: const Key('ceremony-award-title'),
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                    color: widget.vibe.accent,
+                  ),
+                  const SizedBox(height: DJTokens.spaceSm),
+                ],
+                // Award title — the star of the show
+                Text(
+                  award,
+                  key: const Key('ceremony-award-title'),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 36,
                     fontWeight: FontWeight.bold,
+                    color: DJTokens.gold,
                   ),
-            ),
-            const SizedBox(height: DJTokens.spaceMd),
-            // Vibe award flavor text
-            Text(
-              vibeAwardFlavors[widget.vibe] ?? '',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: DJTokens.textSecondary,
+                ),
+                if (widget.songTitle != null) ...[
+                  const SizedBox(height: DJTokens.spaceSm),
+                  Text(
+                    widget.songTitle!,
+                    key: const Key('ceremony-song-title'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: DJTokens.textSecondary,
+                    ),
                   ),
+                ],
+                const SizedBox(height: DJTokens.spaceMd),
+                // Vibe award flavor text
+                Text(
+                  vibeAwardFlavors[widget.vibe] ?? '',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: DJTokens.textSecondary,
+                      ),
+                ),
+              ],
             ),
           ],
         ),

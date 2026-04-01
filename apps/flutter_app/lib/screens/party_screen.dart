@@ -281,9 +281,12 @@ class _PartyScreenState extends State<PartyScreen>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: Stack(
-          children: [
+      body: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        color: partyProvider.backgroundColor,
+        child: SafeArea(
+          child: Stack(
+            children: [
             _buildPartyContent(context, partyProvider, displayVibe),
             // Now Playing / Selected Song — top of screen during song state
             if (partyProvider.djState == DJState.song &&
@@ -637,6 +640,7 @@ class _PartyScreenState extends State<PartyScreen>
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -679,6 +683,7 @@ class _PartyScreenState extends State<PartyScreen>
                 vibe: displayVibe,
                 award: partyProvider.ceremonyAward,
                 tone: partyProvider.ceremonyTone,
+                songTitle: partyProvider.ceremonySongTitle,
               ),
             ] else if (partyProvider.djState == DJState.ceremony &&
                        partyProvider.ceremonyType == 'quick' &&
