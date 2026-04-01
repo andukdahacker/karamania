@@ -37,6 +37,7 @@ import 'package:karamania/widgets/quick_pick_overlay.dart';
 import 'package:karamania/widgets/spin_the_wheel_overlay.dart';
 import 'package:karamania/widgets/song_mode_toggle.dart';
 import 'package:karamania/widgets/hype_signal_button.dart';
+import 'package:karamania/widgets/song_info_display.dart';
 import 'package:karamania/widgets/now_playing_bar.dart';
 import 'package:karamania/widgets/capture_bubble.dart';
 import 'package:karamania/widgets/capture_overlay.dart';
@@ -687,6 +688,25 @@ class _PartyScreenState extends State<PartyScreen>
                 vibe: displayVibe,
                 performerName: partyProvider.ceremonyPerformerName,
               ),
+            ] else if (partyProvider.djState == DJState.song) ...[
+              _buildSongInfoContent(partyProvider),
+              const SizedBox(height: DJTokens.spaceMd),
+              Text(
+                '${partyProvider.participantCount} ${Copy.participants.toLowerCase()}',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: DJTokens.textSecondary,
+                    ),
+              ),
+              if (_remainingSeconds != null) ...[
+                const SizedBox(height: DJTokens.spaceMd),
+                Text(
+                  _formatCountdown(_remainingSeconds!),
+                  key: const Key('countdown-timer'),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: DJTokens.textSecondary,
+                      ),
+                ),
+              ],
             ] else ...[
               Icon(
                 Icons.music_note,
@@ -752,6 +772,31 @@ class _PartyScreenState extends State<PartyScreen>
     final minutes = seconds ~/ 60;
     final secs = seconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildSongInfoContent(PartyProvider partyProvider) {
+    String? songTitle;
+    String? songArtist;
+    if (partyProvider.hasDetectedSong) {
+      songTitle = partyProvider.detectedSongTitle;
+      songArtist = partyProvider.detectedArtist;
+    } else if (partyProvider.hasLastQueuedSong) {
+      songTitle = partyProvider.lastQueuedSongTitle;
+      songArtist = partyProvider.lastQueuedArtist;
+    }
+    songTitle ??= '${Copy.song} #${partyProvider.songCount}';
+    songArtist ??= Copy.unknownArtist;
+    final performerName = partyProvider.participants
+        .where((p) => p.userId == partyProvider.currentPerformer)
+        .map((p) => p.displayName)
+        .firstOrNull;
+    return SongInfoDisplay(
+      key: const Key('song-info-display'),
+      songTitle: songTitle,
+      artist: songArtist,
+      performerName: performerName,
+      vibeAccent: partyProvider.vibe.accent,
+    );
   }
 
   Widget _buildCatchUpCard(

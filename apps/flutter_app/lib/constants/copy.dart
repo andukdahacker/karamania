@@ -265,6 +265,10 @@ class Copy {
       'Could not reconnect. Please re-enter the TV code.';
   static const String tvUnpair = 'Disconnect TV';
 
+  // Song info display
+  static const String isSinging = 'is singing';
+  static const String song = 'Song';
+
   // Now Playing
   static const String nowPlaying = 'Now Playing';
   static const String unknownSong = 'Unknown Song';

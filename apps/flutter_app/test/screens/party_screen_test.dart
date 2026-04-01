@@ -421,7 +421,12 @@ void main() {
       final provider = _createTestProvider();
       provider.onSessionStatus('active');
 
-      for (final state in DJState.values) {
+      // DJState.song now shows SongInfoDisplay instead of dj-state-label
+      final statesWithLabel = DJState.values
+          .where((s) => s != DJState.song)
+          .toList();
+
+      for (final state in statesWithLabel) {
         provider.onDjStateUpdate(state: state);
         await tester.pumpWidget(
             _wrapWithProviders(const PartyScreen(), partyProvider: provider));
@@ -446,6 +451,7 @@ void main() {
       provider.onParticipantsSync([
         const ParticipantInfo(userId: 'user-alice', displayName: 'Alice'),
       ]);
+      // During DJState.song, performer is shown in song-info-performer (SongInfoDisplay)
       provider.onDjStateUpdate(
         state: DJState.song,
         currentPerformer: 'user-alice',
@@ -453,10 +459,10 @@ void main() {
 
       await tester.pumpWidget(
           _wrapWithProviders(const PartyScreen(), partyProvider: provider));
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.byKey(const Key('current-performer')), findsOneWidget);
-      expect(find.text('Alice'), findsOneWidget);
+      expect(find.byKey(const Key('song-info-performer')), findsOneWidget);
+      expect(find.text('Alice ${Copy.isSinging}'), findsOneWidget);
     });
 
     testWidgets('hides performer name when null', (tester) async {
@@ -716,6 +722,93 @@ void main() {
 
       final button = tester.widget<TextButton>(find.byKey(const Key('upgrade-btn')));
       expect(button.onPressed, isNotNull);
+    });
+  });
+
+  group('SongInfoDisplay integration in PartyScreen', () {
+    testWidgets('shows SongInfoDisplay during DJState.song with detected song',
+        (tester) async {
+      final provider = _createTestProvider();
+      provider.onParticipantsSync([
+        ParticipantInfo(userId: 'host', displayName: 'Host'),
+        ParticipantInfo(userId: 'singer-1', displayName: 'Alice'),
+      ]);
+      provider.onDjStateUpdate(
+          state: DJState.song, currentPerformer: 'singer-1', songCount: 3);
+      provider.setDetectedSong(songTitle: 'Bohemian Rhapsody', artist: 'Queen');
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byKey(const Key('song-info-display')), findsOneWidget);
+      final titleWidget = tester.widget<Text>(find.byKey(const Key('song-info-title')));
+      expect(titleWidget.data, 'Bohemian Rhapsody');
+      final artistWidget = tester.widget<Text>(find.byKey(const Key('song-info-artist')));
+      expect(artistWidget.data, 'Queen');
+    });
+
+    testWidgets('shows queued song when no detected song', (tester) async {
+      final provider = _createTestProvider();
+      provider.onDjStateUpdate(state: DJState.song, songCount: 1);
+      provider.setLastQueuedSong(
+        songTitle: 'Eye of the Tiger',
+        artist: 'Survivor',
+        videoId: 'vid-123',
+        catalogTrackId: 'track-123',
+      );
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byKey(const Key('song-info-display')), findsOneWidget);
+      final titleWidget = tester.widget<Text>(find.byKey(const Key('song-info-title')));
+      expect(titleWidget.data, 'Eye of the Tiger');
+      final artistWidget = tester.widget<Text>(find.byKey(const Key('song-info-artist')));
+      expect(artistWidget.data, 'Survivor');
+    });
+
+    testWidgets('shows fallback Song #N when no song data', (tester) async {
+      final provider = _createTestProvider();
+      provider.onDjStateUpdate(state: DJState.song, songCount: 5);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byKey(const Key('song-info-display')), findsOneWidget);
+      expect(find.text('${Copy.song} #5'), findsOneWidget);
+    });
+
+    testWidgets('shows performer name from participants list', (tester) async {
+      final provider = _createTestProvider();
+      provider.onParticipantsSync([
+        ParticipantInfo(userId: 'host', displayName: 'Host'),
+        ParticipantInfo(userId: 'singer-1', displayName: 'Alice'),
+      ]);
+      provider.onDjStateUpdate(
+          state: DJState.song, currentPerformer: 'singer-1', songCount: 1);
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byKey(const Key('song-info-performer')), findsOneWidget);
+      expect(find.text('Alice ${Copy.isSinging}'), findsOneWidget);
+    });
+
+    testWidgets('does NOT show SongInfoDisplay during DJState.lobby',
+        (tester) async {
+      final provider = _createTestProvider();
+      // Default state is lobby
+
+      await tester.pumpWidget(
+          _wrapWithProviders(const PartyScreen(), partyProvider: provider));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byKey(const Key('song-info-display')), findsNothing);
+      expect(find.byKey(const Key('dj-state-label')), findsOneWidget);
     });
   });
 }
