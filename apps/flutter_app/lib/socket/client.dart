@@ -13,7 +13,9 @@ import 'package:karamania/models/setlist_entry.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/capture_provider.dart';
+import 'package:karamania/state/detection_provider.dart';
 import 'package:karamania/state/party_provider.dart';
+import 'package:karamania/services/acrcloud_service.dart';
 import 'package:karamania/theme/dj_theme.dart';
 
 /// Singleton Socket.io client.
@@ -30,6 +32,7 @@ class SocketClient {
   Timer? _hostTransferBannerTimer;
   PartyProvider? _partyProvider;
   CaptureProvider? _captureProvider;
+  DetectionProvider? _detectionProvider;
   StateTransitionAudio _stateTransitionAudio = StateTransitionAudio();
 
   /// Replace the [StateTransitionAudio] instance for testing.
@@ -50,11 +53,13 @@ class SocketClient {
     required String userId,
     required PartyProvider partyProvider,
     CaptureProvider? captureProvider,
+    DetectionProvider? detectionProvider,
   }) async {
     _currentSessionId = sessionId;
     _userId = userId;
     _partyProvider = partyProvider;
     _captureProvider = captureProvider;
+    _detectionProvider = detectionProvider;
     partyProvider.setLocalUserId(userId);
 
     _socket = io.io(
@@ -121,6 +126,9 @@ class SocketClient {
     _partyProvider = null;
     _captureProvider?.clearState();
     _captureProvider = null;
+    AcrCloudService.instance.cancelDetection();
+    _detectionProvider?.onDetectionReset();
+    _detectionProvider = null;
     _userId = null;
     _socket?.disconnect();
     _socket?.dispose();
@@ -252,6 +260,14 @@ class SocketClient {
         isPaused: payload['isPaused'] as bool? ?? false,
         isHost: partyProvider.isHost,
       );
+
+      // ACRCloud detection trigger: start on song, cancel on anything else
+      if (djState == DJState.song) {
+        _triggerAcrCloudDetection();
+      } else {
+        AcrCloudService.instance.cancelDetection();
+        _detectionProvider?.onDetectionReset();
+      }
     });
 
     // DJ pause event
@@ -829,6 +845,38 @@ class SocketClient {
     });
   }
 
+  Future<void> _triggerAcrCloudDetection() async {
+    if (!AcrCloudService.instance.isSetUp) return;
+
+    _detectionProvider?.onDetectionStarted();
+    try {
+      final result = await AcrCloudService.instance.startDetection();
+      if (result != null) {
+        _detectionProvider?.onDetectionResult(
+          title: result.title,
+          artist: result.artist,
+          isrc: result.isrc,
+          timeOffsetMs: result.playOffsetMs,
+          confidence: result.confidence,
+          source: 'acr',
+        );
+        // Emit detect:result to server for broadcasting
+        emit('detect:result', {
+          'title': result.title,
+          'artist': result.artist,
+          'isrc': result.isrc,
+          'timeOffsetMs': result.playOffsetMs,
+          'confidence': result.confidence,
+        });
+      } else {
+        _detectionProvider?.onDetectionFailed();
+      }
+    } catch (e) {
+      debugPrint('ACRCloud detection error: $e');
+      _detectionProvider?.onDetectionFailed();
+    }
+  }
+
   void startParty(PartyProvider partyProvider) {
     partyProvider.onStartPartyLoading(LoadingState.loading);
     _socket?.emit('party:start');
@@ -852,6 +900,7 @@ class SocketClient {
     String? venueName,
     bool accessibilityEqualVolume = false,
     required CaptureProvider captureProvider,
+    DetectionProvider? detectionProvider,
   }) async {
     partyProvider.onCreatePartyLoading(LoadingState.loading);
     try {
@@ -889,6 +938,7 @@ class SocketClient {
         userId: guestId ?? authProvider.firebaseUser?.uid ?? '',
         partyProvider: partyProvider,
         captureProvider: captureProvider,
+        detectionProvider: detectionProvider,
       );
       AudioEngine.instance.setRole(
         isHost: true,
@@ -909,6 +959,7 @@ class SocketClient {
     required String partyCode,
     bool accessibilityEqualVolume = false,
     required CaptureProvider captureProvider,
+    DetectionProvider? detectionProvider,
   }) async {
     partyProvider.onJoinPartyLoading(LoadingState.loading);
     try {
@@ -940,6 +991,7 @@ class SocketClient {
         userId: guestId,
         partyProvider: partyProvider,
         captureProvider: captureProvider,
+        detectionProvider: detectionProvider,
       );
       AudioEngine.instance.setRole(
         isHost: false,

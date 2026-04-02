@@ -21,6 +21,11 @@ class AppConfig {
   final String firebaseAuthDomain;
   final String firebaseIosBundleId;
 
+  // ACRCloud audio fingerprinting
+  final String acrCloudHost;
+  final String acrCloudAccessKey;
+  final String acrCloudAccessSecret;
+
   AppConfig._({
     required this.flavor,
     required this.serverUrl,
@@ -34,6 +39,9 @@ class AppConfig {
     required this.firebaseStorageBucket,
     required this.firebaseAuthDomain,
     required this.firebaseIosBundleId,
+    required this.acrCloudHost,
+    required this.acrCloudAccessKey,
+    required this.acrCloudAccessSecret,
   });
 
   static AppConfig get instance => _instance;
@@ -75,6 +83,12 @@ class AppConfig {
           const String.fromEnvironment('FIREBASE_AUTH_DOMAIN'),
       firebaseIosBundleId:
           const String.fromEnvironment('FIREBASE_IOS_BUNDLE_ID'),
+      acrCloudHost:
+          const String.fromEnvironment('ACRCLOUD_HOST'),
+      acrCloudAccessKey:
+          const String.fromEnvironment('ACRCLOUD_ACCESS_KEY'),
+      acrCloudAccessSecret:
+          const String.fromEnvironment('ACRCLOUD_ACCESS_SECRET'),
     );
   }
 
@@ -93,6 +107,9 @@ class AppConfig {
       firebaseStorageBucket: '',
       firebaseAuthDomain: '',
       firebaseIosBundleId: '',
+      acrCloudHost: '',
+      acrCloudAccessKey: '',
+      acrCloudAccessSecret: '',
     );
   }
 

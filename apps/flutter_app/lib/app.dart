@@ -8,6 +8,7 @@ import 'package:karamania/screens/join_screen.dart';
 import 'package:karamania/screens/lobby_screen.dart';
 import 'package:karamania/screens/party_screen.dart';
 import 'package:karamania/screens/session_detail_screen.dart';
+import 'package:karamania/screens/detection_poc_screen.dart';
 import 'package:karamania/screens/media_gallery_screen.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
@@ -70,6 +71,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/media',
       builder: (context, state) => const MediaGalleryScreen(),
+    ),
+    GoRoute(
+      path: '/poc-detection',
+      builder: (_, __) => const DetectionPocScreen(),
     ),
     GoRoute(
       path: '/party',

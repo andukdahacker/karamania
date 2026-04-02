@@ -391,6 +391,16 @@ class Copy {
     return '$venue was amazing! Let\'s do it again on $dateStr. Get Karamania: $downloadUrl';
   }
 
+  // Detection (Story 11.1)
+  static const String detectionIdle = 'Ready to detect';
+  static const String detectionListening = 'Listening...';
+  static const String detectionNoMatch = 'No match — search manually';
+  static const String detectionError = 'Detection error';
+  static String detectionDetected(String title) => 'Song detected: $title';
+  static const String detectionMicDenied = 'Microphone access needed for song detection';
+  static const String detectionMicSettings = 'Enable microphone in app settings';
+  static const String detectionStartButton = 'Start Detection';
+
   // Dialogs
   static const String cancel = 'CANCEL';
   static const String ok = 'OK';

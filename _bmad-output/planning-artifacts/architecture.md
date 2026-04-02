@@ -8,10 +8,11 @@ inputDocuments:
   - '_bmad-output/planning-artifacts/product-brief-karaoke-party-app-2026-03-04.md'
   - '_bmad-output/planning-artifacts/ux-design-specification.md'
   - '_bmad-output/planning-artifacts/research/market-karaoke-party-companion-research-2026-03-03.md'
+  - '_bmad-output/planning-artifacts/sprint-change-proposal-2026-04-02.md'
 workflowType: 'architecture'
 project_name: 'karaoke-party-app'
 user_name: 'Ducdo'
-date: '2026-03-06'
+date: '2026-04-02'
 ---
 
 # Architecture Decision Document
@@ -23,26 +24,28 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 ### Requirements Overview
 
 **Functional Requirements:**
-115 FRs across 9 major capability areas. The heaviest concentration is in Audience Participation (FR22-73, covering reactions, soundboard, party cards, lightstick mode, hype signals, and prompted media capture) and Song Integration (FR74-95, covering TV pairing, playlist import, suggestion engine, Quick Pick, Spin the Wheel, and fallback modes). Party Management (FR1-8, FR53, FR106-107) and the DJ Engine (FR9-15, FR51, FR54) form the foundational layer everything else depends on. Authentication/Identity (FR96-105) and Session Timeline (FR108-115) add persistence and re-engagement surfaces.
+140 FRs across 11 major capability areas. The heaviest concentration is in Audience Participation (FR22-73, covering reactions, soundboard, party cards, hype signals, and prompted media capture), Song Integration (FR74-95, covering TV pairing, playlist import, suggestion engine, Quick Pick, Spin the Wheel, and fallback modes), and the new Audio Intelligence cluster (FR116-140, covering audio fingerprinting, synced lyrics, chant detection, reactive light show, interactive lyrics games, duet colors, and progressive feature unlock). Party Management (FR1-8, FR53, FR106-107) and the DJ Engine (FR9-15, FR51, FR54) form the foundational layer everything else depends on. Authentication/Identity (FR96-105) and Session Timeline (FR108-115) add persistence and re-engagement surfaces.
 
-Architecturally, FRs cluster into three tiers:
+Architecturally, FRs cluster into four tiers:
 1. **Real-time game engine** (DJ state machine, ceremonies, reactions, soundboard, party cards, interludes, voting) -- all server-authoritative, WebSocket-driven
-2. **Integration layer** (YouTube Lounge API, YouTube Data API, Spotify Web API, Firebase Auth, Firebase Storage, PostgreSQL) -- external service orchestration
+2. **Integration layer** (YouTube Lounge API, YouTube Data API, Spotify Web API, ACRCloud, LRCLIB, Firebase Auth, Firebase Storage, PostgreSQL) -- external service orchestration
 3. **Persistence & content** (session summaries, media captures, session timeline, shareable web views, setlist posters) -- data that outlives the party session
+4. **Audio Intelligence layer** (ACRCloud fingerprinting, LRCLIB lyrics sync, chant detection, reactive light show, progressive feature unlock) -- real-time song awareness that drives lyrics display, audience chant moments, phone light show, interactive lyrics games (Guess The Next Line, Duet Colors), and gated feature reveal
 
 **Non-Functional Requirements:**
-39 NFRs with the most architecturally impactful being:
+47 NFRs with the most architecturally impactful being:
 - **NFR1-7, NFR26-27:** Strict latency budgets (200ms state sync, 100ms reactions, 50ms audio, 5ms event logging overhead) -- drives choice of transport protocol, audio architecture, and server topology
 - **NFR8-13, NFR28:** Reliability requirements -- zero single points of failure in DJ engine, three-tier reconnection, graceful degradation below 3 players, no memory leaks over 3hr sessions
 - **NFR14-20, NFR38-39:** Usability constraints -- 48px+ tap targets, single-tap interactions, centralized string constants for i18n, <50KB web landing page with <2s load
 - **NFR29-33:** Song integration performance -- 5s playlist import, YouTube API quota management (<500 units/session), pre-built karaoke catalog (no live API calls during party), server-side Spotify token management
 - **NFR34-37:** Auth/persistence -- JWT validation on handshake, guest-to-account upgrade without disconnection, async PostgreSQL writes, media access control with signed URLs
+- **NFR40-47:** Audio intelligence requirements -- >60% audio recognition accuracy in noisy karaoke rooms (NFR40), <3s lyrics sync latency from song detection to display (NFR41), <12% battery drain per hour with periodic 5-10s audio capture bursts every 30s (NFR42), lyrics cache hit ratio >80% after warm-up (NFR43), 60fps animation for light show and chant overlays (NFR44), graceful degradation when no lyrics available (NFR45), progressive unlock state consistent across reconnects (NFR46), chant detection precision >70% on repeated chorus lines (NFR47)
 
 **Scale & Complexity:**
 
 - Primary domain: Full-stack mobile (Flutter + Node.js)
 - Complexity level: Medium-High
-- Estimated architectural components: ~15 distinct server-side modules, ~12 Flutter screens, ~25 reusable widgets, 6 external service integrations
+- Estimated architectural components: ~18 distinct server-side modules, ~14 Flutter screens, ~30 reusable widgets, 8 external service integrations
 
 ### State Architecture -- Full Persistence Model
 
@@ -86,6 +89,10 @@ This is a foundational architectural decision that affects every component. The 
 | Railway hosting | Single-process Node.js, co-located PostgreSQL, WebSocket-friendly |
 | Budget Android devices (Vietnam market) | Performance testing on 3-year-old devices, <50MB app size, <80MB runtime memory |
 | 2-3 hour session duration | Battery optimization, memory leak prevention, connection resilience |
+| ACRCloud audio fingerprint API | Rate limits apply (~360 fingerprint calls per 3hr session at 30s intervals), cost tier scales with usage. Server-side proxy for web fallback, Flutter SDK (`flutter_acrcloud`) for direct device-to-ACRCloud |
+| LRCLIB community lyrics API | Free, no auth required. Coverage gaps for obscure/Vietnamese songs -- Musixmatch commercial fallback is future upgrade path |
+| Microphone permission (RECORD_AUDIO) | Required for periodic 5-10s audio capture bursts. Must request at runtime on both iOS and Android, handle denial gracefully (manual song search fallback) |
+| Battery budget for audio capture | <12% battery drain per hour with periodic 5-10s audio capture bursts every 30s. Requires careful microphone session management -- acquire/release, not always-on |
 
 ### Integration Seam Mapping
 
@@ -98,6 +105,10 @@ The three backend services (Node.js/Socket.io, PostgreSQL, Firebase) are not ind
 | Media tagging | Firebase Storage <-> Socket.io | Client uploads tagged with DJ state and session context from server | Race condition: media captured during state transition tagged with old or new state |
 | Session timeline | PostgreSQL <-> Firebase Storage | Session detail view joins PostgreSQL session data with Firebase media by session ID | Cross-service query, no join possible -- client-side assembly |
 | Lounge API lifecycle | YouTube Lounge API <-> Socket.io | Persistent Lounge connection managed per-session alongside WebSocket connections | Two persistent connections per session, both need health monitoring |
+| Audio fingerprint pipeline | Flutter audio capture → ACRCloud SDK → server `song:detected` event | Client captures 5-10s audio burst every 30s, sends fingerprint to ACRCloud, reports result to server | ACRCloud API availability, recognition accuracy in noisy karaoke rooms, battery drain from periodic mic access |
+| Lyrics fetch & cache | Server → LRCLIB API → PostgreSQL `lyrics_cache` → broadcast to clients | Server fetches lyrics on `song:detected`, caches in DB, broadcasts `lyrics:synced` to all session participants | Coverage gaps for obscure songs, API rate limits, cache invalidation when lyrics updated upstream |
+| Light show sync | Server song timing → client LightShowEngine → screen color animation | Server computes section energy map from LRC timestamps, broadcasts `light:intensity` events. Clients render locally at 60fps | Clock drift between server timestamp and client render, 60fps animation budget on budget devices |
+| Progressive unlock gating | Server `user_layer_state` → DJ engine transition guards → feature availability | Per-user song counter gates feature reveal (base → interaction → social layers). DJ engine checks layer state before dealing cards, starting interludes, or activating games | Late joiner edge cases, song count tracking across reconnects, consistent state after server restart |
 
 ### Cross-Cutting Concerns Identified
 
@@ -110,8 +121,10 @@ The three backend services (Node.js/Socket.io, PostgreSQL, Firebase) are not ind
 7. **Media lifecycle** -- Capture -> tag -> background upload -> storage -> access control -> expiry (7-day for guests). Spans client capture, server tagging, Firebase Storage, and signed URL generation. Media persists independently of server state -- crash-safe by design
 8. **Graceful degradation** -- Multiple fallback paths: TV pairing failure -> suggestion-only mode, low participant count -> reduced game set, reconnection tiers, ceremony type adaptation, server crash -> state recovery from PostgreSQL
 9. **Internationalization readiness** -- All strings centralized in `constants/copy.dart` for Vietnamese localization fast-follow. Fonts must support Vietnamese diacritics
-10. **Vibe system as architectural parameterization** -- A single enum value chosen at party creation (PartyVibe) propagates through the entire visual layer: ceremony confetti, reaction buttons, lightstick glow colors, award copy flavor. The theme provider is a cross-cutting dependency for every visual component
-11. **Testability boundaries** -- Clear delineation required: unit-testable (DJ state machine logic, state serialization round-trips, timer reconciliation, pure Dart functions) vs. integration-testable (WebSocket + Flutter rendering, reconnection recovery, device behavior like screen lock/app backgrounding, audio playback)
+10. **Vibe system as architectural parameterization** -- A single enum value chosen at party creation (PartyVibe) propagates through the entire visual layer: ceremony confetti, reaction buttons, light show colors, lyrics display styling, award copy flavor. The theme provider is a cross-cutting dependency for every visual component
+11. **Testability boundaries** -- Clear delineation required: unit-testable (DJ state machine logic, state serialization round-trips, timer reconciliation, pure Dart functions, chant detection, light show energy mapping, progressive unlock state machine) vs. integration-testable (WebSocket + Flutter rendering, reconnection recovery, device behavior like screen lock/app backgrounding, audio playback, audio fingerprint pipeline)
+12. **Progressive feature unlock** -- Per-user song counter gates feature availability across three layers (base → interaction → social). DJ engine transition guards check `user_layer_state` before dealing party cards, starting interludes, or activating games. Affects socket handlers (unlock events), DJ engine (transition guards), and client UI (feature gate checks in providers). Server-authoritative, consistent with DJ engine pattern
+13. **Audio intelligence pipeline** -- Periodic audio capture → fingerprint → lyrics fetch → display → chant detection → light show. Spans client audio capture (`flutter_acrcloud`), server ACRCloud integration, LRCLIB integration, lyrics cache (`lyrics_cache` table), real-time display sync (`lyrics:synced` events), chant moment detection (server-side pure function on LRC data), and light show energy mapping. The pipeline is event-driven: `song:detected` triggers lyrics fetch, lyrics arrival triggers chant detection and light show computation, results broadcast to all session participants
 
 ## Starter Template Evaluation
 
@@ -231,7 +244,7 @@ mkdir -p apps/web_landing
 
 **Code Organization:**
 - Flutter: structure defined in UX spec (`screens/`, `widgets/`, `state/`, `socket/`, `audio/`, `constants/`, `theme/`)
-- Server: feature-based modules (`dj-engine/`, `socket-handlers/`, `integrations/`, `persistence/`)
+- Server: feature-based modules (`dj-engine/`, `audio-intelligence/`, `socket-handlers/`, `integrations/`, `persistence/`)
 - Monorepo: `apps/flutter_app/`, `apps/server/`, `apps/web_landing/`
 
 **Development Experience:**
@@ -296,6 +309,9 @@ mkdir -p apps/web_landing
 | `session_participants` | Per-user session data | `session_id`, `user_id`, `guest_name`, `participation_score`, `top_award`, `feedback_score`, `joined_at` |
 | `media_captures` | Media metadata (files in Firebase Storage) | `id`, `session_id`, `user_id`, `storage_path`, `trigger_type`, `dj_state_at_capture`, `created_at` |
 | `karaoke_catalog` | Pre-scraped karaoke songs | `id`, `song_title`, `artist`, `youtube_video_id`, `channel`, `created_at`, `updated_at` |
+| `lyrics_cache` | Cached LRC lyrics by song | `id`, `isrc`, `title_artist_hash`, `lrc_content` (TEXT), `source` (enum: lrclib/musixmatch), `duration_ms`, `chant_lines` (JSONB), `fetched_at` |
+| `detection_events` | Audio fingerprint results per session | `id`, `session_id`, `detected_at`, `song_title`, `artist`, `isrc`, `confidence`, `time_offset_ms`, `source` (enum: acr/manual/lounge) |
+| `user_layer_state` | Per-user progressive unlock state | `session_id`, `user_id`, `songs_heard`, `current_layer` (enum: base/interaction/social), `layer_changed_at` |
 
 **Karaoke Catalog Index (FR85, NFR32):**
 - PostgreSQL table with 10K+ tracks pre-scraped from popular karaoke YouTube channels
@@ -314,7 +330,12 @@ type SessionEvent =
   | { type: 'reaction:sent'; ts: number; userId: string; data: { emoji: string; streak: number } }
   | { type: 'ceremony:reveal'; ts: number; data: { award: string; recipientId: string; ceremonyType: 'full' | 'quick' } }
   | { type: 'card:accepted'; ts: number; userId: string; data: { cardId: string; cardType: string } }
-  | { type: 'song:detected'; ts: number; data: { title: string; artist: string; videoId: string } }
+  | { type: 'song:detected'; ts: number; data: { title: string; artist: string; isrc: string; confidence: number; source: 'acr' | 'manual' | 'lounge' } }
+  | { type: 'lyrics:synced'; ts: number; data: { title: string; artist: string; isrc: string; hasLyrics: boolean } }
+  | { type: 'lyrics:chantMoment'; ts: number; data: { line: string; chantTimestamp: number } }
+  | { type: 'light:intensity'; ts: number; data: { section: 'verse' | 'prechorus' | 'chorus' | 'chant'; brightness: number } }
+  | { type: 'unlock:layerChanged'; ts: number; userId: string; data: { from: string; to: string; songCount: number } }
+  | { type: 'duet:activated'; ts: number; data: { performers: Array<{ userId: string; color: string }> } }
   // ... additional event types per namespace
 ```
 
@@ -406,6 +427,7 @@ function checkRateLimit(
 | `/api/sessions/:id/share` | GET | Read-only web view (public, no auth) |
 | `/api/playlists/import` | POST | Playlist URL import (YouTube Music / Spotify) |
 | `/api/media/:id/url` | GET | Signed Firebase Storage URL for media access |
+| `/api/songs/search` | POST | Manual song search by title/artist (FR120, fallback when audio fingerprint fails) |
 
 **WebSocket Event Convention: `namespace:action`**
 
@@ -417,10 +439,14 @@ function checkRateLimit(
 | `reaction` | `reaction:sent`, `reaction:broadcast`, `reaction:streak` | Bidirectional |
 | `sound` | `sound:play` | Bidirectional |
 | `card` | `card:dealt`, `card:accepted`, `card:dismissed`, `card:redraw` | Bidirectional |
-| `song` | `song:detected`, `song:queued`, `song:quickpick`, `song:spinwheel` | Bidirectional |
+| `song` | `song:detected`, `song:manualSearch`, `song:searchResult`, `song:queued`, `song:quickpick`, `song:spinwheel` | Bidirectional |
 | `capture` | `capture:bubble`, `capture:started`, `capture:complete` | Bidirectional |
 | `host` | `host:skip`, `host:override`, `host:songOver` | Client -> Server |
 | `auth` | `auth:refreshRequired`, `auth:invalid` | Server -> Client |
+| `lyrics` | `lyrics:synced`, `lyrics:unavailable`, `lyrics:chantMoment`, `lyrics:guessLine`, `lyrics:guessReveal` | Server -> Client |
+| `light` | `light:pulse`, `light:intensity` | Server -> Client |
+| `duet` | `duet:activated`, `duet:assignment`, `duet:deactivated` | Bidirectional |
+| `unlock` | `unlock:layerChanged`, `unlock:songCounted` | Server -> Client |
 
 **REST Type Generation: Zod -> OpenAPI -> dart-open-fetch**
 - Fastify REST routes defined with Zod schemas (already decided)
@@ -463,6 +489,8 @@ Consistent shape across REST responses (Fastify error handler) and Socket.io err
   - `AuthProvider` -- Firebase Auth state, guest/account management
   - `CaptureProvider` -- Media capture state, upload queue
   - `TimelineProvider` -- Session history, timeline data
+  - `LyricsProvider` -- Current lyrics, detection state, chant moments, duet state
+  - `UnlockProvider` -- Per-user layer state, feature gates
 - Consistent with UX spec code examples
 - `SocketClient` initialized as a singleton, dispatches events to providers
 
@@ -478,6 +506,10 @@ Consistent shape across REST responses (Fastify error handler) and Socket.io err
 | Spotify Client ID / Secret | Railway env var | Server-side only (NFR33) |
 | JWT signing secret | Railway env var | For guest token signing |
 | Server URL | Flutter `--dart-define` per environment | Build-time config |
+| `ACRCLOUD_HOST` | Railway env var | ACRCloud API host (server-side proxy for web, Flutter SDK uses directly via `flutter_acrcloud`) |
+| `ACRCLOUD_ACCESS_KEY` | Railway env var | ACRCloud API access key |
+| `ACRCLOUD_ACCESS_SECRET` | Railway env var | ACRCloud API access secret |
+| `LRCLIB_BASE_URL` | Railway env var | LRCLIB API base URL (default: `https://lrclib.net`) |
 | Local dev | `.env` files (gitignored) | `dotenv` for server, `--dart-define-from-file` for Flutter |
 
 **Monitoring & Logging:**
@@ -597,15 +629,26 @@ apps/server/
       transitions.ts            # Transition guards and actions
       timers.ts                 # Timer management + reconciliation
       serializer.ts             # State <-> JSON serialization
+    audio-intelligence/
+      fingerprint-client.ts    # ACRCloud API client (server-side proxy for web fallback)
+      lyrics-fetcher.ts        # LRCLIB + Musixmatch fallback lyrics retrieval
+      chant-detector.ts        # Identify repeated chorus lines from LRC data (pure function)
+      light-show-engine.ts     # Map LRC sections to energy/brightness values (pure function)
+      progressive-unlock.ts    # Per-user song counter + layer state machine (pure function)
+      duet-manager.ts          # Color assignment + performer tracking for duet mode
     socket-handlers/
       auth-middleware.ts        # JWT validation (Firebase + guest)
       party-handlers.ts         # party:* events
       reaction-handlers.ts      # reaction:* events
       ceremony-handlers.ts      # ceremony:* events
       host-handlers.ts          # host:* events
-      song-handlers.ts          # song:* events
+      song-handlers.ts          # song:* events (detected, manualSearch, searchResult, queued, quickpick, spinwheel)
       card-handlers.ts          # card:* events
       capture-handlers.ts       # capture:* events
+      lyrics-handlers.ts        # lyrics:* events (synced, unavailable, chantMoment, guessLine, guessReveal)
+      light-handlers.ts         # light:* events (pulse, intensity)
+      duet-handlers.ts          # duet:* events (activated, assignment, deactivated)
+      unlock-handlers.ts        # unlock:* events (layerChanged, songCounted)
     integrations/
       lounge-api.ts             # YouTube Lounge API client
       youtube-data.ts           # YouTube Data API v3
@@ -622,6 +665,9 @@ apps/server/
       user-repository.ts        # User CRUD
       catalog-repository.ts     # Karaoke catalog queries
       media-repository.ts       # Media metadata CRUD
+      lyrics-cache-repository.ts # lyrics_cache CRUD + lookup by ISRC/title-artist hash
+      detection-repository.ts   # detection_events CRUD + session query
+      unlock-repository.ts      # user_layer_state CRUD + layer transition tracking
     routes/
       sessions.ts               # REST: /api/sessions
       playlists.ts              # REST: /api/playlists
@@ -643,11 +689,18 @@ apps/server/
       session.ts                # createTestSession(overrides?)
       participant.ts            # createTestParticipant(overrides?)
       dj-state.ts               # createTestDJState(overrides?)
+      lyrics-cache.ts           # createTestLyricsCache(overrides?)
+      detection-event.ts        # createTestDetectionEvent(overrides?)
+      user-layer-state.ts       # createTestUserLayerState(overrides?)
     dj-engine/                  # Mirror src structure
       machine.test.ts
       transitions.test.ts
       timers.test.ts
       serializer.test.ts
+    audio-intelligence/
+      chant-detector.test.ts    # Chant line identification from LRC data
+      light-show-engine.test.ts # Section energy mapping from LRC timestamps
+      progressive-unlock.test.ts # Song counter + layer state transitions
     services/
       rate-limiter.test.ts
       award-generator.test.ts
@@ -895,7 +948,9 @@ karamania/
     |   |   |   |-- party_provider.dart      # DJ state, participants, session data, vibe
     |   |   |   |-- auth_provider.dart       # Firebase Auth state, guest/account, token management
     |   |   |   |-- capture_provider.dart    # Media capture state, upload queue, bubble triggers
-    |   |   |   +-- timeline_provider.dart   # Session history list, session detail data
+    |   |   |   |-- timeline_provider.dart   # Session history list, session detail data
+    |   |   |   |-- lyrics_provider.dart     # Current lyrics, detection state, chant moments, duet state
+    |   |   |   +-- unlock_provider.dart     # Per-user layer state, feature gates
     |   |   |-- socket/
     |   |   |   +-- client.dart              # Socket.io singleton, event dispatch to providers
     |   |   |-- audio/
@@ -909,7 +964,7 @@ karamania/
     |   |   |   |-- session_detail_screen.dart # Past session: setlist, awards, media gallery
     |   |   |   |-- lobby_screen.dart        # Join flow, icebreaker, playlist import
     |   |   |   |-- party_screen.dart        # Active party container: switch(djState)
-    |   |   |   |-- song_screen.dart         # Reactions, soundboard, lightstick, hype signal
+    |   |   |   |-- song_screen.dart         # Lyrics-first layout: synced lyrics, reactions, chant overlay, light show
     |   |   |   |-- ceremony_screen.dart     # Full + Quick award reveal choreography
     |   |   |   |-- interlude_screen.dart    # Kings Cup, Dare Pull, Quick Vote
     |   |   |   |-- quick_pick_screen.dart   # 5 song suggestions, group tap-to-vote
@@ -923,7 +978,13 @@ karamania/
     |   |       |-- confetti_layer.dart      # Animated confetti overlay
     |   |       |-- glow_effect.dart         # Radial glow for ceremonies
     |   |       |-- party_card_deal.dart     # Card deal / accept / dismiss / redraw
-    |   |       |-- lightstick_mode.dart     # Full-screen glow with color picker
+    |   |       |-- lyrics_display.dart      # Synced lyrics scroll (60fps, line-by-line highlight)
+    |   |       |-- chant_overlay.dart      # Crescendo animation for chant moments
+    |   |       |-- light_show_layer.dart   # Full-screen pulsing color background (replaces lightstick_mode)
+    |   |       |-- detection_status.dart   # "Listening..." / "Song detected" / "No match" indicator
+    |   |       |-- duet_indicator.dart     # Performer color assignment display
+    |   |       |-- guess_line_card.dart    # "[???]" blanked line + reveal animation
+    |   |       |-- manual_search_sheet.dart # Bottom sheet for manual song search (FR120)
     |   |       |-- hype_signal_button.dart  # Camera flash / screen pulse trigger
     |   |       |-- capture_bubble.dart      # Floating capture prompt
     |   |       |-- capture_overlay.dart     # Active capture UI (photo/video/audio)
@@ -966,21 +1027,34 @@ karamania/
     |   |   |   |-- transitions.ts           # Transition guards and side effects
     |   |   |   |-- timers.ts                # Timer management + crash reconciliation
     |   |   |   +-- serializer.ts            # DJState <-> JSON serialization
+    |   |   |-- audio-intelligence/
+    |   |   |   |-- fingerprint-client.ts    # ACRCloud API client (server-side proxy for web fallback)
+    |   |   |   |-- lyrics-fetcher.ts        # LRCLIB + Musixmatch fallback lyrics retrieval
+    |   |   |   |-- chant-detector.ts        # Identify repeated chorus lines from LRC data (pure function)
+    |   |   |   |-- light-show-engine.ts     # Map LRC sections to energy/brightness values (pure function)
+    |   |   |   |-- progressive-unlock.ts    # Per-user song counter + layer state machine (pure function)
+    |   |   |   +-- duet-manager.ts          # Color assignment + performer tracking for duet mode
     |   |   |-- socket-handlers/
     |   |   |   |-- auth-middleware.ts        # JWT validation (Firebase + guest)
     |   |   |   |-- party-handlers.ts        # party:* events (create, join, end)
     |   |   |   |-- reaction-handlers.ts     # reaction:* events (sent, broadcast, streak)
     |   |   |   |-- ceremony-handlers.ts     # ceremony:* events (anticipation, reveal, quick)
     |   |   |   |-- host-handlers.ts         # host:* events (skip, override, songOver)
-    |   |   |   |-- song-handlers.ts         # song:* events (detected, queued, quickpick, spinwheel)
+    |   |   |   |-- song-handlers.ts         # song:* events (detected, manualSearch, searchResult, queued, quickpick, spinwheel)
     |   |   |   |-- card-handlers.ts         # card:* events (dealt, accepted, dismissed, redraw)
     |   |   |   |-- capture-handlers.ts      # capture:* events (bubble, started, complete)
-    |   |   |   +-- sound-handlers.ts        # sound:* events (play)
+    |   |   |   |-- sound-handlers.ts        # sound:* events (play)
+    |   |   |   |-- lyrics-handlers.ts       # lyrics:* events (synced, unavailable, chantMoment, guessLine, guessReveal)
+    |   |   |   |-- light-handlers.ts        # light:* events (pulse, intensity)
+    |   |   |   |-- duet-handlers.ts         # duet:* events (activated, assignment, deactivated)
+    |   |   |   +-- unlock-handlers.ts       # unlock:* events (layerChanged, songCounted)
     |   |   |-- integrations/
     |   |   |   |-- lounge-api.ts            # YouTube Lounge API client (persistent connection)
     |   |   |   |-- youtube-data.ts          # YouTube Data API v3 (playlist import, search)
     |   |   |   |-- spotify.ts               # Spotify Web API (Client Credentials, playlist import)
-    |   |   |   +-- firebase-admin.ts        # Firebase Admin SDK setup (JWT verification)
+    |   |   |   |-- firebase-admin.ts        # Firebase Admin SDK setup (JWT verification)
+    |   |   |   |-- acrcloud.ts              # ACRCloud REST API client (server-side fingerprint proxy)
+    |   |   |   +-- lrclib.ts                # LRCLIB API client (lyrics fetch by ISRC/title+artist)
     |   |   |-- services/
     |   |   |   |-- session-manager.ts       # Session lifecycle orchestration (create, restore, teardown)
     |   |   |   |-- rate-limiter.ts          # Pure rate limiting function
@@ -992,12 +1066,16 @@ karamania/
     |   |   |   |-- session-repository.ts    # Session CRUD + DJ state upsert
     |   |   |   |-- user-repository.ts       # User CRUD + find-or-create
     |   |   |   |-- catalog-repository.ts    # Karaoke catalog queries + intersection
-    |   |   |   +-- media-repository.ts      # Media metadata CRUD + signed URL generation
+    |   |   |   |-- media-repository.ts      # Media metadata CRUD + signed URL generation
+    |   |   |   |-- lyrics-cache-repository.ts # lyrics_cache CRUD + lookup by ISRC/title-artist hash
+    |   |   |   |-- detection-repository.ts  # detection_events CRUD + session query
+    |   |   |   +-- unlock-repository.ts     # user_layer_state CRUD + layer transition tracking
     |   |   |-- routes/
     |   |   |   |-- sessions.ts              # GET /api/sessions, GET /api/sessions/:id
     |   |   |   |-- playlists.ts             # POST /api/playlists/import
     |   |   |   |-- media.ts                 # GET /api/media/:id/url
-    |   |   |   +-- share.ts                 # GET /api/sessions/:id/share (public, no auth)
+    |   |   |   |-- share.ts                 # GET /api/sessions/:id/share (public, no auth)
+    |   |   |   +-- songs.ts                 # POST /api/songs/search (manual song search, FR120)
     |   |   +-- shared/
     |   |       |-- errors.ts                # AppError type + error factory functions
     |   |       |-- events.ts                # Socket.io event name constants
@@ -1005,7 +1083,8 @@ karamania/
     |   |           |-- session-schemas.ts    # Zod schemas for /api/sessions
     |   |           |-- playlist-schemas.ts   # Zod schemas for /api/playlists
     |   |           |-- media-schemas.ts      # Zod schemas for /api/media
-    |   |           +-- share-schemas.ts      # Zod schemas for /api/sessions/:id/share
+    |   |           |-- share-schemas.ts      # Zod schemas for /api/sessions/:id/share
+    |   |           +-- song-schemas.ts       # Zod schemas for /api/songs/search
     |   |-- kysely.config.ts                   # Kysely CLI configuration (migration path, DB connection)
     |   |-- migrations/
     |   |   +-- 001-initial-schema.ts        # users, sessions, session_participants, media_captures, karaoke_catalog
@@ -1016,12 +1095,19 @@ karamania/
     |   |   |   |-- session.ts               # createTestSession(overrides?)
     |   |   |   |-- participant.ts           # createTestParticipant(overrides?)
     |   |   |   |-- dj-state.ts              # createTestDJState(overrides?)
-    |   |   |   +-- user.ts                  # createTestUser(overrides?)
+    |   |   |   |-- user.ts                  # createTestUser(overrides?)
+    |   |   |   |-- lyrics-cache.ts          # createTestLyricsCache(overrides?)
+    |   |   |   |-- detection-event.ts       # createTestDetectionEvent(overrides?)
+    |   |   |   +-- user-layer-state.ts      # createTestUserLayerState(overrides?)
     |   |   |-- dj-engine/
     |   |   |   |-- machine.test.ts
     |   |   |   |-- transitions.test.ts
     |   |   |   |-- timers.test.ts
     |   |   |   +-- serializer.test.ts
+    |   |   |-- audio-intelligence/
+    |   |   |   |-- chant-detector.test.ts   # Chant line identification from LRC data
+    |   |   |   |-- light-show-engine.test.ts # Section energy mapping from LRC timestamps
+    |   |   |   +-- progressive-unlock.test.ts # Song counter + layer state transitions
     |   |   |-- services/
     |   |   |   |-- rate-limiter.test.ts
     |   |   |   |-- award-generator.test.ts
@@ -1034,7 +1120,7 @@ karamania/
     |   |-- package.json
     |   |-- tsconfig.json                    # strict: true, ESM, noUncheckedIndexedAccess
     |   |-- vitest.config.ts
-    |   +-- .env.example                     # DATABASE_URL, JWT_SECRET, FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, YOUTUBE_API_KEY, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
+    |   +-- .env.example                     # DATABASE_URL, JWT_SECRET, FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, YOUTUBE_API_KEY, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, ACRCLOUD_HOST, ACRCLOUD_ACCESS_KEY, ACRCLOUD_ACCESS_SECRET, LRCLIB_BASE_URL
     |
     +-- web_landing/
     |   |-- index.html                       # Join page: QR/code entry, platform detect, deep link / store redirect
@@ -1063,6 +1149,8 @@ karamania/
 | Server <-> YouTube Lounge API | Persistent HTTP (unofficial) | TV pairing code (session-scoped) | Server -> YouTube |
 | Server <-> YouTube Data API | REST | API key | Server -> YouTube |
 | Server <-> Spotify Web API | REST | Client Credentials token | Server -> Spotify |
+| Flutter -> ACRCloud | REST (audio fingerprint, via `flutter_acrcloud` SDK) | ACRCloud API key (embedded in app) | Client -> ACRCloud |
+| Server -> LRCLIB | REST | None (free API) | Server -> LRCLIB |
 | Web Landing <-> Flutter | Deep link (Universal Links / App Links) | None (party code in URL) | Web -> App |
 
 **Component Boundaries (Server):**
@@ -1091,12 +1179,24 @@ karamania/
               |  guest-token     |
               +--------+--------+
                        |
+              +--------v-----------------+
+              |  audio-intelligence/      |
+              |  (pure logic + ext. API)  |
+              |  chant-detector           |
+              |  light-show-engine        |
+              |  progressive-unlock       |
+              |  duet-manager             |
+              |  fingerprint-client       |
+              |  lyrics-fetcher           |
+              +--------+-----------------+
+                       |
               +--------v--------+    +--------------------------+
               |  persistence/    |    |    integrations/          |
               |  (Kysely queries)|    |  (external API clients)   |
               |  snake_case data |    |  lounge-api, youtube,     |
               |  DB is truth     |    |  spotify, firebase-admin  |
-              +-----------------+    +--------------------------+
+              +-----------------+    |  acrcloud, lrclib         |
+                                     +--------------------------+
 ```
 
 **Key boundary rules:**
@@ -1105,7 +1205,8 @@ karamania/
 - `services/session-manager.ts` is the **only** service that orchestrates across layers (DJ engine + persistence + integrations) for session lifecycle operations (create, restore from DB, teardown)
 - `routes/` call `persistence/` directly (REST is simple CRUD) and `services/` for business logic
 - `persistence/` is the **only** layer that imports from `db/`. No raw Kysely queries anywhere else
-- `integrations/` are called from `services/session-manager.ts` (Lounge API lifecycle) and `routes/` (playlist import) -- never from `dj-engine/`
+- `integrations/` are called from `services/session-manager.ts` (Lounge API lifecycle), `routes/` (playlist import), and `audio-intelligence/` (ACRCloud, LRCLIB) -- never from `dj-engine/`
+- `audio-intelligence/` has **zero imports** from `persistence/` -- it is pure logic + external API calls. Socket handlers bridge audio-intelligence results to persistence (lyrics cache writes, detection event logging, unlock state updates)
 
 **Component Boundaries (Flutter):**
 
@@ -1157,11 +1258,16 @@ karamania/
 | Party Cards | FR31-39 | `socket-handlers/card-handlers.ts`, `dj-engine/transitions.ts` | `widgets/party_card_deal.dart`, `constants/copy.dart` (card text) |
 | Ceremonies | FR16-21, FR55-58 | `socket-handlers/ceremony-handlers.ts`, `services/award-generator.ts` | `screens/ceremony_screen.dart`, `widgets/confetti_layer.dart`, `widgets/glow_effect.dart` |
 | Interludes | FR45-50 | `socket-handlers/party-handlers.ts` (game routing), `dj-engine/machine.ts` | `screens/interlude_screen.dart` |
-| Lightstick + Hype | FR59-66 | `socket-handlers/reaction-handlers.ts` | `widgets/lightstick_mode.dart`, `widgets/hype_signal_button.dart` |
+| Hype Signal | FR59-62, FR65-66 | `socket-handlers/reaction-handlers.ts` | `widgets/hype_signal_button.dart` |
 | Media Capture | FR67-73 | `socket-handlers/capture-handlers.ts`, `persistence/media-repository.ts` | `widgets/capture_bubble.dart`, `widgets/capture_overlay.dart`, `state/capture_provider.dart` |
 | Song Integration | FR74-95 | `integrations/lounge-api.ts`, `integrations/youtube-data.ts`, `integrations/spotify.ts`, `services/suggestion-engine.ts`, `persistence/catalog-repository.ts`, `routes/playlists.ts` | `screens/quick_pick_screen.dart`, `screens/spin_wheel_screen.dart`, `widgets/tv_pairing_overlay.dart`, `widgets/playlist_import_card.dart`, `widgets/song_card.dart` |
 | Auth & Identity | FR96-105 | `socket-handlers/auth-middleware.ts`, `services/guest-token.ts`, `persistence/user-repository.ts`, `integrations/firebase-admin.ts` | `state/auth_provider.dart`, `screens/home_screen.dart` (conditional) |
 | Session Timeline | FR108-115 | `routes/sessions.ts`, `routes/share.ts`, `persistence/session-repository.ts` | `screens/home_screen.dart` (timeline list), `screens/session_detail_screen.dart`, `state/timeline_provider.dart`, `widgets/session_card.dart` |
+| Audio Fingerprint | FR116-122 | `audio-intelligence/fingerprint-client.ts`, `socket-handlers/song-handlers.ts`, `persistence/detection-repository.ts` | `screens/song_screen.dart`, `widgets/detection_status.dart`, `widgets/manual_search_sheet.dart` |
+| Lyrics Sync | FR123-126 | `audio-intelligence/lyrics-fetcher.ts`, `persistence/lyrics-cache-repository.ts`, `socket-handlers/lyrics-handlers.ts` | `widgets/lyrics_display.dart`, `state/lyrics_provider.dart` |
+| Chant & Light Show | FR127-130, FR136-139 | `audio-intelligence/chant-detector.ts`, `audio-intelligence/light-show-engine.ts`, `socket-handlers/light-handlers.ts` | `widgets/chant_overlay.dart`, `widgets/light_show_layer.dart` |
+| Interactive Lyrics Games | FR131-135 | `audio-intelligence/duet-manager.ts`, `socket-handlers/duet-handlers.ts`, `socket-handlers/lyrics-handlers.ts` | `widgets/guess_line_card.dart`, `widgets/duet_indicator.dart` |
+| Progressive Unlock | FR140 | `audio-intelligence/progressive-unlock.ts`, `socket-handlers/unlock-handlers.ts`, `persistence/unlock-repository.ts` | `state/unlock_provider.dart` |
 
 **Cross-Cutting Concerns -> Location:**
 
@@ -1177,6 +1283,8 @@ karamania/
 | Vibe system | `persistence/session-repository.ts` (vibe column) | `theme/dj_tokens.dart`, `theme/dj_theme.dart` |
 | i18n readiness | -- | `constants/copy.dart` (all strings centralized) |
 | Logging + monitoring | Pino (built into Fastify) + Sentry | Sentry Flutter SDK |
+| Progressive feature unlock | `audio-intelligence/progressive-unlock.ts`, `persistence/unlock-repository.ts`, `socket-handlers/unlock-handlers.ts` | `state/unlock_provider.dart` |
+| Audio intelligence pipeline | `audio-intelligence/*`, `integrations/acrcloud.ts`, `integrations/lrclib.ts`, `persistence/lyrics-cache-repository.ts`, `persistence/detection-repository.ts` | `state/lyrics_provider.dart`, `widgets/lyrics_display.dart`, `widgets/chant_overlay.dart`, `widgets/light_show_layer.dart` |
 
 ### Integration Points
 
@@ -1195,6 +1303,11 @@ karamania/
 | `socket/client.dart` | `state/*_provider.dart` | Method call on provider | Server event -> `partyProvider.onStateChanged(...)` |
 | `screens/*.dart` | `socket/client.dart` | Method call | User tap -> `socketClient.emit('reaction:sent', ...)` |
 | `screens/*.dart` | `state/*_provider.dart` | `context.watch<T>()` | Widget rebuild on state change |
+| `socket-handlers/song-handlers.ts` | `audio-intelligence/lyrics-fetcher.ts` | Direct function call | `song:detected` -> fetch lyrics from LRCLIB |
+| `socket-handlers/lyrics-handlers.ts` | `audio-intelligence/chant-detector.ts` | Direct function call | Lyrics fetched -> detect chant lines |
+| `socket-handlers/lyrics-handlers.ts` | `audio-intelligence/light-show-engine.ts` | Direct function call | Lyrics fetched -> compute section energy map |
+| `socket-handlers/unlock-handlers.ts` | `audio-intelligence/progressive-unlock.ts` | Direct function call | Song counted -> check layer transition |
+| `socket-handlers/duet-handlers.ts` | `audio-intelligence/duet-manager.ts` | Direct function call | Duet activated -> assign performer colors |
 
 **External Integrations:**
 
@@ -1206,6 +1319,8 @@ karamania/
 | Firebase Auth | Client SDK (persistent), Admin SDK (per-request JWT verify) | Guest mode (never blocks join) |
 | Firebase Storage | Client direct upload (media capture), server generates signed URLs | Queue for retry, never blocks party |
 | Railway PostgreSQL | Persistent Kysely connection pool | 3 retries + exponential backoff, log on failure |
+| ACRCloud API | On-demand REST (5-10s audio burst every 30s, via `flutter_acrcloud` on client) | Manual song search fallback (FR120), server-side proxy for web fallback |
+| LRCLIB API | On-demand REST (per song detection, server-side) | "No lyrics" graceful state (FR126), Musixmatch commercial upgrade path for coverage gaps |
 
 ### File Organization Patterns
 
@@ -1290,7 +1405,7 @@ All technology choices are mutually compatible and version-verified:
 
 **Pattern Consistency:**
 - Naming conventions are internally consistent: snake_case DB -> snake_case TypeScript data layer -> camelCase at REST/Socket.io boundary -> camelCase Dart. One transformation point, clearly documented
-- `namespace:action` Socket.io convention is consistently applied across all 10 event namespaces
+- `namespace:action` Socket.io convention is consistently applied across all 14 event namespaces
 - Handler registration pattern (`registerXHandlers(socket, session)`) is uniform across all socket handler files
 - Provider pattern (read-only from widgets, mutated only by SocketClient) is consistent and prevents state management conflicts
 
@@ -1303,7 +1418,7 @@ No contradictory decisions found.
 
 ### Requirements Coverage Validation
 
-**Functional Requirements Coverage (115 FRs):**
+**Functional Requirements Coverage (140 FRs):**
 
 | FR Category | FRs | Architectural Support | Status |
 |-------------|-----|----------------------|--------|
@@ -1311,7 +1426,7 @@ No contradictory decisions found.
 | DJ Engine | FR9-15, FR51, FR54 | Pure state machine in `dj-engine/`, server-authoritative, full persistence | Covered |
 | Performance & Spotlight | FR16-21, FR55-62 | Ceremony handlers, award-generator service, party card handlers | Covered |
 | Audience Participation | FR22-28b | Reaction handlers, rate-limiter, sound handlers, audio engine | Covered |
-| Audience Modes | FR63-66 | Reaction handlers (lightstick, hype signal events) | Covered |
+| Hype Signal | FR59-62, FR65-66 | Reaction handlers (hype signal events) | Covered |
 | Media Capture | FR67-73 | Capture handlers, media-repository, Firebase Storage, capture_provider | Covered |
 | Song Integration | FR74-95 | Lounge API, YouTube Data, Spotify integrations, suggestion-engine, catalog-repository | Covered |
 | Auth & Identity | FR96-105 | Auth middleware, guest-token service, Firebase Admin, user-repository | Covered |
@@ -1320,10 +1435,15 @@ No contradictory decisions found.
 | Memory & Sharing | FR34-39, FR52 | Award-generator, capture system, REST share endpoint | Covered |
 | Session Intelligence | FR40-44 | Event stream service, participation scoring in handlers | Covered |
 | Connection & Resilience | FR45-50 | Socket.io reconnection, three-tier model, heartbeat, wake lock | Covered |
+| Audio Fingerprint | FR116-122 | `audio-intelligence/fingerprint-client.ts`, `flutter_acrcloud` SDK, `song:detected` event, manual search fallback (`/api/songs/search`) | Covered |
+| Lyrics Sync | FR123-126 | `audio-intelligence/lyrics-fetcher.ts`, `lyrics_cache` table, `lyrics:synced` broadcast, graceful "no lyrics" state | Covered |
+| Chant & Light Show | FR127-130, FR136-139 | `audio-intelligence/chant-detector.ts`, `audio-intelligence/light-show-engine.ts`, LRC section energy mapping, 60fps client rendering | Covered |
+| Interactive Lyrics Games | FR131-135 | `audio-intelligence/duet-manager.ts`, `lyrics:guessLine`/`lyrics:guessReveal` events, `duet:activated`/`duet:assignment` events | Covered |
+| Progressive Unlock | FR140 | `audio-intelligence/progressive-unlock.ts`, `user_layer_state` table, DJ engine transition guards, `unlock:layerChanged` event | Covered |
 
-All 115 FRs have architectural support. No gaps.
+All 140 FRs have architectural support. No gaps.
 
-**Non-Functional Requirements Coverage (39 NFRs):**
+**Non-Functional Requirements Coverage (47 NFRs):**
 
 | NFR | Requirement | Architectural Support | Status |
 |-----|------------|----------------------|--------|
@@ -1344,6 +1464,14 @@ All 115 FRs have architectural support. No gaps.
 | NFR29-33 | Song integration performance | Batched API calls, pre-built catalog, server-side Spotify tokens | Covered |
 | NFR34-37 | Auth & persistence | JWT handshake, guest upgrade without disconnect, async writes, signed URLs | Covered |
 | NFR38-39 | i18n readiness, web landing <50KB | `copy.dart` centralization, plain HTML/JS landing page | Covered |
+| NFR40 | >60% audio recognition accuracy | ACRCloud fingerprinting with periodic 5-10s bursts, manual search fallback (FR120) | Covered |
+| NFR41 | <3s lyrics sync latency | Server-side LRCLIB fetch on `song:detected`, `lyrics_cache` for repeat songs, immediate broadcast | Covered |
+| NFR42 | <12% battery drain/hr | Periodic mic capture (5-10s every 30s), acquire/release pattern, not always-on | Covered |
+| NFR43 | >80% lyrics cache hit ratio | `lyrics_cache` PostgreSQL table with ISRC + title-artist hash lookup, persistent across sessions | Covered |
+| NFR44 | 60fps light show + chant animations | Flutter native rendering, server computes energy map, client renders locally at 60fps | Covered |
+| NFR45 | Graceful "no lyrics" degradation | `lyrics:unavailable` event, detection_status widget shows appropriate state, party continues without lyrics features | Covered |
+| NFR46 | Progressive unlock state across reconnects | `user_layer_state` persisted in PostgreSQL, restored on reconnection, server-authoritative | Covered |
+| NFR47 | >70% chant detection precision | Server-side pure function analyzing LRC repeated chorus lines, conservative threshold to minimize false positives | Covered |
 
 ### Implementation Readiness Validation
 
@@ -1355,7 +1483,7 @@ All 115 FRs have architectural support. No gaps.
 
 **Structure Completeness:**
 - Complete directory tree with every file named and annotated
-- All 115 FRs mapped to specific server and Flutter locations
+- All 140 FRs mapped to specific server and Flutter locations
 - Cross-cutting concerns mapped to their implementation files
 - Integration points documented with mechanism and direction
 
@@ -1376,22 +1504,24 @@ All 115 FRs have architectural support. No gaps.
 3. **Post-session feedback (FR43, FR52):** The "Would you use again?" North Star metric needs storage. **Resolution:** `feedback_score` column added to `session_participants` table (integer 1-5, nullable). Written as part of session summary at party end -- no separate endpoint needed
 4. **Venue name (FR99, FR108, FR112):** Referenced in session summaries, timeline, and invites but no storage column. **Resolution:** Add `venue_name` (nullable text) to `sessions` table. Optional text input in lobby screen
 
+5. **Audio fingerprint client-side vs server-side decision (FR116-122):** Where does audio capture and fingerprinting happen? **Resolution:** Flutter client uses `flutter_acrcloud` SDK for direct device-to-ACRCloud fingerprinting. This avoids streaming raw audio to the server (latency, bandwidth). Client sends fingerprint result (song title, artist, ISRC, time offset) to server via `song:detected` Socket.io event. Server handles lyrics fetch + distribution to all clients. Server-side `fingerprint-client.ts` exists as a proxy for web fallback only
+
 **Nice-to-Have Gaps: None remaining.**
 
 ### Architecture Completeness Checklist
 
 **Requirements Analysis**
 
-- [x] Project context thoroughly analyzed (115 FRs, 39 NFRs, 4 personas, 6 user journeys)
-- [x] Scale and complexity assessed (medium-high, ~15 server modules, ~12 screens, ~25 widgets)
+- [x] Project context thoroughly analyzed (140 FRs, 47 NFRs, 4 personas, 6 user journeys)
+- [x] Scale and complexity assessed (medium-high, ~18 server modules, ~14 screens, ~30 widgets)
 - [x] Technical constraints identified (solo dev, Flutter native, unofficial Lounge API, budget Android devices)
-- [x] Cross-cutting concerns mapped (11 concerns with implementation locations)
+- [x] Cross-cutting concerns mapped (13 concerns with implementation locations)
 
 **Architectural Decisions**
 
 - [x] Critical decisions documented with verified versions (Fastify 5.8.1, Socket.io 4.x, Kysely, Zod, etc.)
 - [x] Technology stack fully specified (Flutter + Node.js + PostgreSQL + Firebase)
-- [x] Integration patterns defined (6 external services, all with fallback paths)
+- [x] Integration patterns defined (8 external services, all with fallback paths)
 - [x] Performance considerations addressed (latency budgets, audio architecture, rate limiting)
 
 **Implementation Patterns**
@@ -1406,7 +1536,7 @@ All 115 FRs have architectural support. No gaps.
 - [x] Complete directory structure defined (every file named and annotated)
 - [x] Component boundaries established (server layers, Flutter layers, boundary rules)
 - [x] Integration points mapped (internal + external, with mechanism and direction)
-- [x] Requirements to structure mapping complete (all 115 FRs mapped)
+- [x] Requirements to structure mapping complete (all 140 FRs mapped)
 
 ### Architecture Readiness Assessment
 
@@ -1427,6 +1557,10 @@ All 115 FRs have architectural support. No gaps.
 - Horizontal scaling architecture (Redis adapter, sticky sessions) -- deferred to v4
 - Incremental event stream flush (periodic background writes) -- deferred to v2
 - Monorepo tooling (pnpm workspaces + Turborepo) -- when admin dashboard or second JS app is added
+- Musixmatch commercial upgrade -- when LRCLIB coverage gaps become a user-visible problem, add Musixmatch as a paid fallback for lyrics fetch
+
+**Go/No-Go Gate:**
+- ACRCloud PoC must achieve >60% recognition accuracy in real karaoke rooms before committing to audio intelligence features. If recognition fails, manual song search (FR120) becomes primary and audio fingerprint features are descoped
 
 ### Implementation Handoff
 
@@ -1467,8 +1601,8 @@ npm install -D tsx vitest kysely-codegen kysely-ctl @fastify/type-provider-zod
 npx tsc --init  # Configure: strict, ESM, noUncheckedIndexedAccess
 
 # 4. Create server directory structure per architecture doc
-mkdir -p src/{db,dj-engine,socket-handlers,integrations,services,persistence,routes,shared/schemas}
-mkdir -p migrations scripts tests/{factories,dj-engine,services,socket-handlers,persistence}
+mkdir -p src/{db,dj-engine,audio-intelligence,socket-handlers,integrations,services,persistence,routes,shared/schemas}
+mkdir -p migrations scripts tests/{factories,dj-engine,audio-intelligence,services,socket-handlers,persistence}
 
 # 5. Create entry point and config
 # src/index.ts (Fastify + Socket.io setup)
@@ -1511,7 +1645,7 @@ mkdir -p apps/web_landing
 - 20+ architectural decisions made (language, framework, database, auth, real-time, state management, persistence, routing, validation, monitoring, CI/CD, type generation)
 - 15 enforcement guidelines + anti-patterns table for AI agent consistency
 - 3 architectural layers with clear boundary rules (server) + 3 Flutter layers
-- 115 FRs + 39 NFRs fully supported with mapped implementation locations
+- 140 FRs + 47 NFRs fully supported with mapped implementation locations
 
 ### Quality Assurance Checklist
 
@@ -1524,7 +1658,7 @@ mkdir -p apps/web_landing
 
 **Requirements Coverage**
 
-- [x] All 115 functional requirements are supported
+- [x] All 140 functional requirements are supported
 - [x] All 39 non-functional requirements are addressed
 - [x] 11 cross-cutting concerns are handled with implementation locations
 - [x] 10 external integration points are defined with fallback paths

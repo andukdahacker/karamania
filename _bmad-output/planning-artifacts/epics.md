@@ -4,11 +4,17 @@ stepsCompleted:
   - step-02-design-epics
   - step-03-create-stories
   - step-04-final-validation
+  - pivot-update-2026-04-02
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/architecture.md'
   - '_bmad-output/planning-artifacts/ux-design-specification.md'
   - '_bmad-output/project-context.md'
+  - '_bmad-output/planning-artifacts/sprint-change-proposal-2026-04-02.md'
+lastEdited: '2026-04-02'
+editHistory:
+  - date: '2026-04-02'
+    changes: 'Lyrics-sync pivot update per approved sprint change proposal. Added FR116-FR140 (25 new FRs) and NFR40-NFR47 (8 new NFRs) to requirements inventory. Added 3 new epics: Epic 11 (Lyrics Sync Engine, 9 stories), Epic 12 (Interactive Lyrics Games, 3 stories), Epic 13 (Progressive Feature Unlock, 5 stories). Added Epic 10 (UX Redesign, 11 stories including 4 new pivot stories 10.8-10.11). Modified Epic 2 (+Story 2.10 Song Detection Integration), Epic 4 (Story 4.7 rewritten - lightstick removed, hype signal retained; FR63-64 removed), Epic 5 (+Story 5.10 Detection Source Abstraction; ACRCloud primary, Lounge API demoted), Epic 7 (interludes gated to Social Layer). Updated FR Coverage Map with new FR mappings. Updated Additional Requirements with Audio Intelligence architecture.'
 ---
 
 # karaoke-party-app - Epic Breakdown
@@ -138,6 +144,31 @@ FR112: Session Detail includes a "Let's go again!" action that generates a pre-c
 FR113: Guest users see a prompt to create an account to unlock session history. The Session Timeline is not accessible to guests -- guest home screen shows only the "Start Party" / "Join Party" actions
 FR114: Session Timeline loads the 20 most recent sessions initially, with infinite scroll for older sessions
 FR115: If an authenticated user has zero past sessions, the Session Timeline shows an empty state with a "Start your first party" call-to-action
+FR116: System detects the currently playing song via audio fingerprinting using the device microphone. Detection uses a 5-10 second audio capture burst, with results returned within 5 seconds including song title, artist, ISRC code, and playback time offset
+FR117: System performs periodic re-recognition every 30 seconds to correct lyrics drift and detect song changes. Each re-sync burst captures 5 seconds of audio
+FR118: When re-sync returns a different song than currently displayed, the system transitions to the new song's lyrics within 3 seconds (fetch + render)
+FR119: System supports cover-song identification mode for detecting karaoke backing tracks that differ from original recordings
+FR120: If audio fingerprinting detection fails after 3 consecutive attempts (15 seconds total), the system presents a manual song search allowing the user to type song title/artist. Manual selection triggers lyrics fetch and display
+FR121: System optionally pairs with YouTube TV via the TV remote control API (host enters TV code) for passive song detection and queue control at YouTube-equipped venues. TV API detection supplements audio fingerprinting — if both detect, the fingerprinting service's time offset is used for lyrics sync accuracy
+FR122: System maintains a detection status indicator showing current state: "Listening...", "Song detected: [title]", "No match — search manually"
+FR123: System retrieves synced lyrics in LRC format from a lyrics database (primary: community-driven free source, fallback: commercial lyrics API) using detected song title + artist + duration
+FR124: System displays synced lyrics with 60fps line-by-line scrolling (no frame drops) synchronized to the song's playback position, starting from the time offset returned by the audio fingerprinting service
+FR125: System caches retrieved lyrics locally by song identifier (ISRC or title+artist hash). Cached lyrics are used on subsequent detections of the same song without API calls. Cache persists across sessions
+FR126: When no synced lyrics are available for a detected song, the system displays the song title and artist prominently with a "Lyrics not available" message while maintaining the reactive light show and all other features
+FR127: System auto-detects chant moments by identifying lyric lines that appear 2 or more times in the LRC data (chorus/hook lines). These lines are marked as chant candidates
+FR128: Chant moments display with a crescendo animation: the chant text starts at normal size and progressively grows larger over the 3-5 seconds preceding the chant timestamp, reaching maximum size at the moment the chant line is sung
+FR129: During chant moments, all connected phones display the chant text simultaneously with a synchronized visual highlight (screen flash, enlarged text, universal color). The reactive light show intensifies to maximum brightness during chant moments
+FR130: The DJ/host can manually promote or demote chant moments via the host controls overlay — adding custom chant markers or removing auto-detected ones that don't fit
+FR131: During song playback, the system randomly selects lyric lines to blank out (target: 1-2 per song, never during chant moments, never the first or last line). The blanked line shows "[???]" for 3 seconds before revealing the actual lyric
+FR132: Guess The Next Line activates only after Progressive Feature Unlock Interaction Layer (songs 3-4 onward). Not active during Base Layer songs 1-2
+FR133: For songs with 2+ performers, the host or any participant can activate Duet Mode from the song controls. Duet Mode assigns colors to performers (blue and gold for 2 performers, additional colors for 3+)
+FR134: In Duet Mode, each performer's phone highlights their assigned lyric lines in their color. Other performers' lines appear dimmed. Chorus/chant lines display in both/all colors indicating "everyone sings"
+FR135: Non-performing audience members see all colors on their screen, showing who should be singing which part
+FR136: During song playback, each phone's screen background pulses color synchronized to the song's energy level — soft slow breathing during verses, intensifying pulses approaching the chorus, bright rapid pulses during the chorus, peak brightness during chant moments
+FR137: Light show color intensity is derived from the song's audio energy, mapped to LRC section positions: verse timestamps = low energy (30% brightness, 2s pulse cycle), pre-chorus = rising energy (60% brightness, 1s cycle), chorus = high energy (100% brightness, 0.5s cycle)
+FR138: All connected phones display the same color palette and pulse timing for a given song moment, creating a coordinated room-wide light effect
+FR139: Light show is always active during song playback (Base Layer feature). No user action required to activate. Users cannot disable the light show independently — it is part of the core lyrics display experience
+FR140: System tracks each user's personal song count from their join time. Features activate per-user based on their count: Songs 1-2 (Base Layer): synced lyrics, reactive light show, chant highlights, duet colors. Songs 3-4 (Interaction Layer): Guess The Next Line activates. Songs 5+ (Social Layer): party card challenges, interludes, ceremonies, all interactive features. Late joiners begin at their own Song 1 regardless of session progress
 
 ### NonFunctional Requirements
 
@@ -180,6 +211,14 @@ NFR36: PostgreSQL session summary writes at party end must not block the real-ti
 NFR37: Media access control must enforce ownership: authenticated users can access only their own captures and captures from sessions they participated in. Guest session media is accessible to all session participants via a time-limited signed URL (7-day expiry)
 NFR38: All user-facing strings must be defined in a centralized string constants module (not hardcoded in widgets) to enable Vietnamese localization extraction in the fast-follow phase. Flutter's intl package structure recommended. Fonts must support Vietnamese diacritics (UTF-8)
 NFR39: Web landing page must load in <2s on 4G, be under 50KB total, and correctly handle deep-link routing on iOS 15+ and Android 8+. Graceful fallback to app store redirect when deep link fails
+NFR40: Audio fingerprinting song recognition must achieve >70% accuracy in commercial karaoke rooms with typical ambient noise levels (conversation, singing, echo). Measured across minimum 3 different venue setups during PoC
+NFR41: Time from song start to first lyric displayed must be <10 seconds (includes audio capture, fingerprinting API call, lyrics database fetch, and initial render)
+NFR42: Lyrics sync drift must not exceed 2 seconds over a 5-minute song. Periodic re-sync (every 30 seconds) must correct drift to within 500ms
+NFR43: Battery drain from periodic audio recognition (5-10s burst every 30s) must not exceed 12% per hour on a device with >80% battery health, measured on a 2-year-old mid-range Android device
+NFR44: Lyrics cache must store at least 500 songs locally. Cache lookup must complete in <50ms. Cache persistence across app restarts required
+NFR45: Reactive light show must maintain 60fps animation without impacting lyrics scroll performance or WebSocket message handling
+NFR46: Chant moment crescendo animation must begin exactly 3 seconds before the chant timestamp (±200ms tolerance) based on the local timer synced to the fingerprinting service's time offset
+NFR47: Audio fingerprinting API usage must remain within the service plan quota. A typical 3-hour session with 30-second re-sync intervals generates ~360 recognition requests. Cached song detection (same song re-detected) should skip API call and use local timer only
 
 ### Additional Requirements
 
@@ -219,6 +258,13 @@ NFR39: Web landing page must load in <2s on 4G, be under 50KB total, and correct
 - LoadingState enum per async operation
 - Audio engine with pre-loaded bundled assets (<500KB, 10 core assets)
 - Karaoke catalog: 10K+ tracks pre-scraped, offline scraper script, `is_classic` boolean for cold start
+- Audio Intelligence layer: ACRCloud fingerprinting pipeline, LRCLIB/Musixmatch lyrics API, chant detection algorithm, reactive light show engine, progressive feature unlock manager
+- New client components: LyricsSyncService, LyricsDisplayWidget, LightShowEngine, ChantDetector, ProgressiveUnlockManager, DuetManager
+- New data models: lyrics_cache (local SQLite/Hive), detection_events, user_layer_state (per-user song counter + feature unlock state)
+- New dependencies: ACRCloud SDK (flutter_acrcloud), LRCLIB API, flutter_lyric package
+- New permissions: Microphone (RECORD_AUDIO) for audio fingerprinting
+- Battery target: <12%/hr with periodic audio capture (5-10s burst every 30s)
+- MVP schema extended: add lyrics_cache and user_layer_state tables
 - dj-engine/ has zero imports from persistence, integrations, or socket-handlers (pure logic)
 - persistence/ is the ONLY layer that imports from db/
 - services/session-manager.ts is the ONLY cross-boundary orchestrator
@@ -324,10 +370,10 @@ FR59: Epic 4 - Accept/dismiss/redraw party card
 FR60: Epic 4 - Group involvement card participant selection
 FR61: Epic 4 - Party card acceptance rate tracking
 FR62: Epic 4 - Card challenges contribute to awards/scoring
-FR63: Epic 4 - Toggle lean-in vs lightstick mode
-FR64: Epic 4 - Lightstick full-screen glow effect
+FR63: REMOVED - Lightstick mode replaced by Reactive Phone Light Show (FR136-139)
+FR64: REMOVED - Lightstick mode replaced by Reactive Phone Light Show (FR136-139)
 FR65: Epic 4 - Camera flash/screen hype signal
-FR66: Epic 4 - Lightstick and hype alongside reactions
+FR66: Epic 4 - Hype signal available alongside reactions and the reactive light show
 FR67: Epic 6 - Floating capture bubble at key moments
 FR68: Epic 6 - Pop bubble to initiate capture
 FR69: Epic 6 - Inline photo/video/audio capture
@@ -377,6 +423,31 @@ FR112: Epic 9 - "Let's go again!" re-engagement action
 FR113: Epic 9 - Guest prompt to create account
 FR114: Epic 9 - Session Timeline infinite scroll
 FR115: Epic 9 - Empty state with "Start your first party" CTA
+FR116: Epic 11 - Audio fingerprinting song detection via device microphone
+FR117: Epic 11 - Periodic re-recognition every 30s for drift correction and song change
+FR118: Epic 11 - Song change transition within 3 seconds
+FR119: Epic 11 - Cover-song identification mode for karaoke backing tracks
+FR120: Epic 11 - Manual song search fallback after 3 failed attempts
+FR121: Epic 5 - TV API supplements audio fingerprinting (updated Story 5.7)
+FR122: Epic 11 - Detection status indicator (Listening/Detected/No match)
+FR123: Epic 11 - Synced lyrics fetch in LRC format from lyrics database
+FR124: Epic 11 - 60fps line-by-line lyrics scrolling synchronized to playback
+FR125: Epic 11 - Local lyrics cache by song identifier
+FR126: Epic 11 - Graceful "no lyrics" state with song title display
+FR127: Epic 11 - Auto-detect chant moments from repeated lyric lines
+FR128: Epic 11 - Chant crescendo animation (3-5s progressive text growth)
+FR129: Epic 11 - Synchronized chant display on all phones with visual highlight
+FR130: Epic 11 - Host manual chant moment promotion/demotion
+FR131: Epic 12 - Guess The Next Line blanked lyrics during playback
+FR132: Epic 12 - Guess The Next Line gated to Interaction Layer (songs 3-4+)
+FR133: Epic 12 - Duet Mode activation and color assignment
+FR134: Epic 12 - Duet Mode performer-specific lyric highlighting
+FR135: Epic 12 - Duet Mode audience view with all performer colors
+FR136: Epic 11 - Reactive light show color pulses synchronized to song energy
+FR137: Epic 11 - Light show intensity mapped to LRC section positions
+FR138: Epic 11 - Coordinated color palette and pulse timing across all phones
+FR139: Epic 11 - Light show always active during song playback (Base Layer)
+FR140: Epic 13 - Progressive feature unlock per-user song counter and layer gating
 
 ## Epic List
 
@@ -386,22 +457,26 @@ Host can create a party, guests can join via QR code or party code, and everyone
 **Cross-cutting foundations:** Design tokens, DJTapButton, vibe system, LoadingState enum, AccessibilityProvider, Space Grotesk font setup
 
 ### Epic 2: Core DJ Engine & Song Experience
-The party runs automatically -- the DJ engine cycles through states (song selection -> party card deal -> song -> ceremony -> interlude -> repeat), the host controls the flow via a persistent overlay, and audio cues mark every transition. Participants experience the core game loop. The state machine includes placeholder transitions for party cards (Epic 4), ceremonies (Epic 3), and interludes (Epic 7) that those epics implement with full behavior. Event stream logging is established here as core infrastructure for all subsequent epics.
+The party runs automatically -- the DJ engine cycles through states (song selection -> party card deal -> song -> ceremony -> interlude -> repeat), the host controls the flow via a persistent overlay, and audio cues mark every transition. Participants experience the core game loop. The state machine includes placeholder transitions for party cards (Epic 4), ceremonies (Epic 3), and interludes (Epic 7) that those epics implement with full behavior. Event stream logging is established here as core infrastructure for all subsequent epics. **Pivot update:** Song state now integrates with audio fingerprinting detection (Epic 11) — SONG_DETECTED sub-state added, layer-check guards gate card deals and interlude transitions based on progressive unlock state.
 **FRs covered:** FR9, FR10, FR11, FR12, FR14, FR16, FR17, FR26, FR29, FR30, FR31, FR32, FR33, FR42, FR50
 **Cross-cutting concerns:** DJ engine requires 100% unit test coverage; every epic that adds states/transitions must include regression tests. Event stream (FR42) is the audit trail consumed by Epic 8 finale and analytics.
+**Pivot additions:** Story 2.10 (Song Detection Integration with DJ Engine)
 
 ### Epic 3: Ceremonies & Awards
 After each song, performers receive fun, contextual awards with dramatic ceremony reveals. Full ceremonies include anticipation buildup, confetti, and moment card generation. Quick ceremonies deliver a brief award flash. Ceremony audio plays through the host phone as the dominant source. Participation scoring system is established here (passive/active/engaged tiers) and extended by Epic 4 (card challenges) and Epic 8 (end-of-night awards).
 **FRs covered:** FR18a, FR18b, FR19, FR20, FR25, FR34, FR35, FR40
 
 ### Epic 4: Audience Participation & Party Cards
-While songs play, the audience actively participates -- sending emoji reactions, triggering soundboard effects, and toggling lightstick mode or hype signals. Singers receive challenge cards from a curated pool of 19 that shape performances and contribute to scoring.
-**FRs covered:** FR22, FR23, FR24, FR54, FR55, FR56, FR57, FR58, FR59, FR60, FR61, FR62, FR63, FR64, FR65, FR66
-**Dependency note:** Epic 6 (Media Capture) depends on the reaction event stream from this epic for peak detection (FR73).
+While songs play, the audience actively participates -- sending emoji reactions, triggering soundboard effects, and activating hype signals. Singers receive challenge cards from a curated pool of 19 that shape performances and contribute to scoring. **Pivot update:** Lightstick mode (FR63-64) REMOVED and replaced by Reactive Phone Light Show (Epic 11, FR136-139). Party card challenges gated to Social Layer (songs 5+ per user) via Progressive Feature Unlock (Epic 13). Hype signal (FR65) retained as standalone feature alongside reactions and light show.
+**FRs covered:** FR22, FR23, FR24, FR54, FR55, FR56, FR57, FR58, FR59, FR60, FR61, FR62, FR65, FR66
+**FRs removed:** FR63, FR64 (lightstick mode → replaced by Epic 11 light show)
+**Dependency note:** Epic 6 (Media Capture) depends on the reaction event stream from this epic for peak detection (FR73). Party card gating depends on Epic 13 (Progressive Feature Unlock).
+**Pivot modifications:** Story 4.7 rewritten (lightstick removed, hype signal retained)
 
 ### Epic 5: Song Integration & Discovery
-The group discovers and selects songs together. Friends import playlists from YouTube Music and Spotify, the suggestion engine finds songs everyone knows with confirmed karaoke versions, and Quick Pick or Spin the Wheel makes selection a group activity. TV pairing auto-queues songs on YouTube.
-**FRs covered:** FR27, FR74, FR75, FR76, FR77, FR78, FR79, FR80, FR81, FR82, FR83, FR84, FR85, FR86, FR87, FR88, FR89, FR90, FR91, FR92, FR93, FR94, FR95
+The group discovers and selects songs together. Friends import playlists from YouTube Music and Spotify, the suggestion engine finds songs everyone knows with confirmed karaoke versions, and Quick Pick or Spin the Wheel makes selection a group activity. **Pivot update:** ACRCloud audio fingerprinting (Epic 11) is now the PRIMARY song detection method. YouTube TV pairing via Lounge API is DEMOTED to optional enhancement — supplements fingerprinting at YouTube-equipped venues. A unified SongContext interface abstracts detection sources so downstream consumers (lyrics, DJ engine, ceremonies) don't care how the song was detected.
+**FRs covered:** FR27, FR74, FR75, FR76, FR77, FR78, FR79, FR80, FR81, FR82, FR83, FR84, FR85, FR86, FR87, FR88, FR89, FR90, FR91, FR92, FR93, FR94, FR95, FR121
+**Pivot additions:** Story 5.10 (Detection Source Abstraction — unified SongContext interface)
 
 ### Epic 6: Media Capture & Sharing
 Participants capture photos, videos, and audio during key moments via a floating capture bubble or persistent capture icon. Media uploads happen in the background. Reaction peak detection triggers capture prompts automatically.
@@ -409,9 +484,9 @@ Participants capture photos, videos, and audio during key moments via a floating
 **Dependency note:** Requires Epic 4 reaction event stream for peak detection (FR73). Must be implemented after Epic 4.
 
 ### Epic 7: Interlude Games & Icebreaker
-Between songs, mini-games keep energy high -- Kings Cup group rules, Dare Pull random challenges, Quick Vote opinion polls, and a first-session icebreaker. Democratic voting lets the group decide what happens next. Universal activities are front-loaded in the first 30 minutes.
+Between songs, mini-games keep energy high -- Kings Cup group rules, Dare Pull random challenges, Quick Vote opinion polls, and a first-session icebreaker. Democratic voting lets the group decide what happens next. Universal activities are front-loaded in the first 30 minutes. **Pivot update:** Interludes (Kings Cup, Dare Pull) gated to Social Layer (songs 5+ per user) via Progressive Feature Unlock (Epic 13). Quick Vote remains universal (single-tap, no spotlight). Icebreaker unchanged (pre-song activity). Group sing-along now cross-references chant moments (FR127-129) from Epic 11.
 **FRs covered:** FR13, FR15, FR21, FR28a, FR28b, FR51
-**Dependency note:** Reuses the democratic voting mechanism built in Epic 5 (FR27) for activity selection.
+**Dependency note:** Reuses the democratic voting mechanism built in Epic 5 (FR27) for activity selection. Interlude gating depends on Epic 13 (Progressive Feature Unlock).
 
 ### Epic 8: Finale & Session Persistence
 The party ends with a memorable 4-step finale -- highlight awards, session stats, a shareable setlist poster, and one-tap feedback. All session data (event stream, awards, participation scores) is persisted to PostgreSQL for future recall. Consumes the event stream established in Epic 2 (FR42) and participation scores from Epic 3 (FR40).
@@ -420,6 +495,27 @@ The party ends with a memorable 4-step finale -- highlight awards, session stats
 ### Epic 9: Session Timeline & Memories
 Authenticated users revisit past parties via a Session Timeline home screen. Tapping a session reveals full details -- participants, setlist, awards, media gallery. Guest-to-account upgrade preserves all data. "Let's go again!" drives re-engagement through existing group chats.
 **FRs covered:** FR97, FR98, FR100, FR101, FR102, FR108, FR109, FR110, FR111, FR112, FR113, FR114, FR115
+
+### Epic 10: UX Redesign & Brand Identity
+Comprehensive visual and interaction redesign bringing brand identity, consistent styling, and polished UX across all screens. **Pivot update:** During-song screen completely redesigned around lyrics-first layout. New stories added for lyrics display, duet mode visuals, progressive unlock transitions, and detection/fallback UX. Lightstick screens/wireframes removed.
+**FRs covered:** UX polish stories (10.1-10.7), FR124 (lyrics display), FR133-FR135 (duet visuals), FR140 (progressive unlock transitions), FR122 (detection status UX)
+**Pivot additions:** Stories 10.8-10.11 (Lyrics Display Screen, Duet Mode Visuals, Progressive Unlock Transitions, Detection & Fallback UX)
+
+### Epic 11: Lyrics Sync Engine
+The core differentiator — real-time song detection via audio fingerprinting, synced lyrics display on every phone, chant moment detection with crescendo animations, and a reactive phone light show that pulses with the music. This is the "audio intelligence layer" that makes Karamania the only karaoke companion that knows what song is playing and reacts to it in real-time. Works at ANY venue regardless of karaoke system — just a microphone listening to what's playing.
+**FRs covered:** FR116, FR117, FR118, FR119, FR120, FR122, FR123, FR124, FR125, FR126, FR127, FR128, FR129, FR130, FR136, FR137, FR138, FR139
+**NFRs:** NFR40 (recognition accuracy), NFR41 (lyrics latency), NFR42 (sync drift), NFR43 (battery drain), NFR44 (lyrics cache), NFR45 (light show fps), NFR46 (chant timing), NFR47 (API quota)
+**Dependency note:** Requires Epic 1 (WebSocket infrastructure) and Epic 2 (DJ engine song state). Provides song detection data consumed by Epic 12 (Interactive Lyrics Games) and Epic 13 (Progressive Feature Unlock). Detection source abstracted via Epic 5 Story 5.10 (SongContext interface).
+
+### Epic 12: Interactive Lyrics Games
+Interactive features layered on top of the lyrics sync engine — Guess The Next Line blanks random lyrics for the audience to anticipate, and Duet Colors assigns performer-specific colors to lyric lines for multi-singer songs. These features activate progressively (Guess The Next Line at Interaction Layer, songs 3-4+).
+**FRs covered:** FR131, FR132, FR133, FR134, FR135
+**Dependency note:** Requires Epic 11 (lyrics sync engine for lyric data) and Epic 13 (progressive unlock for feature gating).
+
+### Epic 13: Progressive Feature Unlock
+Per-user feature gating system that reveals capabilities gradually over the session. Each user tracks their own song count from join time. Base Layer (songs 1-2): synced lyrics, reactive light show, chant highlights, duet colors. Interaction Layer (songs 3-4): Guess The Next Line activates. Social Layer (songs 5+): party card challenges, interludes, ceremonies, all interactive features. Late joiners start at their own Song 1 regardless of session progress.
+**FRs covered:** FR140
+**Cross-cutting impact:** Gates features in Epic 4 (party cards → Social Layer), Epic 7 (interludes → Social Layer, Quick Vote universal), Epic 12 (Guess The Next Line → Interaction Layer). Requires Epic 2 DJ engine awareness of user layer state for transition guards.
 
 ---
 
@@ -617,7 +713,7 @@ So that network hiccups don't ruin the party experience.
 
 ## Epic 2: Core DJ Engine & Song Experience
 
-The party runs automatically -- the DJ engine cycles through states (song selection -> party card deal -> song -> ceremony -> interlude -> repeat), the host controls the flow via a persistent overlay, and audio cues mark every transition. Participants experience the core game loop. The state machine includes placeholder transitions for party cards (Epic 4), ceremonies (Epic 3), and interludes (Epic 7) that those epics implement with full behavior. Event stream logging is established here as core infrastructure for all subsequent epics.
+The party runs automatically -- the DJ engine cycles through states (song selection -> party card deal -> song -> ceremony -> interlude -> repeat), the host controls the flow via a persistent overlay, and audio cues mark every transition. Participants experience the core game loop. The state machine includes placeholder transitions for party cards (Epic 4), ceremonies (Epic 3), and interludes (Epic 7) that those epics implement with full behavior. Event stream logging is established here as core infrastructure for all subsequent epics. Song state now integrates with audio fingerprinting detection (Epic 11) via Story 2.10 — SONG_DETECTED sub-state added, layer-check guards gate card deals and interlude transitions based on progressive unlock state.
 
 ### Story 2.1: DJ Engine State Machine (Server)
 
@@ -821,6 +917,36 @@ So that the ceremony variety keeps the party engaging without repetition.
 **And** party cards requiring 3+ participants are disabled (NFR12)
 **And** the DJ engine continues cycling with song -> ceremony -> song (NFR12)
 
+### Story 2.10: Song Detection Integration with DJ Engine (Pivot)
+
+As a system,
+I want the DJ engine to be aware of audio fingerprinting song detection events,
+So that the party flow reacts to what song is actually playing in the room.
+
+**Acceptance Criteria:**
+
+**Given** the DJ engine is in SONG state
+**When** a song detection event is received from the audio fingerprinting service (Epic 11, FR116)
+**Then** the engine transitions to a SONG_DETECTED sub-state
+**And** the detected song metadata (title, artist, ISRC, time offset) is stored in the current DJ state
+**And** the song metadata is broadcast to all connected clients via WebSocket
+
+**Given** the DJ engine receives a song change event (FR118)
+**When** the re-recognition detects a different song than currently tracked
+**Then** the engine updates the song metadata in DJ state within 3 seconds
+**And** all connected clients receive the updated song context
+
+**Given** the DJ engine is evaluating a transition to party card deal or interlude
+**When** the transition guard checks the user's progressive unlock layer (Epic 13, FR140)
+**Then** party card deals are only permitted for users at Social Layer (songs 5+)
+**And** interlude transitions (Kings Cup, Dare Pull) are only permitted when all users have reached Social Layer
+**And** Quick Vote interludes remain available at all layers
+
+**Given** no song detection service is available (user denied microphone, API failure)
+**When** the DJ engine operates without detection
+**Then** the engine falls back to manual "now playing" mode (FR94) and proceeds normally
+**And** party cards and interludes remain ungated (legacy behavior without progressive unlock)
+
 ---
 
 ## Epic 3: Ceremonies & Awards
@@ -934,7 +1060,7 @@ So that I can share my karaoke highlights with friends outside the party.
 
 ## Epic 4: Audience Participation & Party Cards
 
-While songs play, the audience actively participates -- sending emoji reactions, triggering soundboard effects, and toggling lightstick mode or hype signals. Singers receive challenge cards from a curated pool of 19 that shape performances and contribute to scoring.
+While songs play, the audience actively participates -- sending emoji reactions, triggering soundboard effects, and activating hype signals. Singers receive challenge cards from a curated pool of 19 that shape performances and contribute to scoring. Lightstick mode has been removed and replaced by the Reactive Phone Light Show (Epic 11). Party card challenges are gated to Social Layer (songs 5+ per user) via Progressive Feature Unlock (Epic 13).
 
 ### Story 4.1: Emoji Reactions System
 
@@ -1060,39 +1186,31 @@ So that the whole group gets spontaneously involved beyond just watching.
 **When** the DJ engine deals party cards
 **Then** group involvement cards that require 3+ participants are disabled (NFR12)
 
-### Story 4.7: Lightstick Mode & Hype Signal
+### Story 4.7: Hype Signal (Pivot: Lightstick Removed)
 
 As an audience member,
-I want to wave my phone like a lightstick or flash encouragement at the performer,
-So that I can physically participate in the performance atmosphere.
+I want to flash encouragement at the performer via a screen pulse and flashlight,
+So that I can physically signal my support during their performance.
 
 **Acceptance Criteria:**
 
 **Given** a song is being performed
-**When** an audience participant toggles their view mode
-**Then** they can switch between lean-in mode (reactions/soundboard) and lightstick mode (FR63)
-
-**Given** a participant is in lightstick mode
-**When** the mode is active
-**Then** a full-screen animated glow effect is rendered (FR64)
-**And** the user can change the glow color (FR64)
-**And** no synchronization between devices is required -- free-form mode (FR64)
-
-**Given** a participant wants to encourage the performer
-**When** they activate the hype signal
-**Then** a screen-based pulse effect fires with device flashlight activation via native API (FR65)
+**When** a participant wants to encourage the performer
+**Then** they can activate a hype signal — a screen-based pulse effect with device flashlight activation via native API (FR65)
 **And** the hype signal works uniformly on both iOS and Android (FR65)
 
-**Given** all audience participation modes
-**When** a participant is in any mode during a song
-**Then** lightstick mode and hype signal are available alongside reactions (FR66)
-**And** participants can switch between modes freely during a song (FR66)
+**Given** the reactive light show is active (Epic 11, FR136-139)
+**When** a participant activates the hype signal
+**Then** the hype signal is available alongside reactions and the reactive light show (FR66)
+**And** participants can trigger hype signals freely during a song without interrupting the light show or lyrics display
+
+**Pivot Note:** Lightstick mode (FR63, FR64) has been REMOVED and replaced by the Reactive Phone Light Show (Epic 11, FR136-139). The light show is automatic, music-synced, and requires zero interaction — a fundamentally different approach from the manual lightstick toggle. Hype signal (FR65) is retained as a deliberate audience action alongside the automatic light show.
 
 ---
 
 ## Epic 5: Song Integration & Discovery
 
-The group discovers and selects songs together. Friends import playlists from YouTube Music and Spotify, the suggestion engine finds songs everyone knows with confirmed karaoke versions, and Quick Pick or Spin the Wheel makes selection a group activity. TV pairing auto-queues songs on YouTube.
+The group discovers and selects songs together. Friends import playlists from YouTube Music and Spotify, the suggestion engine finds songs everyone knows with confirmed karaoke versions, and Quick Pick or Spin the Wheel makes selection a group activity. ACRCloud audio fingerprinting (Epic 11) is now the primary song detection method. YouTube TV pairing via Lounge API is demoted to optional enhancement. Story 5.10 introduces a unified SongContext interface to abstract detection sources.
 
 ### Story 5.1: Karaoke Catalog Index
 
@@ -1308,6 +1426,35 @@ So that the party experience works at any karaoke venue.
 **Then** the system degrades gracefully to suggestion-only mode without crashing, losing session state, or interrupting the active party (NFR31)
 **And** the host sees a single non-blocking notification (NFR31)
 
+### Story 5.10: Detection Source Abstraction (Pivot)
+
+As a developer,
+I want a unified SongContext interface that abstracts how a song was detected,
+So that downstream consumers (lyrics sync, DJ engine, ceremonies, awards) work identically regardless of whether the song was detected via audio fingerprinting, YouTube Lounge API, or manual selection.
+
+**Acceptance Criteria:**
+
+**Given** the song detection system needs to support multiple sources
+**When** the SongContext interface is designed
+**Then** it defines a common contract: `{title, artist, isrc?, timeOffset?, detectionSource, confidence, detectedAt}`
+**And** `detectionSource` is an enum: `AUDIO_FINGERPRINT`, `LOUNGE_API`, `MANUAL`
+**And** the interface is implemented by all three detection paths
+
+**Given** audio fingerprinting (Epic 11) detects a song
+**When** the detection result is received
+**Then** it is wrapped in a SongContext with `detectionSource: AUDIO_FINGERPRINT` and the time offset from the fingerprinting service
+**And** if Lounge API (FR121) also returns a match, the fingerprinting service's time offset takes precedence for lyrics sync accuracy
+
+**Given** the host manually marks a song as "now playing" (FR94)
+**When** the selection is confirmed
+**Then** a SongContext is created with `detectionSource: MANUAL` and `timeOffset: null`
+**And** lyrics sync operates without drift correction (no re-recognition available)
+
+**Given** downstream consumers receive a SongContext
+**When** they process song data
+**Then** they use only the SongContext interface — no awareness of which detection source provided the data
+**And** graceful degradation occurs when optional fields (isrc, timeOffset) are null
+
 ---
 
 ## Epic 6: Media Capture & Sharing
@@ -1423,7 +1570,7 @@ So that capture prompts fire at the most exciting moments of the party.
 
 ## Epic 7: Interlude Games & Icebreaker
 
-Between songs, mini-games keep energy high -- Kings Cup group rules, Dare Pull random challenges, Quick Vote opinion polls, and a first-session icebreaker. Democratic voting lets the group decide what happens next. Universal activities are front-loaded in the first 30 minutes. Reuses the democratic voting mechanism built in Epic 5 (FR27) for activity selection.
+Between songs, mini-games keep energy high -- Kings Cup group rules, Dare Pull random challenges, Quick Vote opinion polls, and a first-session icebreaker. Democratic voting lets the group decide what happens next. Universal activities are front-loaded in the first 30 minutes. Reuses the democratic voting mechanism built in Epic 5 (FR27) for activity selection. **Pivot update:** Interludes (Kings Cup, Dare Pull) gated to Social Layer (songs 5+ per user) via Progressive Feature Unlock (Epic 13). Quick Vote remains universal (single-tap, no spotlight). Icebreaker unchanged (pre-song activity). Group sing-along now cross-references chant moments (FR127-129) from Epic 11.
 
 ### Story 7.1: Democratic Activity Voting
 
@@ -1744,3 +1891,580 @@ So that authenticated users build a personal media library while guests get temp
 **When** the home screen loads
 **Then** they see a prompt to create an account to unlock session history (FR113)
 **And** the guest home screen shows only the "Start Party" / "Join Party" actions -- no Session Timeline (FR113)
+
+---
+
+## Epic 10: UX Redesign & Brand Identity
+
+Comprehensive visual and interaction redesign bringing brand identity, consistent styling, and polished UX across all screens. The lyrics-sync pivot redesigns the during-song screen around a lyrics-first layout with reactive light show, chant animations, duet colors, detection status, and progressive unlock transitions. Lightstick mode screens and wireframes have been removed.
+
+### Story 10.1: Home Screen Brand Identity
+
+As a user,
+I want the home screen to communicate Karamania's brand identity clearly,
+So that I immediately understand what the app does and feel excited to start a party.
+
+**Acceptance Criteria:**
+
+**Given** a user opens the app
+**When** the home screen loads
+**Then** brand identity elements (logo, tagline, color palette) are prominently displayed
+**And** the visual design is consistent with the party vibe system
+**And** "Start Party" and "Join Party" actions are immediately visible and tappable (48x48px minimum)
+
+### Story 10.2: Join Screen Layout & Input Sizing
+
+As a guest,
+I want the join screen to be clearly laid out with appropriately sized input fields,
+So that entering a party code and my name feels effortless.
+
+**Acceptance Criteria:**
+
+**Given** a user is on the join screen
+**When** they need to enter a party code or display name
+**Then** input fields are appropriately sized for mobile use
+**And** the layout follows the 8px spacing system and design tokens
+**And** visual feedback appears within 200ms during the join process (FR53)
+
+### Story 10.3: Lobby Guest Waiting & Playlist
+
+As a guest waiting in the lobby,
+I want a polished waiting experience with clear status,
+So that I know the party hasn't started yet and feel the anticipation building.
+
+**Acceptance Criteria:**
+
+**Given** guests are in the lobby
+**When** they are waiting for the host to start
+**Then** the lobby screen shows current player count, QR code, and share prompt (FR8)
+**And** the visual design matches the selected party vibe
+**And** playlist import options are accessible from the lobby
+
+### Story 10.4: Party Screen Song & Performer
+
+As a participant,
+I want the song and performer display to be visually polished,
+So that the pre-song hype and during-song experience feel exciting.
+
+**Acceptance Criteria:**
+
+**Given** a song is about to start
+**When** the pre-song hype announcement displays
+**Then** the performer name is shown with branded typography and animation (FR17)
+**And** the visual treatment creates genuine excitement for the next performance
+
+### Story 10.5: Ceremony Celebration Energy
+
+As a participant,
+I want ceremonies to feel like genuine celebrations,
+So that every performer gets their moment of recognition.
+
+**Acceptance Criteria:**
+
+**Given** a Full or Quick ceremony is triggered
+**When** the ceremony sequence plays
+**Then** animations, confetti, and visual effects create celebration energy
+**And** the visual design matches the party vibe's celebration palette
+**And** all ceremony timing follows the UX spec (Full: buildup → reveal → moment card; Quick: flash → auto-advance 8-10s)
+
+### Story 10.6: Branded Custom Dialogs
+
+As a user,
+I want all dialogs and overlays to match the app's brand,
+So that the experience feels cohesive and polished throughout.
+
+**Acceptance Criteria:**
+
+**Given** any dialog or overlay appears in the app
+**When** it renders
+**Then** it uses branded styling consistent with DJTokens and the active party vibe
+**And** no default system dialogs are used in the party experience
+
+### Story 10.7: Color Consistency Across Party Flow
+
+As a user,
+I want colors to be consistent and meaningful across the entire party flow,
+So that the visual experience is cohesive and color changes feel intentional.
+
+**Acceptance Criteria:**
+
+**Given** a party is active with a selected vibe
+**When** the user moves through different DJ states
+**Then** color palette transitions are smooth and consistent with the vibe system
+**And** all 5 party vibes maintain WCAG AA contrast compliance throughout
+
+### Story 10.8: Lyrics Display Screen (Pivot)
+
+As a participant,
+I want the during-song screen to center around synced lyrics with a reactive light show background,
+So that I can follow along with the song and feel immersed in the music.
+
+**Acceptance Criteria:**
+
+**Given** a song is detected and lyrics are available
+**When** the during-song screen renders
+**Then** synced lyrics are displayed with 60fps line-by-line scrolling synchronized to the song's playback position (FR124)
+**And** the reactive light show renders as the screen background — color pulses synchronized to song energy (FR136-137)
+**And** chant moments display with crescendo animation: text grows progressively over 3-5 seconds before the chant timestamp (FR128)
+**And** the detection status indicator shows current state: "Listening...", "Song detected: [title]", "No match — search manually" (FR122)
+**And** reactions, soundboard, and hype signal remain accessible via a bottom toolbar during song playback
+**And** the layout follows the lyrics-first design from the UX spec — lyrics are the primary content, all other elements are secondary
+
+**Given** no lyrics are available for the detected song
+**When** the during-song screen renders
+**Then** song title and artist are displayed prominently with "Lyrics not available" message (FR126)
+**And** the reactive light show and all other features continue operating normally
+
+### Story 10.9: Duet Mode Visuals (Pivot)
+
+As a participant in a duet performance,
+I want to see color-coded lyrics indicating which performer sings which part,
+So that duets feel coordinated and visually engaging.
+
+**Acceptance Criteria:**
+
+**Given** Duet Mode is activated for a song with 2+ performers (FR133)
+**When** lyrics are displayed
+**Then** each performer's assigned lyric lines are highlighted in their color (blue and gold for 2 performers, additional colors for 3+) (FR134)
+**And** performers see their own lines highlighted and other performers' lines dimmed (FR134)
+**And** chorus/chant lines display in both/all colors indicating "everyone sings" (FR134)
+**And** non-performing audience members see all colors on their screen showing who should be singing which part (FR135)
+**And** color assignments are visible and distinguishable — not conveyed by color alone (WCAG compliance)
+
+### Story 10.10: Progressive Unlock Transitions (Pivot)
+
+As a participant,
+I want new features to appear naturally and smoothly as I progress through songs,
+So that the experience teaches itself without overwhelming me early on.
+
+**Acceptance Criteria:**
+
+**Given** a user is in Base Layer (songs 1-2)
+**When** features are displayed
+**Then** only synced lyrics, reactive light show, chant highlights, and duet colors are available (FR140)
+**And** hidden features show no placeholder, disabled state, or "locked" indicator — they simply don't exist yet
+
+**Given** a user transitions from Base Layer to Interaction Layer (song 3)
+**When** the transition occurs
+**Then** Guess The Next Line activates with a subtle, non-disruptive introduction animation
+**And** the first blank appears with a brief tooltip explaining the mechanic (NFR16 — single-sentence, first appearance only)
+
+**Given** a user transitions from Interaction Layer to Social Layer (song 5)
+**When** the transition occurs
+**Then** party card challenges, interludes, and ceremonies become available
+**And** transition animations are smooth and feel like natural feature discovery, not unlocking
+
+**Given** a late joiner enters an in-progress party
+**When** they join
+**Then** they begin at their own Song 1 regardless of session progress (FR140)
+**And** they receive the same progressive unlock experience as everyone else
+
+### Story 10.11: Detection & Fallback UX (Pivot)
+
+As a participant,
+I want clear but non-intrusive feedback about song detection status,
+So that I know whether lyrics are available without the detection process disrupting the party.
+
+**Acceptance Criteria:**
+
+**Given** the audio fingerprinting service is actively listening
+**When** the detection status changes
+**Then** the status indicator updates smoothly between states: "Listening..." → "Song detected: [title]" → "No match — search manually" (FR122)
+**And** status transitions use subtle animation — no jarring state changes
+
+**Given** audio fingerprinting fails after 3 consecutive attempts (15 seconds)
+**When** the manual search fallback appears (FR120)
+**Then** a search input is presented allowing the user to type song title/artist
+**And** the search input follows the app's no-text-input-beyond-name principle by making manual search feel like a quick assist, not a required step
+**And** manual selection triggers lyrics fetch and display immediately
+
+**Given** the user has denied microphone permission
+**When** the during-song screen renders
+**Then** the detection status shows an appropriate state and offers the manual search as the primary path
+**And** the reactive light show operates in ambient mode (generic color cycling, not music-synced)
+
+---
+
+## Epic 11: Lyrics Sync Engine
+
+The core differentiator — real-time song detection via audio fingerprinting, synced lyrics display on every phone, chant moment detection with crescendo animations, and a reactive phone light show that pulses with the music. This is the "audio intelligence layer" that makes Karamania the only karaoke companion that knows what song is playing and reacts to it in real-time.
+
+### Story 11.1: ACRCloud Audio Fingerprint Pipeline
+
+As a system,
+I want to capture audio from the device microphone and identify the currently playing song via audio fingerprinting,
+So that the app knows what song is playing in the karaoke room without any manual input.
+
+**Acceptance Criteria:**
+
+**Given** the user has granted microphone permission
+**When** the DJ engine enters SONG state
+**Then** the system captures a 5-10 second audio burst from the device microphone (FR116)
+**And** the audio sample is sent to the audio fingerprinting service (ACRCloud)
+**And** results are returned within 5 seconds including song title, artist, ISRC code, and playback time offset (FR116)
+**And** the result is wrapped in a SongContext via the detection source abstraction (Epic 5, Story 5.10)
+
+**Given** the fingerprinting service returns a match
+**When** the result is processed
+**Then** song metadata is broadcast to all connected clients via WebSocket
+**And** the DJ engine transitions to SONG_DETECTED sub-state (Story 2.10)
+**And** the detection status indicator updates to "Song detected: [title]" (FR122)
+
+**Given** battery drain constraints
+**When** audio capture is active
+**Then** total battery drain from audio recognition must not exceed 12% per hour (NFR43)
+**And** the capture uses a 5-10 second burst — not continuous listening
+
+**Given** the app is deployed to both platforms
+**When** audio capture is initiated
+**Then** it works uniformly on both iOS and Android using the ACRCloud Flutter SDK
+
+### Story 11.2: Periodic Re-Recognition & Song Change
+
+As a system,
+I want to periodically re-check what song is playing to correct lyrics drift and detect song changes,
+So that lyrics stay synchronized and transitions between songs are handled automatically.
+
+**Acceptance Criteria:**
+
+**Given** a song has been detected and lyrics are displaying
+**When** 30 seconds have elapsed since the last recognition
+**Then** a 5-second re-sync audio burst is captured and sent to the fingerprinting service (FR117)
+**And** if the same song is re-detected, the time offset is used to correct any lyrics drift to within 500ms (NFR42)
+
+**Given** the re-sync returns a different song than currently displayed
+**When** the result is processed
+**Then** the system transitions to the new song's lyrics within 3 seconds (fetch + render) (FR118)
+**And** the DJ engine song metadata is updated
+**And** all connected clients receive the updated SongContext
+
+**Given** the same song is re-detected with a cached match
+**When** the re-sync processes
+**Then** the API call is skipped and the local timer is used for drift correction only (NFR47)
+**And** lyrics sync drift does not exceed 2 seconds over a 5-minute song (NFR42)
+
+### Story 11.3: Detection Fallback — Manual Search
+
+As a participant,
+I want to manually search for a song when audio fingerprinting can't identify it,
+So that I can still get lyrics even in noisy environments or for obscure tracks.
+
+**Acceptance Criteria:**
+
+**Given** audio fingerprinting has failed after 3 consecutive attempts (15 seconds total)
+**When** the failure threshold is reached
+**Then** the system presents a manual song search allowing the user to type song title/artist (FR120)
+**And** the detection status updates to "No match — search manually" (FR122)
+
+**Given** the user types a song title/artist in the manual search
+**When** they select a result
+**Then** lyrics fetch is triggered immediately using the selected song's metadata
+**And** the result is wrapped in a SongContext with `detectionSource: MANUAL`
+**And** no periodic re-recognition is performed for manually selected songs (no audio reference)
+
+**Given** cover-song identification is needed
+**When** karaoke backing tracks differ from original recordings
+**Then** the system uses cover-song identification mode to improve recognition (FR119)
+
+### Story 11.4: Detection Status Indicator
+
+As a participant,
+I want to see the current song detection status at a glance,
+So that I know whether the system has identified the song and lyrics are incoming.
+
+**Acceptance Criteria:**
+
+**Given** the audio fingerprinting service is in any state
+**When** the during-song screen is displayed
+**Then** a detection status indicator is visible showing one of: "Listening...", "Song detected: [title]", "No match — search manually" (FR122)
+**And** status transitions animate smoothly without jarring state changes
+**And** the indicator is positioned to be informative without competing with the lyrics display
+**And** audio fingerprinting recognition achieves >70% accuracy in commercial karaoke rooms (NFR40)
+
+### Story 11.5: LRCLIB Lyrics Fetch & Display
+
+As a participant,
+I want synced lyrics displayed on my phone synchronized to the song playing in the room,
+So that I can follow along and sing with the group.
+
+**Acceptance Criteria:**
+
+**Given** a song has been detected with title, artist, and ISRC
+**When** lyrics are fetched
+**Then** the system retrieves synced lyrics in LRC format from a lyrics database (primary: LRCLIB community source, fallback: Musixmatch commercial API) using song title + artist + duration (FR123)
+
+**Given** LRC lyrics are retrieved
+**When** the lyrics display renders
+**Then** synced lyrics scroll line-by-line at 60fps with no frame drops (FR124)
+**And** lyrics are synchronized to the song's playback position starting from the time offset returned by the fingerprinting service (FR124)
+**And** time from song start to first lyric displayed is <10 seconds (NFR41)
+
+**Given** the reactive light show is rendering
+**When** lyrics display is active
+**Then** the light show animation maintains 60fps without impacting lyrics scroll performance or WebSocket message handling (NFR45)
+
+### Story 11.6: Local Lyrics Cache
+
+As a system,
+I want to cache retrieved lyrics locally so the same song doesn't require repeated API calls,
+So that lyrics load faster for frequently played songs and API quota is conserved.
+
+**Acceptance Criteria:**
+
+**Given** lyrics have been successfully fetched for a song
+**When** the fetch completes
+**Then** lyrics are cached locally by song identifier (ISRC or title+artist hash) (FR125)
+**And** the cache stores at least 500 songs (NFR44)
+**And** cache lookup completes in <50ms (NFR44)
+**And** the cache persists across app restarts and sessions (FR125, NFR44)
+
+**Given** a previously cached song is detected again
+**When** the lyrics are needed
+**Then** cached lyrics are used without API calls (FR125)
+**And** the cache hit bypasses the lyrics database entirely
+
+### Story 11.7: Graceful "No Lyrics" State
+
+As a participant,
+I want the app to handle songs without available lyrics gracefully,
+So that the party experience continues even when lyrics can't be found.
+
+**Acceptance Criteria:**
+
+**Given** a song has been detected
+**When** no synced lyrics are available from either the primary or fallback lyrics source
+**Then** the system displays the song title and artist prominently with a "Lyrics not available" message (FR126)
+**And** the reactive light show continues operating in ambient mode
+**And** all other features (reactions, soundboard, hype signal, party cards) remain functional
+**And** the detection status indicator shows the song is detected — only lyrics are unavailable
+
+### Story 11.8: Chant Detection & Crescendo Animation
+
+As a participant,
+I want chorus and chant moments highlighted with a growing animation that builds excitement,
+So that the whole room knows when to sing together.
+
+**Acceptance Criteria:**
+
+**Given** LRC lyrics are loaded for a song
+**When** the system analyzes the lyrics
+**Then** chant moments are auto-detected by identifying lyric lines that appear 2 or more times in the LRC data (chorus/hook lines) (FR127)
+
+**Given** a chant moment is approaching
+**When** the chant timestamp is 3-5 seconds away
+**Then** a crescendo animation begins: the chant text starts at normal size and progressively grows larger, reaching maximum size at the moment the chant line is sung (FR128)
+**And** the animation begins exactly 3 seconds before the chant timestamp (±200ms tolerance) (NFR46)
+
+**Given** a chant moment is active
+**When** all connected phones display the chant
+**Then** the chant text appears simultaneously on all phones with a synchronized visual highlight (screen flash, enlarged text, universal color) (FR129)
+**And** the reactive light show intensifies to maximum brightness during chant moments (FR129)
+
+**Given** the host wants to customize chant moments
+**When** they use the host controls overlay
+**Then** they can manually promote or demote chant moments — adding custom chant markers or removing auto-detected ones (FR130)
+
+### Story 11.9: Reactive Phone Light Show
+
+As a participant,
+I want my phone screen to pulse with color synchronized to the music,
+So that every phone in the room becomes part of a coordinated light show.
+
+**Acceptance Criteria:**
+
+**Given** a song is playing (detected or manually selected)
+**When** the during-song screen is active
+**Then** each phone's screen background pulses color synchronized to the song's energy level (FR136)
+**And** verse timestamps produce low energy (30% brightness, 2s pulse cycle) (FR137)
+**And** pre-chorus produces rising energy (60% brightness, 1s cycle) (FR137)
+**And** chorus produces high energy (100% brightness, 0.5s cycle) (FR137)
+**And** peak brightness occurs during chant moments (FR136)
+
+**Given** multiple phones are connected
+**When** a song moment is playing
+**Then** all phones display the same color palette and pulse timing, creating a coordinated room-wide light effect (FR138)
+
+**Given** the light show is a Base Layer feature
+**When** any user is in any progressive unlock layer
+**Then** the light show is always active during song playback with no user action required (FR139)
+**And** users cannot disable the light show independently — it is part of the core lyrics display experience (FR139)
+
+**Given** the light show is rendering with lyrics
+**When** the screen updates
+**Then** the animation maintains 60fps without impacting lyrics scroll or WebSocket handling (NFR45)
+
+---
+
+## Epic 12: Interactive Lyrics Games
+
+Interactive features layered on top of the lyrics sync engine — Guess The Next Line blanks random lyrics for the audience to anticipate, and Duet Colors assigns performer-specific colors to lyric lines for multi-singer songs. These features activate progressively via Epic 13.
+
+### Story 12.1: Guess The Next Line
+
+As a participant,
+I want random lyrics to be blanked out during the song so I can try to guess them,
+So that following along with the lyrics becomes a fun, interactive challenge.
+
+**Acceptance Criteria:**
+
+**Given** lyrics are displaying for a song and the user is at Interaction Layer or above (songs 3+) (FR132)
+**When** the song is playing
+**Then** the system randomly selects lyric lines to blank out (target: 1-2 per song) (FR131)
+**And** blanked lines show "[???]" for 3 seconds before revealing the actual lyric (FR131)
+**And** blanked lines are never during chant moments, never the first or last line (FR131)
+
+**Given** a user is at Base Layer (songs 1-2)
+**When** the song is playing
+**Then** Guess The Next Line is not active — all lyrics display normally (FR132)
+**And** no placeholder or "locked" indicator is shown
+
+**Given** a blanked line is about to reveal
+**When** the 3-second timer expires
+**Then** the actual lyric is revealed with a brief highlight animation
+**And** the reveal does not disrupt the lyrics scrolling flow
+
+### Story 12.2: Duet Mode Activation & Color Assignment
+
+As a host or participant,
+I want to activate Duet Mode for multi-singer songs and assign colors to each performer,
+So that everyone knows who should be singing which part.
+
+**Acceptance Criteria:**
+
+**Given** a song has 2 or more performers
+**When** the host or any participant activates Duet Mode from the song controls (FR133)
+**Then** colors are assigned to performers: blue and gold for 2 performers, additional colors for 3+ (FR133)
+**And** the color assignment is broadcast to all connected phones
+**And** Duet Mode can be activated at any point during the song
+
+**Given** Duet Mode is active
+**When** the activation state changes
+**Then** all connected phones update their lyrics display within 200ms (NFR1)
+
+### Story 12.3: Duet Lyrics Display
+
+As a participant in a duet song,
+I want lyrics color-coded by performer so I can see who sings what,
+So that duets feel coordinated and visually engaging.
+
+**Acceptance Criteria:**
+
+**Given** Duet Mode is active
+**When** lyrics display on a performer's phone
+**Then** their assigned lyric lines are highlighted in their color (FR134)
+**And** other performers' lines appear dimmed (FR134)
+**And** chorus/chant lines display in both/all colors indicating "everyone sings" (FR134)
+
+**Given** Duet Mode is active
+**When** lyrics display on a non-performing audience member's phone
+**Then** all colors are shown, indicating who should be singing which part (FR135)
+
+**Given** accessibility requirements
+**When** duet colors are displayed
+**Then** color assignments are distinguishable without relying on color alone (WCAG compliance)
+**And** text labels or icons supplement color coding for accessibility
+
+---
+
+## Epic 13: Progressive Feature Unlock
+
+Per-user feature gating system that reveals capabilities gradually over the session. Each user tracks their own song count from join time. Features activate per-user based on their song count, creating a natural learning curve that prevents overwhelm. Late joiners start at Song 1 regardless of session progress.
+
+### Story 13.1: Per-User Song Counter & Layer State
+
+As a system,
+I want to track each user's personal song count and compute their current feature layer,
+So that the progressive unlock system knows which features each user should see.
+
+**Acceptance Criteria:**
+
+**Given** a user joins a party
+**When** they are connected
+**Then** a personal song counter is initialized at 0 for that user (FR140)
+**And** their initial layer state is set to BASE_LAYER
+
+**Given** a song ends (DJ engine transitions from SONG to CEREMONY state)
+**When** the user was present for the song
+**Then** their personal song counter increments by 1
+**And** their layer state is recomputed: songs 1-2 = BASE_LAYER, songs 3-4 = INTERACTION_LAYER, songs 5+ = SOCIAL_LAYER (FR140)
+**And** layer state changes are persisted in the session (survives reconnection)
+
+**Given** the user reconnects after a disconnection
+**When** their state is restored
+**Then** their song counter and layer state are recovered from the server — no regression to BASE_LAYER
+
+### Story 13.2: Base Layer Gating (Songs 1-2)
+
+As a new participant,
+I want to see only the core lyrics experience during my first two songs,
+So that I'm not overwhelmed by features I haven't had time to understand.
+
+**Acceptance Criteria:**
+
+**Given** a user is at BASE_LAYER (songs 1-2)
+**When** the during-song screen renders
+**Then** synced lyrics, reactive light show, chant highlights, and duet colors are available (FR140)
+**And** Guess The Next Line is NOT active (FR132)
+**And** party card challenges are NOT dealt (FR140)
+**And** interludes (Kings Cup, Dare Pull) are NOT triggered for this user (FR140)
+**And** Quick Vote interludes ARE available (universal, no spotlight)
+**And** hidden features show no placeholder, disabled state, or locked indicator — they simply don't exist yet
+
+### Story 13.3: Interaction Layer Activation (Songs 3-4)
+
+As a participant who has been in the party for a few songs,
+I want interactive lyrics features to appear naturally,
+So that the experience grows more engaging as I settle in.
+
+**Acceptance Criteria:**
+
+**Given** a user's song counter reaches 3 (transition to INTERACTION_LAYER)
+**When** the next song begins
+**Then** Guess The Next Line feature activates (FR132)
+**And** a subtle, non-disruptive introduction animation signals the new feature
+**And** the first blank appears with a single-sentence tooltip on first appearance only (NFR16)
+
+**Given** a user is at INTERACTION_LAYER
+**When** party-related features are checked
+**Then** party card challenges remain gated (not yet at Social Layer)
+**And** interludes (Kings Cup, Dare Pull) remain gated
+
+### Story 13.4: Social Layer Activation (Songs 5+)
+
+As a participant who has been engaged for several songs,
+I want all social and interactive features to unlock,
+So that the full party experience is available when I'm most comfortable.
+
+**Acceptance Criteria:**
+
+**Given** a user's song counter reaches 5 (transition to SOCIAL_LAYER)
+**When** the layer transition occurs
+**Then** party card challenges become available — cards may be dealt to this user (FR140)
+**And** interludes (Kings Cup, Dare Pull) become available when triggered by the DJ engine (FR140)
+**And** ceremonies become available — this user's songs receive Full/Quick ceremony treatment (FR140)
+**And** all interactive features are fully unlocked
+
+**Given** the DJ engine is evaluating whether to trigger an interlude
+**When** user layer states are checked
+**Then** interludes requiring group participation (Kings Cup, Dare Pull) only trigger when sufficient users have reached SOCIAL_LAYER
+**And** Quick Vote remains available regardless of layer state
+
+### Story 13.5: Late Joiner Ramp-Up
+
+As a participant joining a party already in progress,
+I want to start my progressive unlock journey from the beginning,
+So that I get the same gradual feature introduction regardless of when I joined.
+
+**Acceptance Criteria:**
+
+**Given** a user joins a party that is already on song 8
+**When** they connect
+**Then** their personal song counter starts at 0 — they begin at BASE_LAYER (FR140)
+**And** they see only Base Layer features during their first 2 songs
+**And** they progress through Interaction Layer (their songs 3-4) and Social Layer (their song 5+) independently of other users
+
+**Given** a late joiner is at BASE_LAYER while other users are at SOCIAL_LAYER
+**When** the DJ engine evaluates party card dealing
+**Then** party cards are NOT dealt to the late joiner (they haven't unlocked cards yet)
+**And** party cards ARE dealt to users who have reached SOCIAL_LAYER
+**And** the late joiner can still see and react to other users' party card performances

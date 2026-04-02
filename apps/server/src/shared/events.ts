@@ -108,6 +108,11 @@ export const EVENTS = {
   FINALE_FEEDBACK: 'finale:feedback',
   HOST_DISMISS_FINALE: 'host:dismissFinale',
 
+  // Detection events (Story 11.1 — ACRCloud audio fingerprinting)
+  DETECT_RESULT: 'detect:result',
+  DETECT_STATUS: 'detect:status',
+  DETECT_SONG_CHANGED: 'detect:songChanged',
+
   // Auth events
   AUTH_REFRESH_REQUIRED: 'auth:refreshRequired',
   AUTH_INVALID: 'auth:invalid',

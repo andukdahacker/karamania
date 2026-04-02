@@ -19,6 +19,7 @@ import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/state/session_detail_provider.dart';
 import 'package:karamania/state/capture_provider.dart';
+import 'package:karamania/state/detection_provider.dart';
 import 'package:karamania/state/timeline_provider.dart';
 import 'package:karamania/theme/dj_theme.dart';
 
@@ -51,6 +52,7 @@ Widget _wrap(Widget child, {HttpAdapter? adapter}) {
       ChangeNotifierProvider(create: (_) => TimelineProvider()),
       ChangeNotifierProvider(create: (_) => SessionDetailProvider()),
       ChangeNotifierProvider(create: (_) => CaptureProvider()),
+      ChangeNotifierProvider(create: (_) => DetectionProvider()),
       Provider<SocketClient>(create: (_) => SocketClient.instance),
       Provider<ApiService>(
           create: (_) => ApiService(
@@ -89,6 +91,7 @@ Widget _wrapWithRouter({String initialLocation = '/join', HttpAdapter? adapter})
       ChangeNotifierProvider(create: (_) => TimelineProvider()),
       ChangeNotifierProvider(create: (_) => SessionDetailProvider()),
       ChangeNotifierProvider(create: (_) => CaptureProvider()),
+      ChangeNotifierProvider(create: (_) => DetectionProvider()),
       Provider<SocketClient>(create: (_) => SocketClient.instance),
       Provider<ApiService>(
           create: (_) => ApiService(baseUrl: 'http://localhost', adapter: adapter)),

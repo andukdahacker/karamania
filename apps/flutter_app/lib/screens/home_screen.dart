@@ -12,6 +12,7 @@ import 'package:karamania/state/accessibility_provider.dart';
 import 'package:karamania/state/auth_provider.dart';
 import 'package:karamania/state/loading_state.dart';
 import 'package:karamania/state/capture_provider.dart';
+import 'package:karamania/state/detection_provider.dart';
 import 'package:karamania/state/party_provider.dart';
 import 'package:karamania/state/timeline_provider.dart';
 import 'package:karamania/theme/dj_tokens.dart';
@@ -520,6 +521,7 @@ class _HomeScreenState extends State<HomeScreen> {
         serverUrl: AppConfig.instance.serverUrl,
         displayName: displayName,
         captureProvider: context.read<CaptureProvider>(),
+        detectionProvider: context.read<DetectionProvider>(),
       );
       if (!context.mounted) return;
       context.go('/lobby');

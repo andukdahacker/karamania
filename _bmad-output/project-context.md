@@ -1,8 +1,10 @@
 ---
 project_name: 'karaoke-party-app'
 user_name: 'Ducdo'
-date: '2026-03-08'
+date: '2026-04-02'
 status: 'complete'
+sections_completed: ['technology_stack', 'audio_intelligence_pipeline', 'progressive_feature_unlock', 'testing_rules', 'anti_patterns_and_boundaries', 'pivot_migration_notes']
+rule_count: 53
 optimized_for_llm: true
 ---
 
@@ -29,6 +31,10 @@ _Critical rules and patterns for implementing Karamania. Read this before writin
 - **dart-open-fetch:** CLI tool that generates typed Dart HTTP clients from OpenAPI spec. Installed from git: `dart pub global activate --source path <local-clone>/packages/dart_open_fetch`. Runtime dep: `dart_open_fetch_runtime` (git ref in pubspec.yaml)
 - **DB types:** `kysely-codegen` auto-generates from live schema. `db/types.ts` is DO NOT EDIT
 - **Guest JWT:** `jose` library (not jsonwebtoken). Server-signed, same shape as Firebase JWT
+- **ACRCloud audio fingerprinting:** `flutter_acrcloud` SDK on client, server-side proxy for web fallback. Periodic 5-10s audio capture bursts every 30s (NOT continuous). Rate limit: ~360 calls/3hr session. Go/No-Go gate: >60% recognition accuracy in real karaoke rooms before committing to full implementation
+- **LRCLIB lyrics API:** Free community API, no auth required. Returns LRC-format synced lyrics. Coverage gaps for obscure/Vietnamese songs — graceful "no lyrics" state required. Future upgrade path: Musixmatch commercial API
+- **Microphone permission:** `RECORD_AUDIO` required for audio fingerprinting. Request at runtime, handle denial gracefully (→ manual song search fallback via FR120)
+- **Battery budget:** <12% drain/hr with periodic audio capture. Acquire/release mic session — NEVER always-on
 
 ---
 
@@ -45,6 +51,7 @@ Monorepo: `apps/flutter_app/`, `apps/server/`, `apps/web_landing/`. No monorepo 
 ### Server Boundaries (ENFORCED)
 
 - `dj-engine/` -- **ZERO imports** from persistence, integrations, or socket-handlers. Pure logic only
+- `audio-intelligence/` -- **ZERO imports** from persistence, integrations, or socket-handlers. Pure logic only (same boundary as `dj-engine/`)
 - `persistence/` -- **ONLY** layer that imports from `db/`. No raw Kysely elsewhere
 - `services/session-manager.ts` -- **ONLY** service that orchestrates across layers
 - `socket-handlers/` -- Call services and dj-engine. **NEVER** call persistence directly
@@ -57,6 +64,7 @@ Monorepo: `apps/flutter_app/`, `apps/server/`, `apps/web_landing/`. No monorepo 
 - No widget creates its own socket listener
 - No business logic in providers -- reactive state containers only
 - No provider-to-provider access
+- New providers needed for pivot: `LyricsProvider`, `DetectionProvider`, `UnlockProvider`, `LightShowProvider` — same rules apply
 
 ---
 
@@ -69,6 +77,9 @@ Monorepo: `apps/flutter_app/`, `apps/server/`, `apps/web_landing/`. No monorepo 
 | `session_participants` | `session_id`, `user_id`, `guest_name`, `participation_score`, `top_award`, `feedback_score`, `joined_at` |
 | `media_captures` | `id`, `session_id`, `user_id`, `storage_path`, `trigger_type`, `dj_state_at_capture`, `created_at` |
 | `karaoke_catalog` | `id`, `song_title`, `artist`, `youtube_video_id`, `channel`, `created_at`, `updated_at` |
+| `lyrics_cache` | `id`, `isrc`, `title_artist_hash`, `lrc_content` (TEXT), `source` (enum: lrclib/musixmatch), `duration_ms`, `chant_lines` (JSONB), `fetched_at` |
+| `detection_events` | `id`, `session_id`, `detected_at`, `song_title`, `artist`, `isrc`, `confidence`, `time_offset_ms`, `source` (enum: acr/manual/lounge) |
+| `user_layer_state` | `session_id`, `user_id`, `songs_heard`, `current_layer` (enum: base/interaction/social), `layer_changed_at` |
 
 All columns `snake_case`. Kysely types match DB exactly. Conversion to `camelCase` happens **ONCE** at the boundary (Zod schemas for REST, Socket.io event emission).
 
@@ -89,6 +100,10 @@ All columns `snake_case`. Kysely types match DB exactly. Conversion to `camelCas
 | `tv` | `tv:pair`, `tv:unpair`, `tv:status`, `tv:nowPlaying` | Bidirectional |
 | `host` | `host:skip`, `host:override`, `host:songOver` | Client -> Server |
 | `auth` | `auth:refreshRequired`, `auth:invalid` | Server -> Client |
+| `detect` | `detect:result` (C→S), `detect:status`, `detect:songChanged` | Bidirectional |
+| `lyrics` | `lyrics:synced`, `lyrics:unavailable` | Server -> Client |
+| `light` | `light:intensity` | Server -> Client |
+| `unlock` | `unlock:layerChanged` | Server -> Client |
 
 Handler pattern: one file per namespace in `socket-handlers/`. Each exports `registerXHandlers(socket, session)`.
 
@@ -149,6 +164,52 @@ enum LoadingState { idle, loading, success, error }
 ```
 Per-operation, not global (e.g., `playlistImportState`, not `isLoading`).
 
+### Audio Intelligence Pipeline
+
+**Pipeline flow:** Client audio capture → ACRCloud fingerprint → server `song:detected` → LRCLIB lyrics fetch → cache in `lyrics_cache` → broadcast `lyrics:synced` → chant detection → `light:intensity` broadcast
+
+**Server-side rules:**
+- `audio-intelligence/` module — new top-level server module alongside `dj-engine/`, `services/`, etc.
+- Chant detection is a **pure function** on LRC data (server-side). Identifies repeated chorus lines with >70% precision target (NFR47). Output stored as `chant_lines` JSONB in `lyrics_cache`
+- Light show energy mapping computed server-side from LRC timestamps. Broadcast as `light:intensity` events. Clients render locally at 60fps
+- Lyrics fetch is **fire-and-forget async** — same pattern as DJ state persistence. Display does NOT wait for cache write
+- Detection source abstraction: unified `SongContext` interface behind ACRCloud (primary), YouTube Lounge API (optional), and manual search (fallback)
+
+**Client-side rules:**
+- `flutter_acrcloud` SDK handles audio capture + fingerprint in one call
+- Mic session: acquire before capture burst, release after. NEVER hold mic open between bursts
+- LyricsDisplayWidget renders synced LRC with current-line highlighting
+- LightShowEngine takes `light:intensity` events and renders screen color animation at 60fps
+- All lyrics UI gracefully degrades to "no lyrics" state (NFR45) — never show errors or empty screens
+
+**Boundary enforcement:**
+- `audio-intelligence/` has ZERO imports from `persistence/` or `socket-handlers/` (same boundary as `dj-engine/`)
+- Chant detection, energy mapping, and lyrics parsing are **pure functions** — unit-testable with no dependencies
+
+### Progressive Feature Unlock
+
+**Three layers, server-authoritative:**
+
+| Layer | Trigger | Features Available |
+|-------|---------|-------------------|
+| **Base** (songs 1-2) | Join party | Synced lyrics, chant highlights, reactive light show, reactions |
+| **Interaction** (songs 3-4) | 3rd song detected for user | Guess The Next Line, duet colors, soundboard |
+| **Social** (songs 5+) | 5th song detected for user | Party cards, interludes (except Quick Vote), hype signals |
+
+**Implementation rules:**
+- `user_layer_state` table tracks per-user song count and current layer
+- DJ engine transition guards check layer state BEFORE dealing cards, starting interludes, or activating games
+- Quick Vote remains universal (single-tap, no spotlight) — available in all layers
+- Icebreaker unchanged — pre-song activity, not layer-gated
+- Late joiners get accelerated ramp-up (exact rules TBD in Story 13.5)
+- Layer state persists across reconnects and server restarts (stored in PostgreSQL, reconstructed on recovery)
+- `unlock:layerChanged` event broadcast when a user's layer advances — client uses this to reveal new UI elements with transition animation
+
+**"No competition" principle (codified):**
+- ZERO scoring, leaderboards, or points anywhere in the app
+- Participation score is internal/server-only for award selection — never displayed to users
+- Awards are celebratory, not competitive — "Most Enthusiastic" not "1st Place"
+
 ---
 
 ## Testing Rules
@@ -156,12 +217,15 @@ Per-operation, not global (e.g., `playlistImportState`, not `isLoading`).
 - **Server:** `apps/server/tests/` mirrors `src/`. Run: `npm test`
 - **Flutter:** `apps/flutter_app/test/` mirrors `lib/`. Run: `flutter test`
 - **DJ engine (`dj-engine/`): 100% unit test coverage required** -- all states, transitions, guards, timers, serialization round-trips
+- **Audio intelligence (`audio-intelligence/`): 100% unit test coverage required** — same standard as `dj-engine/`. All pure functions: chant detection, energy mapping, LRC parsing, detection source abstraction
+- **Progressive unlock state machine: 100% unit test coverage** — layer transitions, song counting, late joiner ramp-up, edge cases (reconnect mid-song, server restart)
 - **Shared factories:** `tests/factories/` -- one per domain object. No inline test data
 - **DB tests:** transaction per test, rolled back after completion
 - **Integration/E2E tests:** Use real server (`tests/helpers/test-server.ts`) + real Socket.io connections (`tests/helpers/bot-client.ts`) + real DB (`tests/helpers/test-db.ts`). Never mock Socket.io for integration tests.
 - **Concurrency tests:** Validate race conditions with parallel bot actions (e.g., 12 simultaneous voters)
-- **DO NOT test:** animations, visual effects, confetti, color values, transition timings
-- **DO test:** state transitions, data flow, event handling, serialization, pure logic
+- **DO NOT test:** animations, visual effects, confetti, color values, transition timings, light show animations, lyrics scroll smoothness, chant overlay visuals, 60fps rendering
+- **DO test:** state transitions, data flow, event handling, serialization, pure logic, LRC parsing correctness, chant line identification, energy map computation, layer gating logic, detection fallback chain (ACRCloud → manual search)
+- **New test factories needed:** `createTestLyricsCache()`, `createTestDetectionEvent()`, `createTestUserLayerState()`
 - **CI:** Server CI (GitHub Actions, Node 24 + PostgreSQL 16) + Flutter CI (GitHub Actions, Flutter 3.32)
 
 ---
@@ -182,6 +246,12 @@ Per-operation, not global (e.g., `playlistImportState`, not `isLoading`).
 | `Padding(padding: EdgeInsets.all(16))` | `Padding(padding: EdgeInsets.all(DJTokens.spaceMd))` |
 | `Color(0xFF6C63FF)` in a widget | `DJTokens.actionPrimary` or vibe provider |
 | Hardcoded strings in Flutter widgets | All copy in `constants/copy.dart` |
+| Always-on microphone for audio capture | Acquire/release mic per 5-10s burst. NEVER hold open between 30s intervals |
+| Chant detection on client (Flutter) | Chant detection is server-side pure function on LRC data. Client only renders results |
+| Computing light show energy in Flutter | Server computes energy map from LRC timestamps, broadcasts `light:intensity`. Client only renders |
+| Showing error screen when no lyrics found | Graceful "no lyrics" state with ambient visuals. Never error UI |
+| Checking progressive unlock in widgets | Layer state comes from provider via `unlock:layerChanged` events. Widgets read, never compute |
+| `lightstick` anything | Lightstick mode REMOVED. Replaced by reactive light show (FR136-139) |
 
 ---
 
@@ -284,6 +354,29 @@ The bot system (`apps/server/bots/`) simulates multiple party participants witho
 
 ---
 
+## Pivot Migration Notes (2026-04-02)
+
+**Removed — Lightstick Mode:**
+- Delete `apps/flutter_app/lib/widgets/lightstick_mode.dart`
+- Delete `apps/server/src/socket-handlers/lightstick-handlers.ts`
+- Remove FR63 (lightstick toggle), FR64 (lightstick glow) references
+- FR66 revised: "Hype signal available alongside reactions and the reactive light show"
+
+**Replaced by — Reactive Phone Light Show (FR136-139):**
+- Automatic, music-synced, zero user interaction required
+- Driven by `light:intensity` server events, not local toggle
+
+**Detection source change:**
+- ACRCloud is **primary** song detection (was YouTube Lounge API)
+- YouTube Lounge API demoted to optional/secondary
+- `song-detection.ts` needs refactoring to use `SongContext` interface with ACRCloud as primary source
+
+**New server module:**
+- `audio-intelligence/` — LRC parser, chant detector, energy mapper, detection source abstraction
+- Follows `dj-engine/` boundary pattern (pure logic, zero external imports)
+
+---
+
 ## Usage
 
 - Read this file before implementing any story
@@ -291,4 +384,4 @@ The bot system (`apps/server/bots/`) simulates multiple party participants witho
 - For deeper context on any decision, read the full architecture doc
 - Update this file when patterns change during implementation
 
-Last Updated: 2026-03-25
+Last Updated: 2026-04-02

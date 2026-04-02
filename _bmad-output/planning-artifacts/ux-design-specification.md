@@ -1,7 +1,7 @@
 ---
 stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 lastStep: 14
-lastEdited: '2026-03-05'
+lastEdited: '2026-04-02'
 editHistory:
   - date: '2026-03-05'
     changes: 'PRD alignment update: Added Party Cards System UX (deal flow, card categories, screen layout, timing rules). Added Song State modes (Lightstick Mode full-screen glow with color picker, Camera Flash Hype Signal with cooldown). Added Prompted Media Capture UX (floating capture bubble, pop-to-capture flow, iOS graceful degradation, background upload). Added Interlude Games UX (Kings Cup, Dare Pull, Quick Vote with screen layouts and interaction patterns). Updated core loop to include party_card_deal phase. Updated DJ state machine with party_card_deal state. Updated screen inventory (9→13 screens). Updated component inventory (18→26 components + new stores). Updated project scaffold, bundle analysis, mermaid diagrams, state transitions, reduced motion table.'
@@ -9,6 +9,8 @@ editHistory:
     changes: 'Song Integration & Discovery update: Added complete Song Integration & Discovery UX section (TV pairing flow, playlist import UX, Intersection-Based Suggestion Engine, Quick Pick mode, Spin the Wheel mode, suggestion-only fallback). Added Journey 6 (Song Discovery flow). Replaced genre-tag-only Song Awareness section with full song intelligence system. Updated screen inventory (13→18 screens). Updated component inventory (26→34 components + new stores). Updated DJ state machine with song_selection states. Updated core loop, bundle analysis, component roadmap, project scaffold, state transitions, and timing patterns.'
   - date: '2026-03-05'
     changes: 'Major platform pivot and ceremony simplification: PWA → Flutter native app (iOS + Android). Replaced all Svelte/Tailwind/Vite/Web Audio references with Flutter/Dart equivalents. Updated Platform Strategy, Design System Foundation, Component Strategy, project scaffold, and all code examples to Flutter patterns. Removed ceremony voting entirely — awards are now context-driven (party card completion, reaction volume, song position, performer stats). Simplified three ceremony types to two (Full/Quick) with host skip option. Updated all ceremony beat-by-beat sequences, removed Voting Mechanics section, replaced with Award Generation Logic. Added Session Timeline & Memories UX (FR108-FR115): timeline home screen, session detail with media gallery, shareable session link, "Let'\''s go again!" invite action. Added Authentication & Identity UX (FR96-FR105): optional OAuth, guest upgrade, auth-gated timeline. Added Web Landing Page join flow UX. Updated screen inventory (18→22 screens). Updated all user journey flows, error patterns, audio patterns, responsive strategy, and accessibility for Flutter native. Removed all browser-specific workarounds (AudioContext unlock, PWA constraints, CSS bundle strategy).'
+  - date: '2026-04-02'
+    changes: 'Lyrics-sync pivot UX overhaul: Removed Lightstick Mode (FR63-64) entirely — replaced by Reactive Phone Light Show (FR136-139). Completely redesigned Song State screen around lyrics-first layout with synced lyrics display, chant crescendo animation, detection status indicator, and duet color system. Added 5 new UX sections: Lyrics Sync & Display UX (FR116-FR126), Chant Moments UX (FR127-FR130), Guess The Next Line UX (FR131-FR132), Duet Colors UX (FR133-FR135), Reactive Phone Light Show UX (FR136-FR139), Progressive Feature Unlock UX (FR140). Updated Song Integration section — ACRCloud audio fingerprinting is now primary detection, Lounge API demoted to optional enhancement. Updated Executive Summary with three-system architecture (Lyrics Sync Engine + DJ Engine + Progressive Feature Unlock). Updated screen inventories (20→24 screens). Updated component strategy — removed lightstick_mode.dart, added lyrics_display.dart, chant_overlay.dart, light_show_layer.dart, duet_indicator.dart, detection_status.dart, guess_next_line.dart, progressive_unlock_provider.dart, lyrics_provider.dart, detection_provider.dart. Updated reduced motion table, widget implementation roadmap, and all Song State references throughout. Updated error taxonomy with detection/lyrics failure patterns.'
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/product-brief-karaoke-party-app-2026-03-04.md'
@@ -39,9 +41,9 @@ date: '2026-03-04'
 
 ### Project Vision
 
-Karamania is a second-screen native mobile app (Flutter, iOS + Android) that transforms group karaoke nights from interactive party experiences into full entertainment sessions. Users join via QR code scan or party code — a lightweight web landing page deep-links into the installed app or redirects to the app store for first-time users. Optional accounts (Google/Facebook OAuth or guest with name-only). Phones become participation devices: reactions, soundboards, party card challenges, lightstick mode, song discovery, ceremonies, and mini-games that keep the entire room engaged before, during, and between songs.
+Karamania is a second-screen native mobile app (Flutter, iOS + Android) that transforms group karaoke nights into immersive, music-reactive entertainment sessions. Users join via QR code scan or party code — a lightweight web landing page deep-links into the installed app or redirects to the app store for first-time users. Optional accounts (Google/Facebook OAuth or guest with name-only). Phones become participation devices: synced lyrics displays, reactive light shows, reactions, soundboards, party card challenges, song discovery, ceremonies, and mini-games that keep the entire room engaged before, during, and between songs.
 
-The app occupies genuine white space: no competitor serves as a companion layer for in-room group karaoke. By not playing music, Karamania sidesteps music licensing entirely and works at any venue. As a native app, Karamania delivers reliable background connectivity, seamless media capture on both platforms, push notifications, and consistent performance. Two interconnected engines power the experience: (1) a server-authoritative DJ engine that automatically orchestrates party flow (party card deal → song → ceremony → interlude → repeat), eliminating dead air and freeing the host from MC duties, and (2) a Song Integration Engine that pairs with the YouTube TV via the Lounge API, passively detects every song played, imports friends' playlists, and surfaces personalized suggestions through Quick Pick voting and Spin the Wheel — eliminating "what should we sing?" decision fatigue.
+The app occupies genuine white space: no competitor serves as a companion layer for in-room group karaoke. By not playing music, Karamania sidesteps music licensing entirely and works at any venue — the app listens to whatever's playing via audio fingerprinting and reacts in real-time. As a native app, Karamania delivers reliable background connectivity, seamless media capture on both platforms, push notifications, and consistent performance. Three interconnected systems power the experience: (1) a **Lyrics Sync Engine** — audio fingerprinting (ACRCloud/ShazamKit) detects the current song, fetches synced lyrics from LRCLIB/Musixmatch, and displays them with chant highlights, crescendo animations, and duet color assignments; (2) a **server-authoritative DJ engine** that automatically orchestrates party flow (party card deal → song → ceremony → interlude → repeat), eliminating dead air and freeing the host from MC duties; and (3) a **Progressive Feature Unlock** system — features reveal gradually (lyrics + light show first, then interactive games, then social features) so the experience teaches itself. Optional YouTube TV pairing via Lounge API adds queue control at YouTube-equipped venues.
 
 Target market: Vietnamese friend groups (ages 20-35) at commercial karaoke venues in HCMC and Hanoi. MVP built by solo developer in ~8 weeks. Success metric: >80% "Would use again" post-session score.
 
@@ -678,6 +680,9 @@ karamania/
 │       │   │   ├── party_provider.dart       ← DJ state + participants + session data
 │       │   │   ├── capture_provider.dart     ← Media capture state + upload queue
 │       │   │   ├── auth_provider.dart        ← Firebase Auth state + guest/account management
+│       │   │   ├── lyrics_provider.dart     ← Lyrics fetch, cache, sync state, chant detection
+│       │   │   ├── detection_provider.dart  ← Audio fingerprinting state, song identification
+│       │   │   ├── progressive_unlock_provider.dart ← Per-user song count + layer state
 │       │   │   └── timeline_provider.dart    ← Session history + timeline data
 │       │   ├── socket/
 │       │   │   └── client.dart              ← Socket.io connection + event dispatching
@@ -689,7 +694,7 @@ karamania/
 │       │   │   ├── home_screen.dart          ← Session Timeline (auth) or Start/Join (guest)
 │       │   │   ├── session_detail_screen.dart ← Past session detail + media gallery
 │       │   │   ├── lobby_screen.dart         ← Join flow + icebreaker + playlist import
-│       │   │   ├── song_screen.dart          ← Song state (reactions + soundboard + lightstick + hype)
+│       │   │   ├── song_screen.dart          ← Song state (lyrics + light show + reactions + soundboard)
 │       │   │   ├── ceremony_screen.dart      ← Award reveal choreography (Full + Quick)
 │       │   │   ├── interlude_screen.dart     ← Kings Cup, Dare Pull, Quick Vote
 │       │   │   ├── quick_pick_screen.dart    ← 5 song cards, group vote
@@ -703,7 +708,12 @@ karamania/
 │       │       ├── confetti_layer.dart       ← Animated confetti overlay
 │       │       ├── glow_effect.dart          ← Radial glow for ceremonies
 │       │       ├── party_card_deal.dart      ← Card deal/accept/dismiss/redraw
-│       │       ├── lightstick_mode.dart      ← Full-screen glow with color picker
+│       │       ├── lyrics_display.dart        ← Synced lyrics scrolling with chant + duet colors
+│       │       ├── chant_overlay.dart        ← Crescendo chant moment animation
+│       │       ├── light_show_layer.dart     ← Reactive phone light show background
+│       │       ├── duet_indicator.dart       ← Duet color legend + assignment badge
+│       │       ├── detection_status.dart     ← Song detection status indicator
+│       │       ├── guess_next_line.dart      ← "[???]" lyric blanking overlay
 │       │       ├── hype_signal_button.dart   ← Flash/screen pulse trigger
 │       │       ├── capture_bubble.dart       ← Floating capture prompt
 │       │       ├── capture_overlay.dart      ← Active capture UI (photo/video/audio)
@@ -895,92 +905,258 @@ The DJ engine auto-generates a fun/random award title from a pool of 20+ templat
 - Auto-advance to next DJ state
 - No moment card, no share prompt, no confetti — just a quick shoutout
 
-## Song State Modes — Audience Participation During Songs
+## Song State — Lyrics-First Audience Experience
 
 ### Overview
 
-Song state is where users spend 60-70% of their time. The PRD defines three audience participation modes during songs, all freely switchable. The phone transforms from a passive screen into an active participation device — users choose how to engage moment-to-moment.
+Song state is where users spend 60-70% of their time. The phone transforms into a **lyrics-synced, music-reactive display** — synced lyrics scroll in real-time, the screen pulses with the music's energy, and chant moments unite the room. Reactions and soundboard remain accessible as an interaction layer on top of the lyrics experience. No mode toggles, no user configuration — the lyrics + light show are always on.
 
-### Three Modes (Toggle Freely)
+### Song Detection Flow (FR116-FR122)
 
-**1. Lean-In Mode (default)**
-- Standard view: emoji reaction buttons (5 emoji) + soundboard (6 sounds, 3×2 grid)
-- Active challenge badge visible if singer accepted a Party Card
-- This is the "game controller" mode — tap reactions, hit soundboard, watch the feed
-- Reaction streaks tracked: milestones at 5, 10, 20, 50 consecutive reactions (FR23)
+When a song starts playing in the karaoke room:
 
-**2. Lightstick Mode (FR63-64)**
-- Full-screen animated glow effect — the phone becomes a concert lightstick
-- User taps a "lightstick" toggle at bottom of Song State to enter
-- Screen fills with a pulsing, breathing glow in the current accent color
-- **Color picker:** Small color dots (5 options matching vibe palette) along the bottom edge. Tap to change glow color. Free-form — no synchronization between devices
-- Phone held up and swayed — creates a physical-room concert atmosphere in a dark KTV room
-- Reactions and soundboard are NOT available in lightstick mode (full-screen glow replaces them)
-- Tap anywhere or swipe down to exit back to lean-in mode
-- `prefers-reduced-motion`: static color fill, no pulse animation
+1. **Audio fingerprinting** captures a 5-10s burst via the device microphone
+2. Detection result returns within 5 seconds: song title, artist, ISRC, playback time offset
+3. **Periodic re-sync** every 30 seconds (5s burst) corrects lyrics drift and detects song changes
+4. If a different song is detected, transition to new song's lyrics within 3 seconds
 
-**3. Hype Signal (FR65)**
-- Available as a button in BOTH lean-in and lightstick modes
+**Detection Status Indicator (FR122):**
+- Small, non-intrusive indicator in the top bar area
+- States: "Listening..." (pulsing dot), "Song detected: [title]" (checkmark), "No match" (search icon)
+- "No match" state shows a tap-to-search affordance leading to manual search (FR120)
+
+**Manual Search Fallback (FR120):**
+- If detection fails after 3 consecutive attempts (15s), a "Search for song" prompt appears
+- User types song title/artist → results list → tap to select → lyrics fetch and display
+- Manual search is the safety net — detection is the magic
+
+**Detection + Lounge API (FR121):**
+- If YouTube TV is paired, Lounge API `nowPlaying` events supplement audio fingerprinting
+- If both detect, audio fingerprinting's time offset is used for lyrics sync accuracy (more precise)
+- If Lounge API detects but fingerprinting doesn't, Lounge API data is used as fallback
+
+### Lyrics Display (FR123-FR126)
+
+**Core lyrics experience:**
+- Synced lyrics in LRC format fetched from lyrics database (LRCLIB primary, Musixmatch fallback)
+- 60fps line-by-line scrolling synchronized to the song's playback position
+- Current line highlighted in vibe accent color, upcoming lines in `textSecondary`, past lines fade
+- Lyrics start from the time offset returned by the audio fingerprinting service
+- **Local cache (FR125):** Lyrics cached by song identifier (ISRC or title+artist hash). Cache persists across sessions. No redundant API calls for repeated songs
+
+**"No Lyrics" Graceful State (FR126):**
+- When no synced lyrics are available for a detected song
+- Song title and artist displayed prominently in the center of the screen
+- Reactive light show remains fully active — the visual energy experience continues
+- All other features (reactions, soundboard, chant detection via audio energy, capture) remain functional
+
+### Chant Moments (FR127-FR130)
+
+**Auto-detection:** System identifies lyric lines appearing 2+ times in LRC data (chorus/hook lines). These are marked as chant candidates.
+
+**Crescendo Animation (FR128-FR129):**
+- 3-5 seconds before a chant timestamp, the chant text begins growing from normal size
+- Progressive enlargement builds anticipation — text reaches maximum size at the moment the line is sung
+- All connected phones display the chant text simultaneously with synchronized visual highlight
+- Screen flashes with the vibe accent color. Light show intensifies to maximum brightness
+- The room FEELS the chorus coming
+
+**Host Override (FR130):**
+- Host can manually promote or demote chant moments via host controls overlay
+- Add custom chant markers for lines the auto-detection missed
+- Remove auto-detected ones that don't fit the energy of the room
+
+### Guess The Next Line (FR131-FR132)
+
+**Activation:** Only after Progressive Feature Unlock Interaction Layer (songs 3-4 onward). Not active during Base Layer songs 1-2.
+
+**Mechanic:**
+- During song playback, 1-2 lyric lines per song randomly blank out
+- Never during chant moments, never the first or last line of a song
+- Blanked line shows "[???]" for 3 seconds, then reveals the actual lyric
+- Pure room call-and-response — no phone interaction required. Shout the answer!
+- Creates spontaneous "STREETLIGHT PEOPLE!" moments
+
+### Duet Colors (FR133-FR135)
+
+**Activation:** Host or any participant activates Duet Mode from song controls. Works for songs with 2+ performers.
+
+**Color Assignment:**
+- 2 performers: blue and gold (high-contrast, vibe-independent)
+- 3+ performers: additional colors from the vibe palette
+- Colors persist for the duration of the song
+
+**Display Rules:**
+- **Performer's phone:** Their assigned lyric lines highlighted in their color. Other performers' lines appear dimmed (40% opacity)
+- **Chorus/chant lines:** Display in both/all colors — "everyone sings" indicator
+- **Audience phones (non-performers):** See all colors, showing who should be singing which part
+- Duet indicator badge visible in the top bar: colored dots showing active duet assignment
+
+### Reactive Phone Light Show (FR136-FR139)
+
+**Always active during song playback (Base Layer feature). No user action required. Cannot be independently disabled — it IS the song state background.**
+
+**Energy Mapping (FR136-FR137):**
+- Phone screen background pulses color synchronized to the song's energy level
+- Energy derived from LRC section positions mapped to song structure:
+
+| Song Section | Brightness | Pulse Cycle | Visual Feel |
+|---|---|---|---|
+| Verse | 30% | 2s slow breathing | Calm, ambient glow |
+| Pre-chorus | 60% | 1s rising pulse | Building anticipation |
+| Chorus | 100% | 0.5s rapid pulse | Peak energy, room glows |
+| Chant moment | 100% + flash | Synchronized burst | Maximum drama |
+| Instrumental/bridge | 50% | 1.5s gentle wave | Breathing room |
+
+**Coordination (FR138):**
+- All connected phones display the same color palette and pulse timing for a given song moment
+- Server broadcasts song position → clients derive energy level locally from cached LRC section data
+- Creates a coordinated room-wide light effect in a dark KTV room
+
+**Design Rules:**
+- Light show colors use the current vibe accent palette (shifts with `PartyVibe`)
+- Light show renders BEHIND the lyrics text (lyrics always readable, light show is ambient background)
+- When no lyrics available, light show still functions using audio energy estimation from detection bursts
+- `prefers-reduced-motion`: static color tint matching current song section energy, no pulse animation
+
+### Progressive Feature Unlock (FR140)
+
+**Per-user song counter** tracks each user's personal song count from their join time. Features activate per-user:
+
+| Layer | Song Count | Features Unlocked | UX Behavior |
+|---|---|---|---|
+| **Base Layer** | Songs 1-2 | Synced lyrics, reactive light show, chant highlights, duet colors, reactions, soundboard, hype signal | Full lyrics experience from first song. Reactions/soundboard available. No party cards, no interludes, no ceremonies |
+| **Interaction Layer** | Songs 3-4 | + Guess The Next Line | Lyric blanking activates. Subtle "new!" badge on first occurrence |
+| **Social Layer** | Songs 5+ | + Party card challenges, interludes, ceremonies, all interactive features | Full DJ engine features unlock. No announcement — features simply appear |
+
+**Late Joiner Ramp-Up:**
+- Late joiners begin at their own Song 1 regardless of session progress
+- They see Base Layer while veterans around them are in Social Layer
+- Each user progresses independently — no group gating
+- The catch-up card on join shows current stats but does NOT skip unlock progression
+
+**Unlock Transitions:**
+- No modal, no tutorial, no "new feature unlocked!" popup
+- Features simply appear in their natural position when the layer activates
+- First occurrence of Guess The Next Line gets a brief pulsing highlight (one-time)
+- Self-explanatory principle: if a feature needs explaining, it's too complex
+
+### Hype Signal (FR65)
+
 - Tap the flash/hype button → phone screen pulses bright white (3 rapid flashes) + optional device flashlight activation via native torch API (both iOS and Android)
 - Creates a camera-flash strobe effect visible to the singer across the room
 - Cooldown: 5-second minimum between hype signals per user (prevents seizure risk from continuous strobing)
 - Visual feedback: button dims during cooldown with circular refill indicator
+- Available at all times during song state — overlays the lyrics + light show experience
 
 ### Song State Screen Layout
 
 ```
-┌─────────────────────┐
-│  TopBar: 🎤 DUC      │
-│  🎭 Method Actor      │  ← Challenge badge (if active)
-│                       │
-│  ┌───────────────┐   │
-│  │ Reaction Feed  │   │  ← Floating emoji from all users
-│  │   🔥 🔥 ❤️     │   │
-│  └───────────────┘   │
-│                       │
-│  ┌──┐ ┌──┐ ┌──┐     │
-│  │🎺│ │👏│ │📯│     │  ← Soundboard (3×2)
-│  ├──┤ ├──┤ ├──┤     │
-│  │😢│ │🔥│ │💥│     │
-│  └──┘ └──┘ └──┘     │
-│                       │
-│ 🔥 ❤️ 😂 👏 💀       │  ← Reaction buttons
-│                       │
-│ [💡Lightstick] [⚡Hype]│  ← Mode toggles
-│ [📸 Capture]          │  ← Persistent capture icon (FR39)
-│                       │
-│ ═══ SONG OVER! ═══   │  ← Host only (500ms long-press)
-└─────────────────────┘
+┌─────────────────────────┐
+│ TopBar: 🎤 DUC           │
+│ 🎭 Method Actor  🔵🟡 Duet│  ← Challenge badge + duet indicator
+│ 🎵 Listening... ✓        │  ← Detection status (subtle)
+│                           │
+│  ┌─────────────────────┐ │
+│  │                     │ │
+│  │   ♪ previous line   │ │  ← Faded past lyric
+│  │                     │ │
+│  │  ► CURRENT LINE ◄   │ │  ← Highlighted in vibe accent
+│  │                     │ │
+│  │    next line...     │ │  ← Upcoming lyric (textSecondary)
+│  │    next line...     │ │
+│  │                     │ │
+│  └─────────────────────┘ │  ← LIGHT SHOW BACKGROUND
+│                           │     (pulses behind lyrics)
+│  ┌───────────────┐       │
+│  │ Reaction Feed  │       │  ← Floating emoji (semi-transparent)
+│  └───────────────┘       │
+│                           │
+│ 🔥 ❤️ 😂 👏 💀  [⚡Hype]  │  ← Reactions + hype (compact row)
+│ [🎺] [👏] [📯]  [📸]     │  ← Soundboard (3) + capture
+│                           │
+│ ═══ SONG OVER! ═══       │  ← Host only (500ms long-press)
+└─────────────────────────┘
 ```
 
-**Lightstick Mode View:**
+**Chant Moment View (auto-transitions during detected chant):**
 
 ```
-┌─────────────────────┐
-│                      │
-│                      │
-│    ╔══════════╗      │
-│    ║          ║      │
-│    ║  GLOW    ║      │  ← Full-screen pulsing glow
-│    ║  EFFECT  ║      │     in selected color
-│    ║          ║      │
-│    ╚══════════╝      │
-│                      │
-│  🔴 🔵 🟢 🟡 🟣     │  ← Color picker dots
-│                      │
-│ [⚡Hype] [✕ Exit]    │  ← Hype still available
-└─────────────────────┘
+┌─────────────────────────┐
+│ TopBar: 🎤 DUC           │
+│                           │
+│                           │
+│   ╔═══════════════════╗  │
+│   ║                   ║  │
+│   ║  DON'T STOP       ║  │  ← Text growing larger...
+│   ║  BELIEVIN'        ║  │     Max size at chant moment
+│   ║                   ║  │     Accent color + screen flash
+│   ╚═══════════════════╝  │
+│                           │  ← LIGHT SHOW AT MAXIMUM
+│                           │     (100% brightness, rapid pulse)
+│                           │
+│ 🔥 ❤️ 😂 👏 💀  [⚡Hype]  │
+│ [🎺] [👏] [📯]  [📸]     │
+│                           │
+│ ═══ SONG OVER! ═══       │
+└─────────────────────────┘
 ```
 
-### Mode Toggle Design Rules
+**Guess The Next Line View (Interaction Layer, songs 3+):**
 
-- Default mode on song entry: lean-in (reactions + soundboard)
-- Lightstick toggle is a single tap — instant full-screen transition
-- Hype signal available in ALL modes (it's a momentary action, not a mode)
-- Mode selection is private — no broadcast of which mode a user is in
-- Song Over button (host) remains visible in ALL modes (absolute positioned, always accessible)
-- Lightstick mode uses CSS `will-change: opacity` for GPU-accelerated glow animation
-- Lightstick participation counts as passive (1pt) while active — lightstick mode active time is tracked
+```
+┌─────────────────────────┐
+│ TopBar: 🎤 DUC           │
+│                           │
+│   ♪ previous line        │
+│                           │
+│  ► CURRENT LINE ◄        │
+│                           │
+│  ┌─────────────────────┐ │
+│  │      [ ??? ]        │ │  ← Blanked line (3s reveal)
+│  └─────────────────────┘ │
+│                           │
+│    next line...          │
+│                           │
+│ 🔥 ❤️ 😂 👏 💀  [⚡Hype]  │
+│ [🎺] [👏] [📯]  [📸]     │
+│                           │
+│ ═══ SONG OVER! ═══       │
+└─────────────────────────┘
+```
+
+**Duet Mode View (performer's phone — blue assignment):**
+
+```
+┌─────────────────────────┐
+│ TopBar: 🎤 DUC + TRANG   │
+│ 🔵 Your lines  🟡 Trang  │  ← Duet color legend
+│                           │
+│   ♪ dimmed gold line     │  ← Trang's line (40% opacity)
+│                           │
+│  ► BRIGHT BLUE LINE ◄    │  ← YOUR line (full brightness)
+│                           │
+│   🔵🟡 CHORUS TOGETHER   │  ← Both colors = everyone sings
+│                           │
+│    dimmed gold line...   │
+│                           │
+│ 🔥 ❤️ 😂 👏 💀  [⚡Hype]  │
+│ [🎺] [👏] [📯]  [📸]     │
+│                           │
+│ ═══ SONG OVER! ═══       │
+└─────────────────────────┘
+```
+
+### Song State Design Rules
+
+- Default experience on song entry: lyrics display + light show + reactions + soundboard (all visible)
+- Lyrics area occupies the top 50-60% of the screen. Interaction controls (reactions, soundboard) are compact at the bottom
+- Light show renders as full-screen background BEHIND all other elements
+- Song Over button (host) remains visible at all times (absolute positioned, always accessible)
+- Detection status indicator is subtle — never competes with lyrics for attention
+- Hype signal available at all times (momentary action overlaid on lyrics view)
+- Capture icon persistent in the interaction row (FR39)
+- When Progressive Feature Unlock introduces new features (e.g., Guess The Next Line at song 3), they appear in-place without mode switches or navigation
 
 ## Prompted Media Capture UX
 
@@ -1683,7 +1859,11 @@ We explored a **full DJ state walkthrough** — 9 sequential screens showing eve
 | 3 | Join & Name Entry (with optional sign-in) | `lobby` | Active | 1 |
 | 4 | Icebreaker Tap | `icebreaker` | Active | 1 |
 | 5 | Party Card Deal | `party_card_deal` | Active | 2 |
-| 6 | Song State (with Lightstick + Hype modes) | `song` | Lean-in | 1 (base), 2 (modes) |
+| 6 | Song State (Lyrics + Light Show + Reactions) | `song` | Lean-in | 1 (base) |
+| 6a | Detection & Manual Search | `song.searching` | Active | 1 |
+| 6b | Chant Moment (overlay) | `song` (auto-triggered) | Active | 1 |
+| 6c | Guess The Next Line (overlay) | `song` (Interaction Layer) | Active | 2 |
+| 6d | Duet Mode | `song.duet` | Lean-in | 2 |
 | 7 | Anticipation Phase | `ceremony.anticipation` | Active | 1 |
 | 8 | The Reveal | `ceremony.reveal` | Active | 1 |
 | 9 | Quick Ceremony | `ceremony.quick_reveal` | Active | 1 |
@@ -1695,13 +1875,19 @@ We explored a **full DJ state walkthrough** — 9 sequential screens showing eve
 
 ### Song Integration & Discovery System
 
-The brainstorming session (2026-03-05) resolved the "how to know what song is playing" challenge. The YouTube Lounge API — the same pairing mechanism users already use to control their YouTube TV from their phone — enables passive song detection AND queue control from Karamania. Combined with playlist import and an intersection-based suggestion engine, the app eliminates the core "what should we sing?" decision fatigue that plagues every karaoke night.
+Two brainstorming sessions (2026-03-05, 2026-04-02) and technical research (2026-04-01) shaped the song integration strategy. **ACRCloud audio fingerprinting is the primary detection method** — it works at ANY venue with ANY karaoke system by listening to room audio via the device microphone. The YouTube Lounge API is an optional enhancement for YouTube TV venues, adding queue control capabilities that audio fingerprinting alone cannot provide.
 
-**Two-Mode Architecture:**
-1. **Passive Lounge API (always-on core):** Pairs with YouTube TV via the TV code, passively detects every song via `nowPlaying` events, pushes selected songs to queue via `addVideo`. The app knows what's playing without anyone typing anything.
-2. **Playlist Import (cold-start assist):** Friends paste YouTube Music or Spotify playlist URLs when they join. The app reads all songs, cross-references against the Karaoke Catalog, and builds a shared song pool in real-time.
+**Three-Layer Architecture:**
+1. **Audio Fingerprinting (primary, always-on):** ACRCloud/ShazamKit detects songs via periodic microphone capture (5-10s burst every 30s). Returns song title, artist, ISRC, and playback time offset. Works at any venue regardless of karaoke system. Cover-song identification mode handles karaoke backing tracks.
+2. **YouTube Lounge API (optional enhancement):** Pairs with YouTube TV via the TV code for passive `nowPlaying` events AND queue control (`addVideo`). When both detect, fingerprinting's time offset is used for lyrics sync accuracy.
+3. **Playlist Import (cold-start assist):** Friends paste YouTube Music or Spotify playlist URLs when they join. The app reads all songs, cross-references against the Karaoke Catalog, and builds a shared song pool in real-time.
 
-**What Song Data Unlocks (beyond genre tags):**
+**What Song Detection Unlocks:**
+- **Synced lyrics display** — LRCLIB/Musixmatch LRC format, 60fps scrolling, time-offset aligned
+- **Chant moment detection** — auto-identified from repeated chorus lines in LRC data
+- **Reactive light show** — phone screen colors driven by song energy mapped to LRC sections
+- **Duet color assignment** — color-coded lyric lines for multi-performer songs
+- **Guess The Next Line** — lyric blanking game powered by LRC data
 - **Song-aware ceremonies:** "Best Rendition of Bohemian Rhapsody" instead of generic "Best Vocalist"
 - **Song-level setlist poster:** Full track-by-track finale with song titles, artists, performers
 - **Genre momentum in suggestions:** After 3 ballads → suggestions shift to upbeat tracks
@@ -2013,7 +2199,7 @@ Key design decisions locked in:
 | Quick Pick | Same | Tap 👍 or ➡️ on song cards, 15s auto-advance |
 | Spin the Wheel | Same | Tap SPIN, watch animation, optional veto |
 | Party Card Deal | Same | Singer: accept/dismiss/redraw. Others: "challenge incoming" |
-| Song State | "Song Over!" long-press (500ms fill) | Soundboard taps (6 sounds), emoji reactions, lightstick toggle, hype signal |
+| Song State | "Song Over!" long-press (500ms fill) | Lyrics scroll (read-along), soundboard taps, emoji reactions, hype signal. Chant moments: shout along. Guess The Next Line: shout answer (songs 3+) |
 | Anticipation | Same | None — 2-3s tension moment, drumroll builds |
 | Reveal | Same | Post-reveal reaction taps, moment card visible |
 | Quick Ceremony | Same | None — DJ auto-generates award, ~3-5s |
@@ -2070,7 +2256,7 @@ Phase transitions driven by WebSocket events (`ceremony_anticipation`, `ceremony
 
 **Sprint 2 — The Experience:**
 - Party Cards (19 cards, deal/accept/dismiss/redraw)
-- Lightstick Mode, Camera Flash Hype Signal
+- Guess The Next Line (Interaction Layer gating), Duet Colors, Camera Flash Hype Signal
 - Post-song ceremony with two types (Full/Quick) — auto-generated awards, no voting
 - Live emoji reactions + streaks, Soundboard (4-6 sounds)
 - Prompted media capture (bubble UX, background upload)
@@ -2142,7 +2328,7 @@ flowchart TD
 
     O --> P["Linh sees floating SONG OVER! button"]
     P --> Q{Song finished?}
-    Q -->|Not yet| R[Optional: tap reactions/soundboard/lightstick]
+    Q -->|Not yet| R[Optional: tap reactions/soundboard/hype, sing along with lyrics]
     R --> Q
     Q -->|Yes| S["Long-press SONG OVER! — 500ms fill"]
     S --> T["ceremony_anticipation event fires"]
@@ -2205,13 +2391,14 @@ flowchart TD
     PCA2 -->|Accept| K
     PCA2 -->|Dismiss| K2
 
-    K --> L["SONG STATE (lean-in / lightstick / hype modes)"]
+    K --> L["SONG STATE (lyrics + light show + reactions)"]
     K2 --> L
     L --> M{What do you do?}
-    M -->|Engaged| N["Tap reactions / soundboard / hype signal"]
-    M -->|Lightstick| N2["Toggle lightstick mode — phone glows"]
-    M -->|Passive| O["Phone down — listen to music"]
-    M -->|Singing| P["Watch karaoke TV — ignore phone"]
+    M -->|Engaged| N["Read lyrics, tap reactions / soundboard / hype signal"]
+    M -->|Chant| N2["Shout along during chant crescendo moments"]
+    M -->|Guess| N3["Guess The Next Line — shout answer (songs 3+)"]
+    M -->|Passive| O["Phone down — light show glows, listen to music"]
+    M -->|Singing| P["Follow lyrics on phone or watch karaoke TV"]
     M -->|Capture| CB["Pop capture bubble → photo/video/audio"]
 
     N --> Q{Host presses Song Over?}
@@ -2246,7 +2433,11 @@ flowchart TD
 | 9 | Spin the Wheel | `song_selection.spin` | Everyone | 3 |
 | 10 | Suggestion-Only Display | `song_selection.display` | Everyone (host has "Now Playing") | 3 |
 | 11 | Party Card Deal | `party_card_deal` | **Singer sees card** / Everyone sees "challenge incoming" | 2 |
-| 12 | Song State (Lean-in / Lightstick / Hype modes) | `song` | Everyone | 1 (base), 2 (modes) |
+| 12 | Song State (Lyrics + Light Show + Reactions) | `song` | Everyone | 1 (base) |
+| 12a | Detection & Manual Search | `song.searching` | Everyone (when detection fails) | 1 |
+| 12b | Chant Moment (overlay) | `song` (auto-triggered) | Everyone | 1 |
+| 12c | Guess The Next Line (overlay) | `song` (Interaction Layer) | Everyone (songs 3+) | 2 |
+| 12d | Duet Mode | `song.duet` | Everyone (host/participant activates) | 2 |
 | 13 | Anticipation | `ceremony.anticipation` | Everyone | 2 |
 | 14 | Reveal | `ceremony.reveal` | Everyone | 2 |
 | 15 | Quick Ceremony | `ceremony.quick_reveal` | Everyone | 2 |
@@ -2264,7 +2455,7 @@ flowchart TD
 |-------|----------|---------------|
 | Song Selection (Quick Pick / Spin) | 15-25s | Active — group deciding |
 | Party Card Deal | 3-8s | Active — singer decides |
-| Song | 3-5 min (real karaoke song) | Lean-in / Passive |
+| Song (lyrics + light show + reactions) | 3-5 min (real karaoke song) | Lean-in (lyrics active) |
 | Transition fanfare | ~1s | Snap to Active |
 | Anticipation (drumroll) | 2-3s | Active (tension) |
 | Reveal + celebration | 5-8s | Active (peak) |
@@ -2534,7 +2725,7 @@ Consumer<PartyProvider>(
 )
 ```
 
-### Custom Widgets (36 Widgets)
+### Custom Widgets (42 Widgets)
 
 #### File Structure
 
@@ -2548,7 +2739,7 @@ lib/
 │   ├── quick_pick_screen.dart           ← 5 song cards + group voting
 │   ├── spin_wheel_screen.dart           ← Animated wheel + spin
 │   ├── suggestion_only_display.dart     ← Song title for manual entry
-│   ├── song_screen.dart                 ← Song state (reactions + soundboard + modes)
+│   ├── song_screen.dart                 ← Song state (lyrics + light show + reactions + soundboard)
 │   ├── ceremony_screen.dart             ← Routes to anticipation/reveal/quick phases
 │   ├── interlude_screen.dart            ← Routes to Kings Cup / Dare Pull / Quick Vote
 │   └── finale_screen.dart               ← End-of-night sequence
@@ -2563,7 +2754,12 @@ lib/
 │   ├── tv_pairing_overlay.dart
 │   ├── playlist_import_card.dart
 │   ├── spotify_guide.dart
-│   ├── lightstick_mode.dart
+│   ├── lyrics_display.dart
+│   ├── chant_overlay.dart
+│   ├── light_show_layer.dart
+│   ├── duet_indicator.dart
+│   ├── detection_status.dart
+│   ├── guess_next_line.dart
 │   ├── hype_signal_button.dart
 │   ├── party_card_deal.dart
 │   ├── capture_bubble.dart
@@ -2582,6 +2778,9 @@ lib/
 │   ├── party_provider.dart              ← DJ state + participants + session data
 │   ├── capture_provider.dart            ← Media capture state + upload queue
 │   ├── auth_provider.dart               ← Firebase Auth state
+│   ├── lyrics_provider.dart             ← Lyrics fetch, cache, sync, chant detection
+│   ├── detection_provider.dart          ← Audio fingerprinting + song identification
+│   ├── progressive_unlock_provider.dart ← Per-user song count + layer gating
 │   └── timeline_provider.dart           ← Session history
 ├── socket/
 │   └── client.dart                      ← socket_io_client connection + event dispatch
@@ -2649,11 +2848,21 @@ The widget handles everything — onTap fires after debounce, haptic fires BEFOR
 
 **IcebreakerScreen** — Synchronized tap-and-reveal. Reads: `PartyProvider.icebreaker`. States: `choosing`, `chosen`, `revealing`.
 
-**SongScreen** — Manages all song modes. Reads: `PartyProvider` for currentSinger, currentGenre, participants, isHost, songMode, partyCard. Default: lean-in mode with 6 soundboard buttons (3×2), 5 reaction buttons, challenge badge (if party card accepted). Toggle buttons for lightstick mode and hype signal. SongOverButton visible only when isHost. Capture icon persistent in toolbar (FR39).
+**SongScreen** — Lyrics-first song experience. Reads: `PartyProvider` for currentSinger, currentGenre, participants, isHost, partyCard. Reads: `LyricsProvider` for currentLyrics, currentLine, chantMoments, syncState. Reads: `DetectionProvider` for detectionStatus, currentSong. Reads: `ProgressiveUnlockProvider` for currentLayer. Composites: LightShowLayer (background), LyricsDisplay (center), ChantOverlay (auto-triggered), GuessNextLine (Interaction Layer+), DuetIndicator (when active), DetectionStatus (top bar), reactions + soundboard (compact bottom row), HypeSignalButton, SongOverButton (host only), CaptureBubble. Progressive Feature Unlock gates GuessNextLine visibility based on user's personal song count.
 
-**LightstickMode** — Full-screen glow sub-widget within SongScreen. Props: `color`, `active`. Renders full-viewport animated gradient glow. Color picker (5 dots) along bottom. Hype button remains accessible. Tap anywhere to exit. Reduced motion: static color fill, no animation.
+**LyricsDisplay** — Synced lyrics scrolling widget. Props: `lyrics`, `currentLine`, `timeOffset`, `chantLines`, `duetAssignment`. Renders 60fps line-by-line scroll using AnimatedPositioned. Current line highlighted in vibe accent color. Past lines fade to 20% opacity. Chant-candidate lines render with subtle pre-highlight. Duet mode: lines colored per assignment, other performers' lines at 40% opacity. Chorus lines display multi-color. Reduced motion: instant line transitions, no smooth scroll.
 
-**HypeSignalButton** — Momentary flash trigger. Props: `onHype`, `cooldown`. On tap: screen flashes white (3 pulses via AnimationController) + activates device flashlight via native torch API (works on both iOS and Android). 5-second cooldown with circular refill indicator. Available in both lean-in and lightstick modes.
+**ChantOverlay** — Crescendo chant animation. Props: `chantText`, `triggerTime`, `active`. Text grows from normal size to maximum over 3-5 seconds using TweenAnimationBuilder. Screen flash at peak moment via AnimationController. Synchronized across all devices (server broadcasts chant timestamp). Reduced motion: text appears at full size instantly, no growth animation, no flash.
+
+**LightShowLayer** — Full-screen reactive background. Props: `energy`, `pulseRate`, `vibeColors`. Renders behind all other widgets using a Stack. AnimationController drives opacity/color oscillation. Energy levels: verse=30%, pre-chorus=60%, chorus=100%. Color palette from current PartyVibe. Reduced motion: static color tint matching energy level, no pulse.
+
+**DuetIndicator** — Duet color legend badge. Props: `performers`, `colors`, `activePerformer`. Small colored dots in top bar area showing duet assignment. Active performer's dot pulses gently.
+
+**DetectionStatus** — Song detection indicator. Props: `status`, `songTitle`. Renders in top bar: pulsing dot for "listening", checkmark + title for "detected", search icon for "no match". Tap on "no match" opens manual search. Minimal footprint — never competes with lyrics.
+
+**GuessNextLine** — Lyric blanking overlay. Props: `active`, `blankLine`, `revealTime`. Renders "[???]" in place of a lyric line for 3 seconds, then reveals with a brief flash. Only rendered when ProgressiveUnlockProvider.currentLayer >= interaction. First occurrence gets a one-time pulsing highlight. Reduced motion: instant reveal, no flash.
+
+**HypeSignalButton** — Momentary flash trigger. Props: `onHype`, `cooldown`. On tap: screen flashes white (3 pulses via AnimationController) + activates device flashlight via native torch API (works on both iOS and Android). 5-second cooldown with circular refill indicator. Available at all times during song state.
 
 **PartyCardDeal** — Card deal screen. Reads: `PartyProvider.partyCard`, `isCurrentSinger`. Singer view: card with title, emoji, description, type badge + Accept/Dismiss/Redraw buttons. Audience view: "CHALLENGE INCOMING..." with singer name. Soft 8s auto-dismiss timer. Card slides in from bottom with flip animation + card-flip sound.
 
@@ -2737,7 +2946,11 @@ Flutter respects the system's "Reduce motion" / "Remove animations" setting via 
 | CeremonyAnticipation | Static text |
 | SongOverButton | No fill animation, instant at 500ms |
 | LoadingSkeleton | Static logo, no pulse |
-| LightstickMode | Static color fill, no glow pulse animation |
+| LyricsDisplay | Instant line transitions, no smooth scroll animation |
+| ChantOverlay | Text appears at full size instantly, no growth animation, no screen flash |
+| LightShowLayer | Static color tint matching current energy level, no pulse animation |
+| GuessNextLine | Instant reveal, no flash animation |
+| DuetIndicator | Static dots, no pulse |
 | HypeSignalButton | Single screen flash (no strobe), no flashlight activation |
 | PartyCardDeal | Card appears instantly, no flip/slide animation |
 | CaptureBubble | Static circle, no pulse. Expand/collapse instant |
@@ -2756,7 +2969,7 @@ Flutter compiles to native ARM code — no bundle splitting needed. All widgets 
 | Cold start (app launch → lobby) | <3s on 4G | AOT compilation, no JS parsing |
 | Warm start (app in memory) | <1.5s | Already compiled and cached |
 | Memory usage (2hr session) | <80MB | No memory leaks in animations/WebSocket |
-| Battery impact | <12%/hr | Adaptive heartbeat + wake lock release during song |
+| Battery impact | <12%/hr | Adaptive heartbeat + wake lock release during song + periodic audio capture (5-10s burst every 30s) |
 | Frame rate (ceremony animations) | 60fps | Flutter's Skia rendering engine |
 
 ### Widget Implementation Roadmap
@@ -2775,11 +2988,19 @@ Flutter compiles to native ARM code — no bundle splitting needed. All widgets 
 | 8 | HostControlsOverlay | Host must control flow |
 | 9 | TVPairingOverlay | YouTube TV pairing (Sprint 1 per PRD) |
 
+**Sprint 1 additions (Lyrics Sync Engine — after ACRCloud PoC passes):**
+- LyricsDisplay (synced lyrics scrolling with line highlighting)
+- LightShowLayer (reactive phone light show background)
+- ChantOverlay (crescendo chant moment animation)
+- DetectionStatus (song detection indicator in top bar)
+- LyricsProvider + DetectionProvider + ProgressiveUnlockProvider (state management)
+
 **Sprint 2 additions (The Experience):**
 - CeremonyScreen + CeremonyAnticipation + CeremonyReveal + CeremonyQuick (award reveal, no voting)
 - ConfettiLayer + GlowEffect (reveal polish)
 - PartyCardDeal (card deal/accept/dismiss/redraw)
-- LightstickMode (full-screen glow with color picker)
+- GuessNextLine (lyric blanking, Interaction Layer gating)
+- DuetIndicator + duet color system in LyricsDisplay
 - HypeSignalButton (flash/strobe trigger)
 - CaptureBubble + CaptureOverlay (prompted media capture)
 - IcebreakerScreen (first-60-seconds)
@@ -2948,12 +3169,20 @@ No error toasts. No "something went wrong." No retry buttons. The app either han
 | Playlist import fails | Invalid URL, private Spotify, API timeout | Platform-specific guidance (SpotifyGuide for private) or "Try again?" | Mock API errors per platform, assert guidance shown |
 | No playlists imported | Cold start, nobody imports | Karaoke Classics fallback suggestions (FR91) | Assert fallback pool when `$playlists` is empty |
 | YouTube Data API quota exceeded | >10K units/day | Suggestions based on previously cached data only. No new metadata lookups | Mock 403 response, assert cached data used |
+| Audio fingerprint fails | Noisy room, backing track not recognized | After 3 failed attempts (15s), show manual search prompt. No error toast | Mock ACRCloud to return no match, assert manual search appears |
+| No synced lyrics available | Song detected but LRCLIB/Musixmatch has no LRC data | Display song title + artist prominently. Light show + all features continue | Mock lyrics API to return empty, assert graceful "no lyrics" state |
+| Lyrics sync drift | Re-sync returns offset >2s from current position | Smooth re-alignment to corrected position over 500ms. No visual jump | Send drift correction event, assert smooth transition |
+| Microphone permission denied | User denies RECORD_AUDIO permission | Manual song search is only option. No detection status indicator. App fully functional without detection | Mock permission denied, assert manual search flow |
+| ACRCloud API quota exceeded | >360 requests in session | Stop periodic recognition, rely on last detected song + manual search | Mock quota error, assert graceful degradation |
 
 **Empty States:**
 - 0 reactions during song → No "be the first to react!" prompt. Just empty. Fine.
 - 0 votes in Quick Pick (15s timeout) → Highest-voted wins. If 0 total votes → DJ picks randomly from suggestions
 - 0 playlists imported → Karaoke Classics fallback. App works out of the box
 - TV not paired → Suggestion-only mode. Full song selection UX, just no auto-queue
+- Song not detected → Manual search available. Light show defaults to gentle ambient pulse. All features except synced lyrics work
+- No lyrics for detected song → Song title/artist displayed prominently. Light show runs from audio energy estimation
+- Microphone permission denied → No audio detection. Manual song search only. All other features work
 - 1 participant → App works. Ceremonies skip (need 2+ nominees). Song state + finale still function.
 
 **AC:** Given any error in the taxonomy, WHEN the error occurs, THEN no error message, toast, or modal is shown to the user, AND the app continues functioning with graceful degradation.
@@ -2982,6 +3211,7 @@ No error toasts. No "something went wrong." No retry buttons. The app either han
 | Phase | Buffers Loaded | Trigger |
 |---|---|---|
 | App boot (Sprint 0 prep) | Lobby ambient only (~15KB) | Eager load on connect |
+| Song detection entry | Chant crescendo whoosh, guess-reveal chime (~10KB) | Lazy load on first `song` state with lyrics |
 | First ceremony entry | Ceremony set: chime, silence, reveal burst, confetti (~40KB) | Lazy load on first `ceremony` state |
 | Song selection entry | Song pick chime, wheel spin/decelerate, song-queued confirmation (~15KB) | Lazy load on first `song_selection` state |
 | Interlude entry | Interlude loop (~10KB) | Lazy load on first `interlude` state |

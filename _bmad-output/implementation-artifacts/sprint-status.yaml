@@ -1,8 +1,14 @@
-# generated: 2026-03-06
+# generated: 2026-04-02
 # project: karaoke-party-app
 # tracking_system: file-system
 # story_location: _bmad-output/implementation-artifacts
-
+#
+# PIVOT NOTE: Lyrics Sync Pivot applied 2026-04-02
+# - 3 new epics (11-13) with 17 new stories
+# - 5 new stories added to existing epics (2, 5, 10)
+# - 1 story modified (4.7: lightstick removed, hype signal only)
+# - See sprint-change-proposal-2026-04-02.md for full details
+#
 # STATUS DEFINITIONS:
 # ==================
 # Epic Status:
@@ -16,6 +22,7 @@
 #
 # Story Status:
 #   - backlog: Story only exists in epic file
+#   - needs-update: Story was done but requires rework due to pivot/change
 #   - ready-for-dev: Story file created in stories folder
 #   - in-progress: Developer actively working on implementation
 #   - review: Ready for code review (via Dev's code-review workflow)
@@ -32,14 +39,14 @@
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2026-03-06
+generated: 2026-04-02
 project: karaoke-party-app
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 
 development_status:
-  # Epic 1: Party Foundation (8 stories)
-  epic-1: in-progress
+  # Epic 1: Party Foundation (8 stories) — COMPLETE
+  epic-1: done
   1-1-flutter-app-scaffold-and-design-token-system: done
   1-2-server-foundation-and-database-schema: done
   1-3-authentication-and-websocket-infrastructure: done
@@ -50,7 +57,7 @@ development_status:
   1-8-connection-resilience-and-disconnection-handling: done
   epic-1-retrospective: optional
 
-  # Epic 2: Core DJ Engine & Song Experience (9 stories)
+  # Epic 2: Core DJ Engine & Song Experience (10 stories) — 9 done, 1 new
   epic-2: in-progress
   2-1-dj-engine-state-machine-server: done
   2-2-dj-state-persistence: done
@@ -61,10 +68,11 @@ development_status:
   2-7-audio-cues-and-state-transition-sounds: done
   2-8-event-stream-logging: done
   2-9-ceremony-type-selection-rules: done
+  2-10-song-detection-integration-with-dj-engine: backlog  # NEW (Pivot)
   epic-2-retrospective: optional
 
-  # Epic 3: Ceremonies & Awards (5 stories)
-  epic-3: in-progress
+  # Epic 3: Ceremonies & Awards (5 stories) — COMPLETE
+  epic-3: done
   3-1-participation-scoring-system: done
   3-2-award-template-engine: done
   3-3-full-ceremony-experience: done
@@ -72,7 +80,7 @@ development_status:
   3-5-moment-card-generation-and-sharing: done
   epic-3-retrospective: optional
 
-  # Epic 4: Audience Participation & Party Cards (7 stories)
+  # Epic 4: Audience Participation & Party Cards (7 stories) — 6 done, 1 needs rework
   epic-4: in-progress
   4-1-emoji-reactions-system: done
   4-2-reaction-streaks-and-milestones: done
@@ -80,10 +88,10 @@ development_status:
   4-4-party-card-pool-and-deal-system: done
   4-5-party-card-interaction-and-scoring: done
   4-6-group-involvement-cards: done
-  4-7-lightstick-mode-and-hype-signal: done
+  4-7-hype-signal: needs-update  # MODIFIED (Pivot: lightstick removed, hype signal only)
   epic-4-retrospective: optional
 
-  # Epic 5: Song Integration & Discovery (9 stories)
+  # Epic 5: Song Integration & Discovery (10 stories) — 9 done, 1 new
   epic-5: in-progress
   5-1-karaoke-catalog-index: done
   5-2-playlist-import-youtube-music: done
@@ -94,10 +102,11 @@ development_status:
   5-7-tv-pairing-and-youtube-lounge-api: done
   5-8-song-detection-and-metadata-resolution: done
   5-9-suggestion-only-mode: done
+  5-10-detection-source-abstraction: backlog  # NEW (Pivot)
   epic-5-retrospective: optional
 
-  # Epic 6: Media Capture & Sharing (5 stories)
-  epic-6: in-progress
+  # Epic 6: Media Capture & Sharing (5 stories) — COMPLETE
+  epic-6: done
   6-1-floating-capture-bubble: done
   6-2-inline-media-capture: done
   6-3-media-tagging-and-background-upload: done
@@ -105,8 +114,9 @@ development_status:
   6-5-reaction-peak-detection: done
   epic-6-retrospective: optional
 
-  # Epic 7: Interlude Games & Icebreaker (6 stories)
-  epic-7: in-progress
+  # Epic 7: Interlude Games & Icebreaker (6 stories) — COMPLETE
+  # Note: Interludes gated to Social Layer (songs 5+) per pivot, handled by Epic 13
+  epic-7: done
   7-1-democratic-activity-voting: done
   7-2-kings-cup-interlude: done
   7-3-dare-pull-interlude: done
@@ -115,16 +125,16 @@ development_status:
   7-6-first-session-icebreaker: done
   epic-7-retrospective: optional
 
-  # Epic 8: Finale & Session Persistence (4 stories)
-  epic-8: in-progress
+  # Epic 8: Finale & Session Persistence (4 stories) — COMPLETE
+  epic-8: done
   8-1-end-of-night-awards-generation: done
   8-2-finale-ceremony-sequence: done
   8-3-setlist-poster-generation-and-sharing: done
   8-4-session-summary-persistence: done
   epic-8-retrospective: optional
 
-  # Epic 9: Session Timeline & Memories (6 stories)
-  epic-9: in-progress
+  # Epic 9: Session Timeline & Memories (6 stories) — COMPLETE
+  epic-9: done
   9-1-user-profile-and-account-management: done
   9-2-guest-to-account-upgrade: done
   9-3-session-timeline-screen: done
@@ -133,7 +143,7 @@ development_status:
   9-6-media-linking-and-guest-access: done
   epic-9-retrospective: optional
 
-  # Epic 10: UX Redesign & Brand Identity (7 stories)
+  # Epic 10: UX Redesign & Brand Identity (11 stories) — 7 done, 4 new
   epic-10: in-progress
   10-1-home-screen-brand-identity: done
   10-2-join-screen-layout-and-input-sizing: done
@@ -142,4 +152,37 @@ development_status:
   10-5-ceremony-celebration-energy: done
   10-6-branded-custom-dialogs: done
   10-7-color-consistency-party-flow: done
+  10-8-lyrics-display-screen: backlog  # NEW (Pivot)
+  10-9-duet-mode-visuals: backlog  # NEW (Pivot)
+  10-10-progressive-unlock-transitions: backlog  # NEW (Pivot)
+  10-11-detection-and-fallback-ux: backlog  # NEW (Pivot)
   epic-10-retrospective: optional
+
+  # Epic 11: Lyrics Sync Engine (9 stories) — ALL NEW (Pivot)
+  epic-11: in-progress
+  11-1-acrcloud-audio-fingerprint-pipeline: done
+  11-2-periodic-re-recognition-and-song-change: backlog
+  11-3-detection-fallback-manual-search: backlog
+  11-4-detection-status-indicator: backlog
+  11-5-lrclib-lyrics-fetch-and-display: backlog
+  11-6-local-lyrics-cache: backlog
+  11-7-graceful-no-lyrics-state: backlog
+  11-8-chant-detection-and-crescendo-animation: backlog
+  11-9-reactive-phone-light-show: backlog
+  epic-11-retrospective: optional
+
+  # Epic 12: Interactive Lyrics Games (3 stories) — ALL NEW (Pivot)
+  epic-12: backlog
+  12-1-guess-the-next-line: backlog
+  12-2-duet-mode-activation-and-color-assignment: backlog
+  12-3-duet-lyrics-display: backlog
+  epic-12-retrospective: optional
+
+  # Epic 13: Progressive Feature Unlock (5 stories) — ALL NEW (Pivot)
+  epic-13: backlog
+  13-1-per-user-song-counter-and-layer-state: backlog
+  13-2-base-layer-gating: backlog
+  13-3-interaction-layer-activation: backlog
+  13-4-social-layer-activation: backlog
+  13-5-late-joiner-ramp-up: backlog
+  epic-13-retrospective: optional

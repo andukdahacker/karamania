@@ -14,6 +14,7 @@ import { registerInterludeHandlers } from './interlude-handlers.js';
 import { registerIcebreakerHandlers } from './icebreaker-handlers.js';
 import { registerFinaleHandlers } from './finale-handlers.js';
 import { registerAuthUpgradeHandler } from './auth-upgrade-handler.js';
+import { registerDetectionHandlers } from './detection-handlers.js';
 import { handleParticipantJoin, transferHost, isRecoveryFailed, clearRecoveryFailed } from '../services/session-manager.js';
 import { getSessionDjState } from '../services/dj-state-store.js';
 import {
@@ -65,6 +66,7 @@ export function setupSocketHandlers(io: SocketIOServer, logger: FastifyBaseLogge
     registerIcebreakerHandlers(s, io);
     registerFinaleHandlers(s, io);
     registerAuthUpgradeHandler(s);
+    registerDetectionHandlers(s, io);
 
     try {
       const joinResult = await handleParticipantJoin({

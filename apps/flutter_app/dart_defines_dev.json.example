@@ -8,5 +8,8 @@
   "FIREBASE_PROJECT_ID": "karamania-dev",
   "FIREBASE_STORAGE_BUCKET": "karamania-dev.firebasestorage.app",
   "FIREBASE_AUTH_DOMAIN": "karamania-dev.firebaseapp.com",
-  "FIREBASE_IOS_BUNDLE_ID": "com.karamania.dev"
+  "FIREBASE_IOS_BUNDLE_ID": "com.karamania.dev",
+  "ACRCLOUD_HOST": "identify-eu-west-1.acrcloud.com",
+  "ACRCLOUD_ACCESS_KEY": "YOUR_ACRCLOUD_ACCESS_KEY",
+  "ACRCLOUD_ACCESS_SECRET": "YOUR_ACRCLOUD_ACCESS_SECRET"
 }

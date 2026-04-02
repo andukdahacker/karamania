@@ -15,7 +15,9 @@ import 'package:karamania/state/timeline_provider.dart';
 import 'package:karamania/api/api_service.dart';
 import 'package:karamania/audio/audio_engine.dart';
 import 'package:karamania/services/upload_queue.dart';
+import 'package:karamania/state/detection_provider.dart';
 import 'package:karamania/state/upload_provider.dart';
+import 'package:karamania/services/acrcloud_service.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +51,19 @@ Future<void> bootstrap() async {
 
   // Upload queue init — load persisted queue and start connectivity listener
   await UploadQueue.instance.init();
+
+  // ACRCloud audio fingerprinting init
+  if (config.acrCloudAccessKey.isNotEmpty) {
+    try {
+      await AcrCloudService.instance.setUp(
+        accessKey: config.acrCloudAccessKey,
+        accessSecret: config.acrCloudAccessSecret,
+        host: config.acrCloudHost,
+      );
+    } catch (e) {
+      debugPrint('ACRCloud init failed: $e');
+    }
+  }
 
   final apiService = ApiService(baseUrl: AppConfig.instance.serverUrl);
   final authProvider = AuthProvider();
@@ -96,6 +111,7 @@ Future<void> bootstrap() async {
         ChangeNotifierProvider(create: (_) => TimelineProvider()),
         ChangeNotifierProvider(create: (_) => SessionDetailProvider()),
         ChangeNotifierProvider(create: (_) => AccessibilityProvider()),
+        ChangeNotifierProvider(create: (_) => DetectionProvider()),
         ChangeNotifierProvider(create: (_) => UploadProvider()),
         Provider<SocketClient>(create: (_) => SocketClient.instance),
         Provider<ApiService>.value(value: apiService),
