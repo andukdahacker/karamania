@@ -495,6 +495,7 @@ class PartyProvider extends ChangeNotifier {
     required String emoji,
     required double rewardMultiplier,
   }) {
+    debugPrint('[party] onReactionBroadcast — userId=$userId, emoji=$emoji, multiplier=$rewardMultiplier, feedSize=${_reactionFeed.length}');
     _reactionFeed.add(ReactionEvent(
       id: _reactionIdCounter++,
       userId: userId,
@@ -719,6 +720,7 @@ class PartyProvider extends ChangeNotifier {
 
   // Icebreaker methods (Story 7.6)
   void onIcebreakerStarted(String question, List<IcebreakerOption> options, int voteDurationMs) {
+    debugPrint('[party] onIcebreakerStarted — question=$question, options=${options.length}, djState=$_djState');
     _icebreakerQuestion = question;
     _icebreakerOptions = options;
     _myIcebreakerVote = null;

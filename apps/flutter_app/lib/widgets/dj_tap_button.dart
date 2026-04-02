@@ -155,11 +155,11 @@ class _DJTapButtonState extends State<DJTapButton>
 
           return Padding(
             padding: const EdgeInsets.all(8.0),
-            child: GestureDetector(
+            child: Listener(
               behavior: HitTestBehavior.opaque,
-              onTapDown: (_) => _onPointerDown(),
-              onTapUp: (_) => _onPointerUp(),
-              onTapCancel: _onPointerCancel,
+              onPointerDown: (_) => _onPointerDown(),
+              onPointerUp: (_) => _onPointerUp(),
+              onPointerCancel: (_) => _onPointerCancel(),
               child: Container(
                 decoration: hasFocus
                     ? BoxDecoration(

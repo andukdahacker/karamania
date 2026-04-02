@@ -285,14 +285,22 @@ class _PartyScreenState extends State<PartyScreen>
         duration: const Duration(milliseconds: 300),
         color: partyProvider.backgroundColor,
         child: SafeArea(
-          child: Stack(
+          child: Builder(builder: (context) {
+            final authProvider = context.watch<AuthProvider>();
+            final showUpgradeBanner =
+                authProvider.state == AuthState.authenticatedGuest &&
+                authProvider.upgradeLoading != LoadingState.success;
+            // Banner height: spaceSm vertical padding * 2 + ~40 button height
+            const upgradeBannerHeight = 56.0;
+
+            return Stack(
             children: [
             _buildPartyContent(context, partyProvider, displayVibe),
             // Now Playing / Selected Song — top of screen during song state
             if (partyProvider.djState == DJState.song &&
                 !partyProvider.isLightstickMode)
               Positioned(
-                top: DJTokens.spaceMd,
+                top: DJTokens.spaceMd + (showUpgradeBanner ? upgradeBannerHeight : 0),
                 left: DJTokens.spaceMd,
                 right: DJTokens.spaceMd,
                 child: partyProvider.isSuggestionOnlyMode
@@ -310,11 +318,8 @@ class _PartyScreenState extends State<PartyScreen>
             if (partyProvider.connectionStatus == ConnectionStatus.reconnecting)
               const ReconnectingBanner(),
             // Guest-to-account upgrade banner (Story 9.2)
-            Builder(builder: (context) {
-              final authProvider = context.watch<AuthProvider>();
-              if (authProvider.state == AuthState.authenticatedGuest &&
-                  authProvider.upgradeLoading != LoadingState.success)
-                return Positioned(
+            if (showUpgradeBanner)
+                Positioned(
                   top: 0,
                   left: 0,
                   right: 0,
@@ -345,9 +350,7 @@ class _PartyScreenState extends State<PartyScreen>
                       ],
                     ),
                   ),
-                );
-              return const SizedBox.shrink();
-            }),
+                ),
             if (partyProvider.hostTransferPending)
               _buildHostTransferBanner(context, displayVibe),
             // Moment card overlay — only during Full ceremony celebration window
@@ -358,7 +361,10 @@ class _PartyScreenState extends State<PartyScreen>
                 child: MomentCardOverlay(
                   award: partyProvider.ceremonyAward!,
                   vibe: displayVibe,
-                  performerName: partyProvider.ceremonyPerformerName,
+                  performerName: partyProvider.participants
+                      .where((p) => p.userId == partyProvider.ceremonyPerformerName)
+                      .map((p) => p.displayName)
+                      .firstOrNull ?? partyProvider.ceremonyPerformerName,
                   songTitle: partyProvider.ceremonySongTitle,
                   onDismiss: () => partyProvider.dismissMomentCard(),
                 ),
@@ -638,7 +644,8 @@ class _PartyScreenState extends State<PartyScreen>
                 onInvite: () => _showInviteSheet(context, partyProvider),
               ),
           ],
-        ),
+        );
+      }),
       ),
       ),
     );
@@ -678,7 +685,10 @@ class _PartyScreenState extends State<PartyScreen>
                 partyProvider.ceremonyType == 'full' &&
                 partyProvider.ceremonyRevealAt != null) ...[
               CeremonyDisplay(
-                performerName: partyProvider.ceremonyPerformerName,
+                performerName: partyProvider.participants
+                    .where((p) => p.userId == partyProvider.ceremonyPerformerName)
+                    .map((p) => p.displayName)
+                    .firstOrNull ?? partyProvider.ceremonyPerformerName,
                 revealAt: partyProvider.ceremonyRevealAt!,
                 vibe: displayVibe,
                 award: partyProvider.ceremonyAward,
@@ -691,7 +701,10 @@ class _PartyScreenState extends State<PartyScreen>
               QuickCeremonyDisplay(
                 award: partyProvider.ceremonyAward!,
                 vibe: displayVibe,
-                performerName: partyProvider.ceremonyPerformerName,
+                performerName: partyProvider.participants
+                    .where((p) => p.userId == partyProvider.ceremonyPerformerName)
+                    .map((p) => p.displayName)
+                    .firstOrNull ?? partyProvider.ceremonyPerformerName,
               ),
             ] else if (partyProvider.djState == DJState.song) ...[
               _buildSongInfoContent(partyProvider),

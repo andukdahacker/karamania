@@ -402,7 +402,7 @@ const INTERLUDE_GAME_DURATION_MS = 10_000; // 10s card display
 const DARE_PULL_GAME_DURATION_MS = 15_000; // 15s dare timer
 const QUICK_VOTE_VOTING_DURATION_MS = 6_000; // 6s hard voting window
 const QUICK_VOTE_REVEAL_DURATION_MS = 5_000; // 5s results display
-const SINGALONG_GAME_DURATION_MS = 15_000; // 15s — longer than Kings Cup (10s) to give group time to start singing; not specified in UX spec, tunable
+const SINGALONG_GAME_DURATION_MS = 30_000; // 30s — needs to be long enough for group to actually sing together; tunable
 
 function clearInterludeTimers(sessionId: string): void {
   const revealTimer = interludeRevealTimers.get(sessionId);

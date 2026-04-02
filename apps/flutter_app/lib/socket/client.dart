@@ -228,6 +228,7 @@ class SocketClient {
     // DJ state change event
     on('dj:stateChanged', (data) {
       final payload = data as Map<String, dynamic>;
+      debugPrint('[socket] dj:stateChanged received: state=${payload['state']}');
       final stateString = payload['state'] as String;
       final DJState djState;
       try {
@@ -307,6 +308,7 @@ class SocketClient {
 
     // Reaction broadcast event
     on('reaction:broadcast', (data) {
+      debugPrint('[socket] reaction:broadcast received: $data');
       final payload = data as Map<String, dynamic>;
       _partyProvider?.onReactionBroadcast(
         userId: payload['userId'] as String,
@@ -606,6 +608,7 @@ class SocketClient {
 
     // Icebreaker events (Story 7.6)
     on('icebreaker:started', (data) {
+      debugPrint('[socket] icebreaker:started received: $data');
       final payload = data as Map<String, dynamic>;
       final question = payload['question'] as String;
       final rawOptions = payload['options'] as List<dynamic>;
@@ -613,6 +616,7 @@ class SocketClient {
           .map((o) => IcebreakerOption.fromJson(o as Map<String, dynamic>))
           .toList();
       final voteDurationMs = payload['voteDurationMs'] as int;
+      debugPrint('[socket] icebreaker:started — question=$question, options=${options.length}, voteDurationMs=$voteDurationMs');
       _partyProvider?.onIcebreakerStarted(question, options, voteDurationMs);
     });
 
